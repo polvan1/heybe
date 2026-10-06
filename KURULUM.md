@@ -14,7 +14,38 @@ sadece iki yeni tablo eklenir.
 | `veritabani_guncelleme.sql` | Yeni tablolar (irsaliyeler, kullanicilar, settings) |
 | `KURULUM.md` | Bu dosya |
 
-## Kurulum Adımları (sırayla)
+## v3.0 — Güvenlik Güncellemesi (ÖNEMLİ: kurulumdan önce okuyun)
+
+Bu sürümle giriş ve yetki kontrolü **sunucuya** taşındı.
+
+**Sunucuya yükleme**
+1. `pnpm run build` ile derleyin; `dist/` içeriğini sunucudaki klasöre yükleyin.
+   `dist/` içinde artık bir de **`inc/`** klasörü var (sunucu kodu) — mutlaka yükleyin.
+2. Sunucudaki mevcut `config.php` dosyanız **aynen çalışır**. `$API_KEY` satırı artık
+   kullanılmıyor, silebilirsiniz. Yeni kurulumda `config.example.php` → `config.php`.
+3. Veritabanı tabloları/kolonları `api.php` tarafından **otomatik** oluşturulur/eklenir;
+   SQL çalıştırmanız gerekmez. Mevcut verilere dokunulmaz.
+
+**Kullanıcılar için değişenler**
+- Güncellemeden sonra herkes **bir kez yeniden giriş yapar** (eski oturumlar geçersiz).
+- Mevcut şifreler çalışmaya devam eder; ilk girişte otomatik olarak güçlü
+  biçimde (bcrypt) yeniden saklanır.
+- Yeni şifreler en az **6 karakter** olmalı.
+- 10 hatalı girişten sonra o cihazdan 15 dakika giriş engellenir.
+
+**Neler düzeldi**
+- Giriş/oturum sunucuda (HttpOnly çerez). Kodda hiçbir anahtar veya şifre yok;
+  eski "API anahtarı" ile veritabanının tamamını indirme açığı kapandı.
+- Şifre hash'leri hiçbir kullanıcıya gönderilmez. Kullanıcı yönetimi yetkisi
+  olmayanlar diğer kullanıcıların e-posta/telefonunu göremez.
+- Yetkiler sunucuda uygulanır: örn. firmalar yetkisi olmayan biri firma
+  değiştiremez/silemez; "İzleyici" rolü hiçbir veriyi değiştiremez.
+- Kayıt artık **kayıt bazlı**: sadece değişen/silinen kayıtlar gönderilir. İki kişi
+  aynı anda çalışırken biri diğerinin eklediği kaydı artık silemez.
+- Bildirimler ve işlem günlüğü en yeniden eskiye sıralı gelir (eskiden budama
+  sırasında en yeni kayıtlar silinebiliyordu).
+
+## Kurulum Adımları (v2.x — eski sürüm notları)
 
 ### 1. Veritabanını güncelleyin
 - cPanel → **phpMyAdmin** → `myhiscom_fason_takip` veritabanını seçin
@@ -25,13 +56,6 @@ sadece iki yeni tablo eklenir.
 Eski şifre daha önce dist.zip içinde paylaşıldığı için açığa çıktı sayılır.
 - cPanel → **MySQL Databases** → kullanıcı şifresini değiştirin
 - Yeni şifreyi `config.php` içindeki `$DB_PASS` satırına yazın
-
-### Gizli bilgiler (kaynak koddan derleme yapıyorsanız)
-Şifreler ve anahtarlar artık kaynak kodda tutulmaz:
-- `public/config.example.php` → sunucuda `config.php` olarak kopyalayıp doldurun
-- `.env.example` → proje kökünde `.env` olarak kopyalayın; `VITE_API_KEY` ve
-  `VITE_VAPID_PUBLIC_KEY` değerleri `config.php` ile aynı olmalı, sonra `pnpm run build`
-- `config.php` ve `.env` GitHub'a gönderilmez (`.gitignore`)
 
 ### 3. Dosyaları yükleyin
 - Sunucudaki `dist/` klasörünün **eski içeriğini silin** (assets, index.html, api.php...)

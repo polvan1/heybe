@@ -34,3 +34,4 @@ uploads/
 *.zip
 *.rar
 .claude/settings.local.json
+dev/data/

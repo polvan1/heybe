@@ -5,7 +5,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import { Plus, Trash2, Search, Scissors, Camera, PackagePlus, Settings2, Loader2, Sparkles } from 'lucide-react';
 import { gorselDataUrl } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
-import { API_URL, API_KEY } from '../data/api';
+import { API_URL } from '../data/api';
 
 const BIRIMLER = ['kg', 'metre', 'top'];
 
@@ -58,7 +58,8 @@ export default function KumasStok() {
             const dataUrl = await gorselDataUrl(file, 1600, 0.85);
             const resp = await fetch(`${API_URL}?irsaliye_oku=1`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+                credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
                 body: JSON.stringify({ data: dataUrl, kumas_turleri: kumasTurleri.map(t => t.ad) }),
             });
             const json = await resp.json();

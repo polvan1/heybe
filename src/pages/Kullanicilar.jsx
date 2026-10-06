@@ -93,8 +93,10 @@ export default function Kullanicilar() {
         });
     };
 
-    const handleSave = () => {
-        if (!form.ad.trim()) return;
+    const handleSave = async () => {
+        if (!form.ad.trim()) { alert('Ad Soyad girin.'); return; }
+        if (!editId && !form.sifre) { alert('Yeni kullanıcı için şifre belirleyin.'); return; }
+        if (form.sifre && form.sifre.length < 6) { alert('Şifre en az 6 karakter olmalı.'); return; }
         const userData = {
             ad: form.ad.trim(),
             email: form.email.trim(),
@@ -107,18 +109,22 @@ export default function Kullanicilar() {
         if (form.sifre) {
             userData.sifre = form.sifre;
         }
-        if (editId) {
-            kullaniciGuncelle(editId, userData);
-        } else {
-            kullaniciEkle({ ...userData, sifre: form.sifre || '1234' });
+        try {
+            if (editId) {
+                await kullaniciGuncelle(editId, userData);
+            } else {
+                await kullaniciEkle(userData);
+            }
+            setModal(null);
+        } catch (err) {
+            alert('Kaydedilemedi: ' + err.message);
         }
-        setModal(null);
     };
 
     const handleDelete = (id) => {
         const user = kullanicilar.find(k => k.id === id);
         if (!silmeOnayi(`${user?.ad || ''} kullanıcısı silinecek.`)) return;
-        kullaniciSil(id);
+        kullaniciSil(id).catch(err => alert('Silinemedi: ' + err.message));
     };
 
     const getRolBadge = (rol) => {
@@ -279,7 +285,7 @@ export default function Kullanicilar() {
                                 type={showPassword ? 'text' : 'password'}
                                 value={form.sifre}
                                 onChange={e => setForm({ ...form, sifre: e.target.value })}
-                                placeholder={editId ? '••••••••' : 'Şifre belirleyin'}
+                                placeholder={editId ? '••••••••' : 'En az 6 karakter'}
                             />
                             <button
                                 type="button"

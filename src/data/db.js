@@ -1,6 +1,5 @@
 // HİS ERP - Veri Katmanı (sunucu API senkronizasyonlu)
-import { sha256 } from '../utils/sha256';
-import { API_URL, API_KEY } from './api';
+import { apiIstek, ApiHatasi } from './api';
 
 const STORAGE_KEYS = {
   firmalar: 'myhis_firmalar',
@@ -21,18 +20,41 @@ const STORAGE_KEYS = {
 
 // Generic CRUD helpers
 let inMemoryDb = {};
-const API_HEADERS = { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY };
 
 // --- SENKRONİZASYON ALTYAPISI ---
-// Değişen koleksiyonlar biriktirilir ve tek POST ile SADECE değişenler gönderilir.
-// Böylece iki cihaz aynı anda açıkken birbirinin farklı koleksiyonlarını ezmez.
+// Sunucuya bir koleksiyonun TAMAMI değil, sadece değişen kayıtlar (upsert)
+// ve silinen kayıtların id'leri (delete) gönderilir. Bunun için sunucudaki
+// son bilinen hal (senkronHali) tutulur ve kayıt öncesi karşılaştırılır.
+// Böylece iki kişi aynı anda çalışırken biri diğerinin kaydını silmez/ezmez.
+let senkronHali = {};   // key → Map(id → JSON metni)
 let pendingKeys = new Set();
 let persistTimer = null;
 
-function notifySync(ok) {
+function notifySync(ok, mesaj) {
   try {
-    window.dispatchEvent(new CustomEvent('myhis:sync', { detail: { ok } }));
+    window.dispatchEvent(new CustomEvent('myhis:sync', { detail: { ok, mesaj } }));
   } catch (e) { /* SSR/test ortamı */ }
+}
+
+function haliKaydet(key, dizi) {
+  const m = new Map();
+  if (Array.isArray(dizi)) dizi.forEach(r => { if (r && r.id) m.set(r.id, JSON.stringify(r)); });
+  senkronHali[key] = m;
+}
+
+// Bir koleksiyonun sunucuya göre farkı: { upsert: [...], delete: [...] }
+function farkHesapla(key) {
+  const eski = senkronHali[key] || new Map();
+  const simdi = Array.isArray(inMemoryDb[key]) ? inMemoryDb[key] : [];
+  const upsert = [];
+  const gorulen = new Set();
+  simdi.forEach(r => {
+    if (!r || !r.id) return;
+    gorulen.add(r.id);
+    if (eski.get(r.id) !== JSON.stringify(r)) upsert.push(r);
+  });
+  const silinen = [...eski.keys()].filter(id => !gorulen.has(id));
+  return { upsert, delete: silinen };
 }
 
 function schedulePersist(key) {
@@ -46,26 +68,34 @@ export async function flushPersist() {
   if (pendingKeys.size === 0) return true;
   const keys = [...pendingKeys];
   pendingKeys.clear();
-  const payload = {};
-  keys.forEach(k => { payload[k] = inMemoryDb[k]; });
+
+  const payload = { degisiklikler: {} };
+  keys.forEach(k => {
+    if (k === STORAGE_KEYS.tema) { payload[k] = inMemoryDb[k]; return; }
+    const fark = farkHesapla(k);
+    if (fark.upsert.length || fark.delete.length) payload.degisiklikler[k] = fark;
+  });
+  if (Object.keys(payload.degisiklikler).length === 0 && payload[STORAGE_KEYS.tema] === undefined) {
+    return true;
+  }
+
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: API_HEADERS,
-      body: JSON.stringify(payload),
-      keepalive: true, // sayfa kapanırken de gönderilebilsin
-    });
-    if (!response.ok) {
-      console.error('Veritabanı sunucuya kaydedilemedi:', response.status);
-      keys.forEach(k => pendingKeys.add(k)); // tekrar denenebilsin
-      notifySync(false);
-      return false;
-    }
+    await apiIstek('', payload, { keepalive: true });
+    // Başarılı: gönderilen koleksiyonların sunucu hali artık yerel hal
+    Object.keys(payload.degisiklikler).forEach(k => haliKaydet(k, inMemoryDb[k]));
     notifySync(true);
     return true;
   } catch (e) {
-    console.error('Veritabanı bağlantı hatası:', e);
-    keys.forEach(k => pendingKeys.add(k));
+    if (e instanceof ApiHatasi && (e.durum === 403 || e.durum === 401)) {
+      // Yetkisiz değişiklik: tekrar denemenin anlamı yok → sunucudaki hale geri dön
+      console.warn('Değişiklik reddedildi:', e.mesaj || e.message);
+      notifySync(false, e.message);
+      await refetchFromServer(true);
+      window.dispatchEvent(new CustomEvent('myhis:veri-yenilendi'));
+      return false;
+    }
+    console.error('Veritabanı sunucuya kaydedilemedi:', e);
+    keys.forEach(k => pendingKeys.add(k)); // bağlantı hatası: tekrar denenebilsin
     notifySync(false);
     return false;
   }
@@ -80,17 +110,23 @@ async function persistNow(keys) {
   return flushPersist();
 }
 
+function sunucuVerisiniUygula(data, hepsi) {
+  Object.keys(data).forEach(k => {
+    if (!hepsi && pendingKeys.has(k)) return; // gönderilmemiş yerel değişiklik ezilmesin
+    inMemoryDb[k] = data[k];
+    if (Array.isArray(data[k])) haliKaydet(k, data[k]);
+  });
+  if (hepsi) pendingKeys.clear();
+}
+
 // Sunucudan güncel veriyi çek (başka cihazda yapılan değişiklikleri almak için).
-// Henüz sunucuya GÖNDERİLMEMİŞ yerel değişiklikler (pendingKeys) EZİLMEZ.
-export async function refetchFromServer() {
+// Henüz sunucuya GÖNDERİLMEMİŞ yerel değişiklikler (pendingKeys) EZİLMEZ;
+// hepsi=true ise yerel değişiklikler atılır ve sunucu hali esas alınır.
+export async function refetchFromServer(hepsi = false) {
   try {
-    const response = await fetch(`${API_URL}?t=${Date.now()}`, { headers: { 'X-Api-Key': API_KEY } });
-    if (!response.ok) return false;
-    const data = await response.json();
+    const data = await apiIstek();
     if (!data || typeof data !== 'object') return false;
-    Object.keys(data).forEach(k => {
-      if (!pendingKeys.has(k)) inMemoryDb[k] = data[k];
-    });
+    sunucuVerisiniUygula(data, hepsi);
     return true;
   } catch (e) {
     return false;
@@ -98,37 +134,14 @@ export async function refetchFromServer() {
 }
 
 export async function initDB() {
+  inMemoryDb = {};
+  senkronHali = {};
+  pendingKeys.clear();
   try {
-    const response = await fetch(`${API_URL}?t=${Date.now()}`, { headers: { 'X-Api-Key': API_KEY } });
-    if (!response.ok) {
-      notifySync(false);
-      return;
-    }
-    const data = await response.json();
-    inMemoryDb = data || {};
-
-    // Migration: tarayıcıda eski localStorage verisi varsa dosya/DB'ye aktar
-    const isMigrated = localStorage.getItem('myhis_migrated');
-    const hasOldData = localStorage.getItem(STORAGE_KEYS.partiler);
-
-    if (!isMigrated && hasOldData) {
-      console.log('Eski veriler tespit edildi, sunucuya aktarılıyor...');
-      for (const key of Object.values(STORAGE_KEYS)) {
-        const item = localStorage.getItem(key);
-        if (item) {
-          try { inMemoryDb[key] = JSON.parse(item); } catch (e) { inMemoryDb[key] = item; }
-        }
-      }
-      localStorage.setItem('myhis_migrated', 'true');
-      await persistNow(Object.values(STORAGE_KEYS));
-    } else if (Object.keys(inMemoryDb).length === 0) {
-      // SADECE fetch başarılı olduysa VE veritabanı cidden boşsa örnek veriler yükle.
-      seedData();
-      await flushPersist();
-    }
+    const data = await apiIstek();
+    sunucuVerisiniUygula(data || {}, true);
   } catch (error) {
     console.error('Veritabanı yükleme hatası:', error);
-    // Hata durumunda örnek veri yüklemiyoruz ki mevcut sunucu verisini bozmayalım
     notifySync(false);
   }
 }
@@ -1087,142 +1100,62 @@ export function exportToCSV(data, headers, filename) {
   URL.revokeObjectURL(link.href);
 }
 
-// --- SEED DATA ---
-export function seedData() {
-  if (getFirmalar().length > 0) return;
-
-  const firmalar = [
-    { ad: 'Yıldız Kesimhane', tip: 'kesimhane', telefon: '0532 111 2233', adres: 'Merter, İstanbul', yetkiliKisi: 'Ahmet Yıldız', notlar: '', gunlukKapasite: 500, odemeVadesi: 20 },
-    { ad: 'Star Baskı', tip: 'baskici', telefon: '0533 222 3344', adres: 'Güngören, İstanbul', yetkiliKisi: 'Mehmet Kaya', notlar: 'Dijital baskı uzmanı', gunlukKapasite: 300, odemeVadesi: 15 },
-    { ad: 'Özkan Tekstil Atölyesi', tip: 'atolye', telefon: '0534 333 4455', adres: 'Zeytinburnu, İstanbul', yetkiliKisi: 'Ali Özkan', notlar: '', gunlukKapasite: 200, odemeVadesi: 25 },
-    { ad: 'Güneş Ütü Paket', tip: 'utupaketci', telefon: '0535 444 5566', adres: 'Bayrampaşa, İstanbul', yetkiliKisi: 'Fatma Güneş', notlar: '', gunlukKapasite: 400, odemeVadesi: 20 },
-    { ad: 'Demir Kesim', tip: 'kesimhane', telefon: '0536 555 6677', adres: 'Bağcılar, İstanbul', yetkiliKisi: 'Hasan Demir', notlar: '', gunlukKapasite: 600, odemeVadesi: null },
-    { ad: 'Efe Dikim Atölyesi', tip: 'atolye', telefon: '0537 666 7788', adres: 'Esenler, İstanbul', yetkiliKisi: 'Efe Çelik', notlar: '', gunlukKapasite: 150, odemeVadesi: 20 },
-  ];
-  firmalar.forEach(f => addFirma(f));
-
-  const urunler = [
-    {
-      urunKodu: 'TS-001',
-      urunAdi: 'Erkek Basic T-Shirt',
-      asorti: {
-        bedenler: ['S', 'M', 'L', 'XL', '2XL'],
-        dagilim: { 'S': 1, 'M': 2, 'L': 3, 'XL': 2, '2XL': 1 },
-      },
-    },
-    {
-      urunKodu: 'TS-002',
-      urunAdi: 'Kadın V-Yaka T-Shirt',
-      asorti: {
-        bedenler: ['XS', 'S', 'M', 'L', 'XL'],
-        dagilim: { 'XS': 1, 'S': 2, 'M': 3, 'L': 2, 'XL': 1 },
-      },
-    },
-    {
-      urunKodu: 'SW-001',
-      urunAdi: 'Unisex Oversize Sweatshirt',
-      asorti: {
-        bedenler: ['S', 'M', 'L', 'XL'],
-        dagilim: { 'S': 1, 'M': 2, 'L': 2, 'XL': 1 },
-      },
-    },
-  ];
-  urunler.forEach(u => addUrun(u));
-}
-
 // --- KULLANICILAR & KİMLİK DOĞRULAMA ---
-function isSifreHash(v) {
-  return typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
-}
-
-export function hashSifre(sifre) {
-  return sha256(String(sifre));
-}
+// Giriş, oturum ve kullanıcı yönetimi tamamen SUNUCUDA yapılır.
+// Şifreler ve şifre hash'leri tarayıcıya hiç gelmez.
 
 export function getKullanicilar() {
   return getAll(STORAGE_KEYS.kullanicilar);
 }
 
-export function addKullanici(kullanici) {
-  const kullanicilar = getKullanicilar();
-  const yeniKullanici = {
-    ...kullanici,
-    // Şifreyi asla düz metin saklama
-    sifre: kullanici.sifre && !isSifreHash(kullanici.sifre) ? hashSifre(kullanici.sifre) : (kullanici.sifre || ''),
-    id: 'usr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    createdAt: new Date().toISOString()
-  };
-  kullanicilar.push(yeniKullanici);
-  saveAll(STORAGE_KEYS.kullanicilar, kullanicilar);
-  logIslem('Kullanıcı Eklendi', `${yeniKullanici.ad} (${yeniKullanici.rol})`);
-  return yeniKullanici;
+// Oturum durumu: { kurulumGerekli, kullanici }
+export async function oturumDurumu() {
+  return apiIstek('auth=durum');
 }
 
-export function updateKullanici(id, updates) {
-  const kullanicilar = getKullanicilar();
-  const index = kullanicilar.findIndex(k => k.id === id);
-  if (index !== -1) {
-    const safeUpdates = { ...updates };
-    if (safeUpdates.sifre && !isSifreHash(safeUpdates.sifre)) {
-      safeUpdates.sifre = hashSifre(safeUpdates.sifre);
+export async function girisYap(kimlik, sifre) {
+  const r = await apiIstek('auth=giris', { kimlik, sifre });
+  return r.kullanici;
+}
+
+export async function cikisYap() {
+  try { await flushPersist(); } catch (e) { /* yoksay */ }
+  try { await apiIstek('auth=cikis', {}); } catch (e) { /* oturum zaten düşmüş olabilir */ }
+}
+
+export async function ilkKurulumYap(ad, email, sifre) {
+  const r = await apiIstek('auth=kurulum', { ad, email, sifre });
+  return r.kullanici;
+}
+
+// Kullanıcı listesini sunucudan tazele (yerel kullanıcı listesi sadece okunur)
+async function kullanicilariTazele() {
+  const data = await apiIstek();
+  if (data && Array.isArray(data[STORAGE_KEYS.kullanicilar])) {
+    inMemoryDb[STORAGE_KEYS.kullanicilar] = data[STORAGE_KEYS.kullanicilar];
+    // İşlem günlüğü de sunucuda yazıldı; onu da al
+    if (Array.isArray(data[STORAGE_KEYS.islemGunlugu]) && !pendingKeys.has(STORAGE_KEYS.islemGunlugu)) {
+      inMemoryDb[STORAGE_KEYS.islemGunlugu] = data[STORAGE_KEYS.islemGunlugu];
+      haliKaydet(STORAGE_KEYS.islemGunlugu, data[STORAGE_KEYS.islemGunlugu]);
     }
-    kullanicilar[index] = { ...kullanicilar[index], ...safeUpdates };
-    saveAll(STORAGE_KEYS.kullanicilar, kullanicilar);
-    return kullanicilar[index];
   }
-  return null;
 }
 
-export function deleteKullanici(id) {
-  const kullanicilar = getKullanicilar();
-  const silinen = kullanicilar.find(k => k.id === id);
-  saveAll(STORAGE_KEYS.kullanicilar, kullanicilar.filter(k => k.id !== id));
-  logIslem('Kullanıcı Silindi', silinen?.ad || id);
+export async function addKullanici(kullanici) {
+  const r = await apiIstek('kullanici=ekle', kullanici);
+  await kullanicilariTazele();
+  return r.kullanici;
 }
 
-export function verifyLogin(kimlik, sifre) {
-  const aranan = String(kimlik || '').trim().toLowerCase();
-  if (!aranan) return { ok: false, error: 'Kullanıcı adı veya e-posta girin.' };
-  const user = getKullanicilar().find(k =>
-    k.aktif !== false && (
-      (k.email && k.email.toLowerCase() === aranan) ||
-      (k.ad && k.ad.toLowerCase() === aranan)
-    )
-  );
-  if (!user) return { ok: false, error: 'Kullanıcı bulunamadı veya pasif durumda.' };
-
-  const stored = user.sifre || '';
-  const dogru = isSifreHash(stored)
-    ? stored === hashSifre(sifre)
-    : stored === String(sifre); // eski düz metin şifre desteği
-
-  if (!dogru) return { ok: false, error: 'Şifre hatalı.' };
-
-  // Eski düz metin şifreyi hash'e yükselt
-  if (!isSifreHash(stored)) {
-    updateKullanici(user.id, { sifre: hashSifre(sifre) });
-  }
-  return { ok: true, user };
+export async function updateKullanici(id, updates) {
+  const r = await apiIstek('kullanici=guncelle', { ...updates, id });
+  await kullanicilariTazele();
+  return r.kullanici;
 }
 
-// --- OTURUM (12 saat geçerli) ---
-const SESSION_KEY = 'myhis_session';
-const SESSION_TTL = 12 * 60 * 60 * 1000;
-
-export function saveSession(userId) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, expires: Date.now() + SESSION_TTL }));
-}
-
-export function loadSession() {
-  try {
-    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
-    if (s && s.userId && s.expires > Date.now()) return s.userId;
-  } catch (e) { /* bozuk kayıt */ }
-  return null;
-}
-
-export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
+export async function deleteKullanici(id) {
+  await apiIstek('kullanici=sil', { id });
+  await kullanicilariTazele();
 }
 
 // --- YEDEKLEME ---
@@ -1249,7 +1182,8 @@ export async function importBackup(jsonText) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error('Geçersiz yedek dosyası.');
   }
-  const bilinen = Object.values(STORAGE_KEYS);
+  // Kullanıcılar ve şifreleri yedekten geri yüklenmez (güvenlik: sadece Kullanıcılar sayfasından)
+  const bilinen = Object.values(STORAGE_KEYS).filter(k => k !== STORAGE_KEYS.kullanicilar);
   const keys = Object.keys(data).filter(k => bilinen.includes(k));
   if (keys.length === 0) {
     throw new Error('Yedek dosyasında tanınan HİS ERP verisi bulunamadı.');

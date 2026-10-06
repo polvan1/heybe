@@ -1,7 +1,7 @@
 // Fotoğraf yükleme yardımcıları
 // Seçilen görsel tarayıcıda küçültülür (max 900px, JPEG) ve sunucuya
 // base64 olarak gönderilir; sunucu dosyayı uploads/ klasörüne kaydeder.
-import { API_URL, API_KEY } from '../data/api';
+import { API_URL } from '../data/api';
 
 const MAX_BOYUT = 900;      // uzun kenar (px)
 const JPEG_KALITE = 0.8;
@@ -60,7 +60,8 @@ export async function fotoYukle(file) {
     const dataUrl = await dosyayiKucult(file);
     const resp = await fetch(`${API_URL}?foto=upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
         body: JSON.stringify({ data: dataUrl }),
     });
     if (!resp.ok) throw new Error('Fotoğraf sunucuya yüklenemedi.');
@@ -74,7 +75,8 @@ export async function fotoSil(url) {
     try {
         await fetch(`${API_URL}?foto=sil`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+            credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
             body: JSON.stringify({ url }),
         });
     } catch (e) { /* sunucudaki dosya silinemese de kayıttan düşer */ }

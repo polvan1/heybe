@@ -4,8 +4,6 @@
 //  - assets/  : önce önbellek (dosya adları hash'li olduğu için güvenli)
 //  - diğerleri: önce ağ, çevrimdışıysa önbellek
 const CACHE_NAME = 'his-erp-v2';
-// api.php erişimi için anahtar (config.php'deki $API_KEY ile aynı)
-const API_KEY = '__VITE_API_KEY__'; // derlemede vite.config.js tarafından .env'deki değerle değiştirilir
 
 self.addEventListener('install', () => {
     self.skipWaiting();
@@ -69,7 +67,7 @@ self.addEventListener('push', (event) => {
         let mesaj = 'Yeni bildiriminiz var';
         let link = './';
         try {
-            const resp = await fetch(`./api.php?push=son&key=${API_KEY}&t=${Date.now()}`);
+            const resp = await fetch(`./api.php?push=son&t=${Date.now()}`, { credentials: 'same-origin' });
             if (resp.ok) {
                 const data = await resp.json();
                 if (data.bildirim) {

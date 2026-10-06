@@ -3,8 +3,8 @@ import { useApp } from '../context/AppContext';
 import { LogIn, Eye, EyeOff, UserPlus, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
-    const { kullanicilar, login, ilkKurulum } = useApp();
-    const ilkKurulumMu = kullanicilar.length === 0;
+    const { kurulumGerekli, login, ilkKurulum } = useApp();
+    const ilkKurulumMu = kurulumGerekli;
 
     const [kimlik, setKimlik] = useState('');
     const [sifre, setSifre] = useState('');
@@ -15,22 +15,28 @@ export default function Login() {
     const [hata, setHata] = useState('');
     const [busy, setBusy] = useState(false);
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setHata('');
-        const result = login(kimlik, sifre);
-        if (!result.ok) setHata(result.error);
+        if (!kimlik.trim() || !sifre) { setHata('Kullanıcı adı ve şifre girin.'); return; }
+        setBusy(true);
+        try {
+            await login(kimlik.trim(), sifre);
+        } catch (err) {
+            setHata(err.message || 'Giriş yapılamadı.');
+            setBusy(false);
+        }
     };
 
-    const handleKurulum = (e) => {
+    const handleKurulum = async (e) => {
         e.preventDefault();
         setHata('');
         if (!ad.trim()) { setHata('Ad Soyad girin.'); return; }
-        if (!sifre || sifre.length < 4) { setHata('Şifre en az 4 karakter olmalı.'); return; }
+        if (!sifre || sifre.length < 6) { setHata('Şifre en az 6 karakter olmalı.'); return; }
         if (sifre !== sifre2) { setHata('Şifreler eşleşmiyor.'); return; }
         setBusy(true);
         try {
-            ilkKurulum(ad.trim(), email.trim(), sifre);
+            await ilkKurulum(ad.trim(), email.trim(), sifre);
         } catch (err) {
             setHata('Kurulum sırasında hata oluştu: ' + err.message);
             setBusy(false);
@@ -74,7 +80,7 @@ export default function Login() {
                         <div className="form-group">
                             <label className="form-label">Şifre *</label>
                             <div style={{ position: 'relative' }}>
-                                <input className="form-input" type={showPassword ? 'text' : 'password'} value={sifre} onChange={e => setSifre(e.target.value)} placeholder="En az 4 karakter" />
+                                <input className="form-input" type={showPassword ? 'text' : 'password'} value={sifre} onChange={e => setSifre(e.target.value)} placeholder="En az 6 karakter" />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -114,8 +120,8 @@ export default function Login() {
                                 {hata}
                             </div>
                         )}
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                            <LogIn size={16} /> Giriş Yap
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
+                            <LogIn size={16} /> {busy ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                         </button>
                     </form>
                 )}

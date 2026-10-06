@@ -1,5 +1,5 @@
 // Telefon push bildirimleri: abone olma/çıkma yardımcıları
-import { API_URL, API_KEY, VAPID_PUBLIC_KEY } from './api';
+import { API_URL, apiIstek } from './api';
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -45,15 +45,19 @@ export async function pushAc() {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
     if (!sub) {
+        // Public key sunucudaki config.php'den alınır (tek kaynak)
+        const { publicKey } = await apiIstek('push=anahtar');
+        if (!publicKey) throw new Error('Sunucuda bildirim anahtarı (VAPID) tanımlı değil.');
         sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
         });
     }
 
     const resp = await fetch(`${API_URL}?push=subscribe`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
         body: JSON.stringify(sub.toJSON()),
     });
     if (!resp.ok) throw new Error('Abonelik sunucuya kaydedilemedi.');
@@ -68,7 +72,8 @@ export async function pushKapat() {
     try {
         await fetch(`${API_URL}?push=unsubscribe`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
+            credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
             body: JSON.stringify({ endpoint: sub.endpoint }),
         });
     } catch (e) { /* sunucu kaydı silinemese de yerel abonelik iptal edilir */ }
@@ -78,7 +83,8 @@ export async function pushKapat() {
 export async function pushTest() {
     const resp = await fetch(`${API_URL}?push=test`, {
         method: 'POST',
-        headers: { 'X-Api-Key': API_KEY },
+        credentials: 'same-origin',
+        headers: { 'X-HisERP': '1' },
     });
     if (!resp.ok) throw new Error('Test bildirimi gönderilemedi.');
 }
