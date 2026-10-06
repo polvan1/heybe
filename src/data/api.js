@@ -19,6 +19,16 @@ function oturumDustu() {
 
 // sorgu: 'auth=giris' gibi; govde verilirse POST yapılır
 export async function apiIstek(sorgu = '', govde, secenekler = {}) {
+    // Demo derlemesi: sunucu yerine tarayıcı içi demo sunucusu (normal derlemeye girmez)
+    if (import.meta.env.VITE_DEMO === '1') {
+        const { demoIstek } = await import('./demoSunucu');
+        try {
+            return await demoIstek(sorgu, govde);
+        } catch (e) {
+            if (e instanceof ApiHatasi && e.durum === 401 && !sorgu.startsWith('auth=')) oturumDustu();
+            throw e;
+        }
+    }
     const url = `${API_URL}?${sorgu ? sorgu + '&' : ''}t=${Date.now()}`;
     const post = govde !== undefined;
     const yanit = await fetch(url, {

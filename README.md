@@ -25,3 +25,8 @@ pnpm run build              # dist/ klasörüne derler
 Ayrıntılar için `KURULUM.md`. Sunucuda `config.example.php` dosyasını
 `config.php` olarak kopyalayıp doldurun. `config.php`, `database.json`,
 `backups/`, `uploads/` ve `dev/data/` asla depoya gönderilmez.
+
+## Demo
+`pnpm run build:demo` → `dist-demo/`. Bu derleme sunucu gerektirmez: `src/data/demoSunucu.js`
+api.php'yi tarayıcı içinde taklit eder ve kurgusal örnek verilerle (`src/data/demoVeri.js`)
+çalışır. Demo kodu normal derlemeye girmez.

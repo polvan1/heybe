@@ -87,6 +87,23 @@ export default function Ayarlar() {
 
             <div style={{ display: 'grid', gap: '20px', maxWidth: '700px' }}>
 
+                {import.meta.env.VITE_DEMO === '1' && (
+                    <div className="card">
+                        <div className="card-header">
+                            <h3 className="card-title"><Database size={18} /> Demo</h3>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                            Bu bir demodur. Değişiklikleriniz sadece bu tarayıcıda saklanır.
+                            Örnek verilere dönmek için demoyu sıfırlayın.
+                        </p>
+                        <button className="btn btn-ghost" onClick={async () => {
+                            const { demoSifirla } = await import('../data/demoSunucu');
+                            demoSifirla();
+                            window.location.reload();
+                        }}>Demoyu Sıfırla</button>
+                    </div>
+                )}
+
                 {/* Görünüm */}
                 <div className="card">
                     <div className="card-header">

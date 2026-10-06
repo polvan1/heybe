@@ -28,7 +28,7 @@ function dbSurucu($pdo) {
 // Yeni kurulumda tablolar oluşturulur; mevcut kurulumda yalnızca
 // EKSİK kolonlar eklenir (mevcut veriye dokunulmaz).
 // ============================================================
-const SEMA_SURUMU = 3;
+const SEMA_SURUMU = 4;
 
 function semaTanimi() {
     $ts = 'VARCHAR(40) DEFAULT NULL';     // ISO tarih metni
@@ -50,6 +50,7 @@ function semaTanimi() {
         'urunler' => [
             'urunKodu' => 'VARCHAR(80) DEFAULT NULL', 'urunAdi' => 'VARCHAR(255) DEFAULT NULL',
             'aciklama' => $metin, 'bedenler' => 'VARCHAR(255) DEFAULT NULL', 'asorti' => $json,
+            'kesimFiyat' => $sayi, 'dikimFiyat' => $sayi, 'utuFiyat' => $sayi,
             'fiyatlar' => $json, 'firmaFiyatlari' => $json, 'foto' => 'VARCHAR(255) DEFAULT NULL',
             'stokAdet' => $sayi, 'aktif' => 'TINYINT(1) DEFAULT 1', 'createdAt' => $ts, 'updatedAt' => $ts,
         ],
@@ -129,6 +130,11 @@ function semaTanimi() {
     ];
 }
 
+// Veri tablolarına eklenen genel JSON kolonu: uygulamanın gönderdiği ama tabloda
+// karşılığı olmayan alanlar burada saklanır (hiçbir alan sessizce kaybolmasın).
+const EK_KOLON = 'ekAlanlar';
+const EK_KOLONSUZ = ['kullanicilar', 'push_subscriptions', 'giris_denemeleri'];
+
 function tabloKolonlari($pdo, $tablo, $tazele = false) {
     static $onbellek = [];
     if (!$tazele && isset($onbellek[$tablo])) return $onbellek[$tablo];
@@ -154,6 +160,7 @@ function semaGuncelle($pdo) {
 
     foreach (semaTanimi() as $tablo => $kolonlar) {
         $idTip = $tablo === 'push_subscriptions' ? 'VARCHAR(64)' : 'VARCHAR(40)';
+        if (!in_array($tablo, EK_KOLONSUZ, true)) $kolonlar[EK_KOLON] = 'LONGTEXT DEFAULT NULL';
         $parcalar = ["`id` $idTip NOT NULL"];
         foreach ($kolonlar as $k => $tanim) $parcalar[] = "`$k` $tanim";
         $parcalar[] = 'PRIMARY KEY (`id`)';

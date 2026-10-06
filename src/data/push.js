@@ -1,5 +1,5 @@
 // Telefon push bildirimleri: abone olma/çıkma yardımcıları
-import { API_URL, apiIstek } from './api';
+import { apiIstek } from './api';
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -54,13 +54,7 @@ export async function pushAc() {
         });
     }
 
-    const resp = await fetch(`${API_URL}?push=subscribe`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
-        body: JSON.stringify(sub.toJSON()),
-    });
-    if (!resp.ok) throw new Error('Abonelik sunucuya kaydedilemedi.');
+    await apiIstek('push=subscribe', sub.toJSON());
     return true;
 }
 
@@ -70,21 +64,11 @@ export async function pushKapat() {
     const sub = await reg.pushManager.getSubscription();
     if (!sub) return;
     try {
-        await fetch(`${API_URL}?push=unsubscribe`, {
-            method: 'POST',
-            credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
-            body: JSON.stringify({ endpoint: sub.endpoint }),
-        });
+        await apiIstek('push=unsubscribe', { endpoint: sub.endpoint });
     } catch (e) { /* sunucu kaydı silinemese de yerel abonelik iptal edilir */ }
     await sub.unsubscribe();
 }
 
 export async function pushTest() {
-    const resp = await fetch(`${API_URL}?push=test`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-HisERP': '1' },
-    });
-    if (!resp.ok) throw new Error('Test bildirimi gönderilemedi.');
+    await apiIstek('push=test', {});
 }

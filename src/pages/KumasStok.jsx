@@ -5,7 +5,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import { Plus, Trash2, Search, Scissors, Camera, PackagePlus, Settings2, Loader2, Sparkles } from 'lucide-react';
 import { gorselDataUrl } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
-import { API_URL } from '../data/api';
+import { apiIstek } from '../data/api';
 
 const BIRIMLER = ['kg', 'metre', 'top'];
 
@@ -56,13 +56,8 @@ export default function KumasStok() {
         setOkumaBusy(true);
         try {
             const dataUrl = await gorselDataUrl(file, 1600, 0.85);
-            const resp = await fetch(`${API_URL}?irsaliye_oku=1`, {
-                method: 'POST',
-                credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
-                body: JSON.stringify({ data: dataUrl, kumas_turleri: kumasTurleri.map(t => t.ad) }),
-            });
-            const json = await resp.json();
+            const json = await apiIstek('irsaliye_oku=1', { data: dataUrl, kumas_turleri: kumasTurleri.map(t => t.ad) })
+                .catch(err => err.veri || { error: 'baglanti', mesaj: err.message });
             if (json.error === 'anahtar_yok') {
                 alert(json.mesaj || 'Yapay zekâ okuma için sunucuya Anthropic API anahtarı eklenmelidir (config.php).');
                 return;

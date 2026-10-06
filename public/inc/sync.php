@@ -27,6 +27,16 @@ const JSON_KOLONLAR = ['asorti', 'fiyatlar', 'renkler', 'teslimatGecmisi', 'firm
 const BOOL_KOLONLAR = ['aktif', 'okundu', 'hesaplandi', 'tamamlandi', 'arsivde'];
 
 function satirCoz($satir) {
+    // Tabloda kolonu olmayan alanlar ekAlanlar içinde saklanır; geri birleştir
+    if (array_key_exists(EK_KOLON, $satir)) {
+        $ek = $satir[EK_KOLON] !== null ? json_decode($satir[EK_KOLON], true) : null;
+        unset($satir[EK_KOLON]);
+        if (is_array($ek)) {
+            foreach ($ek as $k => $v) {
+                if (!array_key_exists($k, $satir) || $satir[$k] === null) $satir[$k] = $v;
+            }
+        }
+    }
     foreach ($satir as $kolon => $deger) {
         if ($deger !== null && in_array($kolon, JSON_KOLONLAR, true)) {
             $cozulen = json_decode($deger, true);
@@ -117,8 +127,12 @@ function veriYaz($pdo, $ben, $govde) {
             foreach ((isset($d['upsert']) && is_array($d['upsert']) ? $d['upsert'] : []) as $satir) {
                 if (!is_array($satir) || empty($satir['id'])) continue;
                 $filtreli = [];
+                if (in_array(EK_KOLON, $kolonlar, true)) {
+                    $ek = array_diff_key($satir, array_flip($kolonlar));
+                    $filtreli[EK_KOLON] = $ek ? json_encode($ek, JSON_UNESCAPED_UNICODE) : null;
+                }
                 foreach ($kolonlar as $kolon) {
-                    if (!array_key_exists($kolon, $satir)) continue;
+                    if ($kolon === EK_KOLON || !array_key_exists($kolon, $satir)) continue;
                     $deger = $satir[$kolon];
                     if (is_array($deger) || is_object($deger)) $deger = json_encode($deger, JSON_UNESCAPED_UNICODE);
                     if ($deger === true) $deger = 1;

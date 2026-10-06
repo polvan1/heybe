@@ -58,6 +58,17 @@ export default function Login() {
                     </p>
                 </div>
 
+                {import.meta.env.VITE_DEMO === '1' && !ilkKurulumMu && (
+                    <div className="demo-giris">
+                        <strong>Demo hesapları</strong> (şifre: demo123)
+                        <div className="demo-giris-butonlar">
+                            <button type="button" className="btn btn-ghost" onClick={() => { setKimlik('demo@hiserp.app'); setSifre('demo123'); }}>Yönetici</button>
+                            <button type="button" className="btn btn-ghost" onClick={() => { setKimlik('fasoncu@hiserp.app'); setSifre('demo123'); }}>Fasoncu</button>
+                        </div>
+                        <small>Örnek verilerle çalışır; yaptığınız değişiklikler sadece bu tarayıcıda saklanır.</small>
+                    </div>
+                )}
+
                 {ilkKurulumMu ? (
                     /* ---- İLK KURULUM: Yönetici hesabı oluştur ---- */
                     <form onSubmit={handleKurulum}>

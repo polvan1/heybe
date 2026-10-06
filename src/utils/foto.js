@@ -1,7 +1,7 @@
 // Fotoğraf yükleme yardımcıları
 // Seçilen görsel tarayıcıda küçültülür (max 900px, JPEG) ve sunucuya
 // base64 olarak gönderilir; sunucu dosyayı uploads/ klasörüne kaydeder.
-import { API_URL } from '../data/api';
+import { apiIstek } from '../data/api';
 
 const MAX_BOYUT = 900;      // uzun kenar (px)
 const JPEG_KALITE = 0.8;
@@ -58,27 +58,15 @@ export function gorselDataUrl(file, maxBoyut = 1600, kalite = 0.85) {
 export async function fotoYukle(file) {
     if (!file.type.startsWith('image/')) throw new Error('Lütfen bir görsel dosyası seçin.');
     const dataUrl = await dosyayiKucult(file);
-    const resp = await fetch(`${API_URL}?foto=upload`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
-        body: JSON.stringify({ data: dataUrl }),
-    });
-    if (!resp.ok) throw new Error('Fotoğraf sunucuya yüklenemedi.');
-    const json = await resp.json();
-    if (!json.url) throw new Error(json.error || 'Fotoğraf kaydedilemedi.');
+    const json = await apiIstek('foto=upload', { data: dataUrl });
+    if (!json?.url) throw new Error(json?.error || 'Fotoğraf kaydedilemedi.');
     return json.url;
 }
 
 export async function fotoSil(url) {
     if (!url) return;
     try {
-        await fetch(`${API_URL}?foto=sil`, {
-            method: 'POST',
-            credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-HisERP': '1' },
-            body: JSON.stringify({ url }),
-        });
+        await apiIstek('foto=sil', { url });
     } catch (e) { /* sunucudaki dosya silinemese de kayıttan düşer */ }
 }
 
