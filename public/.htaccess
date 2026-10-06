@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # NOT: Uygulamayi sunucuda farkli bir klasore koyarsaniz
+  # asagidaki /dist/ yollarini o klasorun adiyla degistirin.
+  RewriteBase /dist/
+  RewriteRule ^index\.html$ - [L]
+  RewriteRule ^api\.php$ - [L]
+  RewriteRule ^uploads/ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /dist/index.html [L]
+</IfModule>
+
+# config.php dogrudan indirilemesin
+<Files "config.php">
+  Require all denied
+</Files>

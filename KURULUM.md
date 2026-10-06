@@ -1,0 +1,174 @@
+# HİS ERP v2.1 — Sunucu Kurulum Talimatları
+
+Bu paket, uygulamanın derlenen son sürümünü içerir. Mevcut verileriniz **korunur** —
+sadece iki yeni tablo eklenir.
+
+## Paket İçeriği
+
+| Dosya | Açıklama |
+|---|---|
+| `index.html`, `assets/`, `*.svg`, `manifest.json`, `sw.js` | Derlenmiş uygulama |
+| `api.php` | Sunucu API'si (MySQL) — güncellendi |
+| `config.php` | Veritabanı bilgileri + API anahtarı (**şifreyi değiştirin!**) |
+| `.htaccess` | Yönlendirme kuralları (`/dist/` klasörüne göre ayarlı) |
+| `veritabani_guncelleme.sql` | Yeni tablolar (irsaliyeler, kullanicilar, settings) |
+| `KURULUM.md` | Bu dosya |
+
+## Kurulum Adımları (sırayla)
+
+### 1. Veritabanını güncelleyin
+- cPanel → **phpMyAdmin** → `myhiscom_fason_takip` veritabanını seçin
+- **SQL** sekmesine `veritabani_guncelleme.sql` içeriğini yapıştırıp çalıştırın
+- `IF NOT EXISTS` kullanıldığı için mevcut tablolara/verilere dokunmaz
+
+### 2. MySQL şifresini değiştirin (ÖNEMLİ)
+Eski şifre daha önce dist.zip içinde paylaşıldığı için açığa çıktı sayılır.
+- cPanel → **MySQL Databases** → kullanıcı şifresini değiştirin
+- Yeni şifreyi `config.php` içindeki `$DB_PASS` satırına yazın
+
+### Gizli bilgiler (kaynak koddan derleme yapıyorsanız)
+Şifreler ve anahtarlar artık kaynak kodda tutulmaz:
+- `public/config.example.php` → sunucuda `config.php` olarak kopyalayıp doldurun
+- `.env.example` → proje kökünde `.env` olarak kopyalayın; `VITE_API_KEY` ve
+  `VITE_VAPID_PUBLIC_KEY` değerleri `config.php` ile aynı olmalı, sonra `pnpm run build`
+- `config.php` ve `.env` GitHub'a gönderilmez (`.gitignore`)
+
+### 3. Dosyaları yükleyin
+- Sunucudaki `dist/` klasörünün **eski içeriğini silin** (assets, index.html, api.php...)
+  - Varsa `backups/` klasörünü SİLMEYİN
+- Bu paketteki tüm dosyaları `dist/` klasörüne yükleyin
+- `veritabani_guncelleme.sql` ve `KURULUM.md` dosyalarını sunucuya yüklemenize gerek yok
+
+> Farklı bir klasöre kuruyorsanız `.htaccess` içindeki `/dist/` yollarını değiştirin.
+
+### 4. İlk giriş
+- Uygulamayı açın → **"İlk kurulum"** ekranı gelir → yönetici hesabınızı oluşturun
+- Sonraki girişlerde ad/e-posta + şifre istenir
+- Diğer kullanıcıları **Kullanıcılar** sayfasından ekleyin (rol + sayfa yetkileri)
+
+## Bu Sürümdeki Yenilikler
+
+**Düzeltilen kritik hatalar**
+- İrsaliyeler ve kullanıcılar artık MySQL'e kaydediliyor (önceden sayfa yenilenince kayboluyordu)
+- Uygulama artık sadece değişen veri gruplarını gönderiyor — iki cihaz aynı anda
+  açıkken birbirinin farklı verilerini ezme riski büyük ölçüde azaldı
+- Parti ve irsaliye numaraları silme sonrası tekrar etmiyor
+- Ayarlar'daki bozuk "CSV Dışa Aktar" yerine çalışan **JSON Yedek İndir / Geri Yükle** geldi
+- Çift veri yükleme (çift seed) riski giderildi
+
+**Güvenlik**
+- Giriş ekranı + rol bazlı sayfa yetkilendirme (menüler de yetkiye göre gizlenir)
+- Şifreler artık SHA-256 hash ile saklanıyor (eski düz metin şifreler ilk girişte otomatik hash'lenir)
+- api.php artık API anahtarı istiyor — anahtarsız istekler 401 alır
+- config.php'ye doğrudan HTTP erişimi .htaccess ile kapalı
+- Silinen firma/parti bağlı kayıt kontrolü (veri bütünlüğü)
+
+**Yedekleme**
+- Sunucu her günün ilk kaydında otomatik JSON yedek alır → `dist/backups/` (son 14 gün, dışarıdan erişime kapalı)
+- Ayarlar sayfasından manuel tam yedek indirilebilir / geri yüklenebilir
+
+**Performans / PWA**
+- Sayfalar artık parça parça yükleniyor (code splitting) — ilk açılış daha hızlı
+- Service worker eklendi — statik dosyalar önbellekten gelir, tekrar açılışlar hızlanır
+
+## Telefon Bildirimleri (v2.2)
+
+Uygulama artık gerçek push bildirimi gönderir: parti tamamlanma, yüksek fire,
+irsaliye teslimi gibi olaylar **uygulama kapalıyken bile** telefona düşer.
+
+**Etkinleştirme (her cihazda bir kez):**
+1. Siteniz **HTTPS** üzerinden sunulmalı (push bunu zorunlu kılar)
+2. **iPhone:** Safari → Paylaş → **"Ana Ekrana Ekle"** → uygulamayı ana ekrandaki
+   simgeden açın (iOS 16.4+ gerekir). Android/PC'de bu adım gerekmez.
+3. Uygulamada **Ayarlar → Telefon Bildirimleri → "Bu Cihazda Bildirimleri Aç"**
+4. İzin sorusuna "İzin Ver" deyin → **"Test Gönder"** ile deneyin
+
+**Nasıl çalışır:** Herhangi bir cihazda yeni bildirim oluşunca (örn. parti
+tamamlandı) sunucu, kayıtlı tüm cihazlara push sinyali yollar; service worker
+en son bildirimi çekip cihazda gösterir. Abonelikler `push_subscriptions`
+tablosunda tutulur; ölü abonelikler otomatik temizlenir.
+
+## v2.3 Yenilikleri
+
+- **WhatsApp paylaşımı:** İrsaliye detayında "WhatsApp" butonu — irsaliye özeti
+  (parti, adet, renk dökümü) alıcı firmanın telefonuna hazır mesaj olarak açılır.
+- **Fasoncu ekranı (İşlerim):** Kullanıcılar sayfasında fasoncu hesabına firma
+  bağlayın; fasoncu girişte yalnızca kendi işlerini görür, "Teslim Bildir" ile
+  çıkış adedini girer → yöneticiye bildirim + push düşer, yönetici onaylar.
+- **QR kod:** Yazdırılan irsaliyelerde QR — telefonla okutunca uygulamada
+  ilgili parti açılır.
+- **İşlem Günlüğü:** YÖNETİM menüsünde — kim, ne zaman, ne yaptı (parti silme,
+  hesap kapatma, kullanıcı ekleme...). Son 1000 kayıt tutulur.
+- **Fotoğraflar:** Ürüne numune fotoğrafı, partiye çoklu fotoğraf (kalite
+  kontrol, sevkiyat). Fotoğraflar sunucuda `dist/uploads/` klasöründe saklanır —
+  **bu klasörü silmeyin**; yedeklerinize dahil etmek için arada indirin.
+- Veritabanı değişiklikleri (islem_gunlugu tablosu + 3 yeni kolon) **api.php
+  tarafından otomatik yapılır** — SQL çalıştırmanız gerekmez.
+
+## v2.4 Yenilikleri
+
+- **Firma bazlı fiyat anlaşmaları:** Ürün kartında "Firma Bazlı Fiyat Anlaşmaları"
+  bölümü — aynı ürün için firmaya özel kesim/dikim/ütü fiyatı girin. Parti
+  açarken o firma seçilince anlaşma fiyatı otomatik kullanılır (formda
+  "— firma anlaşması" ibaresiyle görünür); anlaşması olmayanlar varsayılanı alır.
+- **Parti Arşivi:** Partiler sayfasına "Arşiv" sekmesi. Cari Detay'da
+  **"Hesabı Kapat"** yapıldığında, borçları hesaplanan tamamlanmış partiler
+  OTOMATİK arşive düşer ve diğer sekmelerden kalkar. Tamamlanmış partileri
+  elle de arşivleyebilirsiniz (arşiv ikonlu buton); elle arşivlenenler geri
+  çıkarılabilir. Raporlar/istatistikler arşivdekileri saymaya devam eder.
+- Veritabanı değişiklikleri (2 yeni kolon) yine api.php tarafından otomatik yapılır.
+
+## v2.5 Yenilikleri
+
+- **iPhone üst kısım düzeltmesi:** Header artık çentik/Dynamic Island'ın altından
+  başlıyor — üstteki menü/zil/çıkış ikonlarına dokunulabiliyor.
+- **Dikim → Ütü otomatik irsaliyesi:** Parti dikimden ütü/pakete ilerletildiğinde
+  (ütü/paketçi atanmışsa) dikimhane → ütücü irsaliyesi otomatik oluşur; dikimden
+  çıkan adetle düzenlenir ve WhatsApp ile ütücüye iletilebilir.
+- **WhatsApp'a PDF gönderme:** İrsaliye detayında **"PDF Gönder"** — irsaliyenin
+  PDF'i oluşturulur ve telefonun paylaşım sayfası açılır; WhatsApp'ı seçince PDF
+  dosya olarak ekli gider. (Metin olarak gönderme "Metin" butonunda duruyor.)
+  Paylaşım desteklemeyen cihazlarda PDF indirilir.
+- **Otomatik veri tazeleme:** Uygulama öne gelince ve açıkken her 60 saniyede bir
+  sunucudan güncel veri çekilir — başka cihazda yapılan değişiklikler sayfa
+  yenilemeden görünür. Henüz kaydedilmemiş yerel değişiklikler ezilmez.
+
+## v2.6 Yenilikleri
+
+- **Kumaş Stok sayfası** (STOK menüsünün altında): gelen kumaşları elle veya
+  **kamera ile irsaliye QR'ı okutarak** kaydedin. Yazdırdığımız irsaliyelerdeki
+  QR okutulunca ilgili parti bulunur ve form önden dolu açılır. Kamera için
+  HTTPS ve ilk kullanımda kamera izni gerekir. Yeni `kumas_stok` tablosu
+  api.php tarafından otomatik oluşturulur.
+- **Alt menü:** "Firmalar" yerine "İş Akışı" geldi (Firmalar yan menüde duruyor).
+- **iPhone üst boşluk:** üstteki butonlar durum çubuğunun altına ek payla indi —
+  artık rahatça dokunulabiliyor.
+- **Alt menü kayma düzeltmesi:** kaydırma artık gövde yerine içerik alanında —
+  alt butonlar hiçbir sayfada sayfayla birlikte sürüklenmiyor.
+- **İşlem Günlüğü:** en yeni işlem her zaman en üstte; "daha fazla göster"
+  yerine sayfa mantığı (50 kayıt/sayfa, Önceki/Sonraki).
+- **Han blue zemin** artık tüm uygulamada (kenarlık/açık tonlar da uyumlu).
+
+## v2.7 Yenilikleri
+
+- **Yapay zekâ ile irsaliye okuma (Kumaş Stok):** QR sistemi kaldırıldı. Artık
+  "İrsaliye Okut" telefonun kamerasını açar, çekilen fotoğraf sunucu üzerinden
+  Claude yapay zekâsına gönderilir; irsaliyedeki kumaş türü, renk, top adedi ve
+  kilogram satır satır okunur, düzenlenebilir önizlemeden tek dokunuşla stoklara
+  kaydedilir. **Gereksinim:** console.anthropic.com'dan alınan bir Anthropic API
+  anahtarını `config.php` içindeki `$ANTHROPIC_API_KEY` alanına yazın (boşsa
+  özellik kapalı kalır ve uygulama yönlendirme mesajı gösterir). "Türler"
+  düğmesinden kumaş türlerinizi tanımlayın — okuma bu türlerle eşleştirilir.
+- **Silme güvenliği:** Parti/ürün/firma/irsaliye silme butonları listelerden
+  kaldırıldı (parti → detay sayfası, ürün/firma → düzenleme penceresi,
+  irsaliye → detay penceresi). TÜM silme işlemleri artık güvenlik şifresi
+  ister: **his38**
+- **Klavye düzeltmesi (iPhone):** klavye kapandıktan sonra alt menünün yukarıda
+  asılı kalması giderildi.
+
+## Bilinen Sınırlamalar (bilgi amaçlı)
+- Kimlik doğrulama istemci taraflıdır; API anahtarı derlenmiş JS içinde yer alır.
+  Botlara/rastgele erişime karşı korur, ancak hedefli bir saldırgana karşı tam koruma
+  için sunucu taraflı oturum (PHP session) gerekir — sonraki sürüm adayı.
+- Aynı koleksiyonu (örn. iki kişi aynı anda parti listesini) düzenlerken hâlâ
+  "son kaydeden kazanır" davranışı geçerlidir.
