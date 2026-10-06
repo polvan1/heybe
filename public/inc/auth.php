@@ -10,7 +10,7 @@ const KILIT_SURESI = 15 * 60;           // ...15 dakika bekletilir
 const ROLLER = ['admin', 'uretim', 'muhasebe', 'fasoncu', 'izleyici'];
 
 const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi',
-    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'raporlar', 'kullanicilar', 'ayarlar'];
+    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'raporlar', 'kullanicilar', 'ayarlar'];
 
 // Hangi sayfa yetkisi hangi veri gruplarına YAZMA izni verir.
 // (src/data/db.js içindeki işlemlerin dokunduğu koleksiyonlara göre)

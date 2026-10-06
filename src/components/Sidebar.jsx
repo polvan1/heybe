@@ -3,7 +3,7 @@ import {
     LayoutDashboard, Layers, GitBranch, CalendarClock,
     Package, Scissors, Factory, Wallet, BarChart3,
     Users, Settings, ChevronLeft, ChevronRight,
-    FileText, ClipboardList, ScrollText, PackagePlus,
+    FileText, ClipboardList, ScrollText, PackagePlus, MapPinned,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { hasYetki } from '../data/yetki';
@@ -37,6 +37,7 @@ const NAV_SECTIONS = [
             { to: '/firmalar', icon: Factory, label: 'Firmalar', yetki: 'firmalar' },
             { to: '/cari-hesaplar', icon: Wallet, label: 'Cari Hesaplar', yetki: 'cari_hesaplar' },
             { to: '/irsaliyeler', icon: FileText, label: 'İrsaliyeler', yetki: 'irsaliyeler' },
+            { to: '/harita', icon: MapPinned, label: 'Harita ve Rota', yetki: 'harita' },
         ]
     },
     {

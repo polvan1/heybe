@@ -26,6 +26,7 @@ const Ayarlar = lazy(() => import('./pages/Ayarlar'));
 const Islerim = lazy(() => import('./pages/Islerim'));
 const IslemGunlugu = lazy(() => import('./pages/IslemGunlugu'));
 const KumasStok = lazy(() => import('./pages/KumasStok'));
+const Harita = lazy(() => import('./pages/Harita'));
 
 const PAGE_TITLES = {
     '/': 'Anasayfa',
@@ -38,6 +39,7 @@ const PAGE_TITLES = {
     '/stok-takibi': 'Stok Takibi',
     '/kumas-stok': 'Kumaş Stok',
     '/irsaliyeler': 'İrsaliyeler',
+    '/harita': 'Harita ve Rota',
     '/is-talep-takvimi': 'Takvim',
     '/cari-hesaplar': 'Cari Hesaplar',
     '/raporlar': 'Raporlar',
@@ -168,6 +170,7 @@ export default function App() {
                             <Route path="/stok-takibi" element={<Korumali yetki="stok_takibi"><StokTakibi /></Korumali>} />
                             <Route path="/kumas-stok" element={<Korumali yetki="stok_takibi"><KumasStok /></Korumali>} />
                             <Route path="/irsaliyeler" element={<Korumali yetki="irsaliyeler"><Irsaliyeler /></Korumali>} />
+                            <Route path="/harita" element={<Korumali yetki="harita"><Harita /></Korumali>} />
                             <Route path="/is-talep-takvimi" element={<Korumali yetki="takvim"><IsTalepTakvimi /></Korumali>} />
                             <Route path="/cari-hesaplar" element={<Korumali yetki="cari_hesaplar"><CariHesaplar /></Korumali>} />
                             <Route path="/cari/:id" element={<Korumali yetki="cari_hesaplar"><CariDetay /></Korumali>} />

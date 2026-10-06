@@ -12,15 +12,15 @@ let sayac = 0;
 const id = (onEk) => `${onEk}${(++sayac).toString(36).padStart(3, '0')}demo`;
 
 const FIRMALAR = [
-    { ad: 'Yıldız Kesim', tip: 'kesimhane', yetkiliKisi: 'Murat Yıldız', adres: 'Merter, İstanbul', gunlukKapasite: 3000, odemeVadesi: 10 },
-    { ad: 'Doğan Kesimhane', tip: 'kesimhane', yetkiliKisi: 'Selim Doğan', adres: 'Güngören, İstanbul', gunlukKapasite: 2500, odemeVadesi: 15 },
-    { ad: 'Akın Konfeksiyon', tip: 'atolye', yetkiliKisi: 'Hasan Akın', adres: 'Bağcılar, İstanbul', gunlukKapasite: 600, odemeVadesi: 20 },
-    { ad: 'Güneş Tekstil Atölyesi', tip: 'atolye', yetkiliKisi: 'Ayşe Güneş', adres: 'Esenler, İstanbul', gunlukKapasite: 450, odemeVadesi: 25 },
-    { ad: 'Ece Dikim Evi', tip: 'atolye', yetkiliKisi: 'Ece Kara', adres: 'Zeytinburnu, İstanbul', gunlukKapasite: 350, odemeVadesi: 5 },
+    { ad: 'Yıldız Kesim', lat: 41.0089, lng: 28.8917, tip: 'kesimhane', yetkiliKisi: 'Murat Yıldız', adres: 'Merter, İstanbul', gunlukKapasite: 3000, odemeVadesi: 10 },
+    { ad: 'Doğan Kesimhane', lat: 41.0225, lng: 28.8722, tip: 'kesimhane', yetkiliKisi: 'Selim Doğan', adres: 'Güngören, İstanbul', gunlukKapasite: 2500, odemeVadesi: 15 },
+    { ad: 'Akın Konfeksiyon', lat: 41.0386, lng: 28.8564, tip: 'atolye', yetkiliKisi: 'Hasan Akın', adres: 'Bağcılar, İstanbul', gunlukKapasite: 600, odemeVadesi: 20 },
+    { ad: 'Güneş Tekstil Atölyesi', lat: 41.0433, lng: 28.8761, tip: 'atolye', yetkiliKisi: 'Ayşe Güneş', adres: 'Esenler, İstanbul', gunlukKapasite: 450, odemeVadesi: 25 },
+    { ad: 'Ece Dikim Evi', lat: 40.9947, lng: 28.9044, tip: 'atolye', yetkiliKisi: 'Ece Kara', adres: 'Zeytinburnu, İstanbul', gunlukKapasite: 350, odemeVadesi: 5 },
     { ad: 'Kaya Atölye', tip: 'atolye', yetkiliKisi: 'Emre Kaya', adres: 'Sultangazi, İstanbul', gunlukKapasite: 500, odemeVadesi: 30 },
-    { ad: 'Bulut Ütü-Paket', tip: 'utupaketci', yetkiliKisi: 'Kemal Bulut', adres: 'Bayrampaşa, İstanbul', gunlukKapasite: 1500, odemeVadesi: 10 },
-    { ad: 'Nur Paketleme', tip: 'utupaketci', yetkiliKisi: 'Nurten Şahin', adres: 'Güngören, İstanbul', gunlukKapasite: 1200, odemeVadesi: 20 },
-    { ad: 'Renk Baskı', tip: 'baskici', yetkiliKisi: 'Okan Renk', adres: 'Merter, İstanbul', gunlukKapasite: 2000, odemeVadesi: 15 },
+    { ad: 'Bulut Ütü-Paket', lat: 41.0461, lng: 28.9006, tip: 'utupaketci', yetkiliKisi: 'Kemal Bulut', adres: 'Bayrampaşa, İstanbul', gunlukKapasite: 1500, odemeVadesi: 10 },
+    { ad: 'Nur Paketleme', lat: 41.0181, lng: 28.88, tip: 'utupaketci', yetkiliKisi: 'Nurten Şahin', adres: 'Güngören, İstanbul', gunlukKapasite: 1200, odemeVadesi: 20 },
+    { ad: 'Renk Baskı', lat: 41.012, lng: 28.887, tip: 'baskici', yetkiliKisi: 'Okan Renk', adres: 'Merter, İstanbul', gunlukKapasite: 2000, odemeVadesi: 15 },
 ];
 
 const URUNLER = [
@@ -174,6 +174,8 @@ export function demoVerisiOlustur() {
     ];
 
     return {
+        // Sevkiyat aracının çıkış noktası (demo)
+        merkez: { ad: 'HİS Merkez (Merter)', lat: 41.0105, lng: 28.895 },
         myhis_firmalar: firmalar,
         myhis_urunler: urunler,
         myhis_partiler: partiler,
@@ -187,7 +189,7 @@ export function demoVerisiOlustur() {
         myhis_kumasStok: kumasStok,
         myhis_kumasTurleri: kumasTurleri,
         kullanicilar: [
-            { id: 'usr_demo_admin', ad: 'Demo Yönetici', email: 'demo@hiserp.app', telefon: '', rol: 'admin', yetkiler: ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'firmalar', 'cari_hesaplar', 'irsaliyeler', 'raporlar', 'kullanicilar', 'ayarlar'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(60) },
+            { id: 'usr_demo_admin', ad: 'Demo Yönetici', email: 'demo@hiserp.app', telefon: '', rol: 'admin', yetkiler: ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'raporlar', 'kullanicilar', 'ayarlar'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(60) },
             { id: 'usr_demo_fason', ad: 'Akın Konfeksiyon', email: 'fasoncu@hiserp.app', telefon: '', rol: 'fasoncu', yetkiler: ['islerim'], aktif: true, firmaId: firmalar[2].id, sifre: 'demo123', createdAt: tarih(40) },
         ],
     };

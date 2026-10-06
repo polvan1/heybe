@@ -151,6 +151,17 @@ function veriYaz($pdo, $ben, $govde) {
         if (isset($govde['myhis_tema']) && in_array($govde['myhis_tema'], ['light', 'dark'], true)) {
             $pdo->prepare("REPLACE INTO settings (s_key, s_value) VALUES ('myhis_tema', ?)")->execute([$govde['myhis_tema']]);
         }
+        // Sevkiyat aracının çıkış noktası (merkez): { ad, lat, lng }
+        if (isset($govde['myhis_merkez']) && is_array($govde['myhis_merkez'])
+            && (yetkiVar($ben, 'ayarlar') || yetkiVar($ben, 'harita'))) {
+            $m = $govde['myhis_merkez'];
+            $lat = isset($m['lat']) ? (float)$m['lat'] : null;
+            $lng = isset($m['lng']) ? (float)$m['lng'] : null;
+            if ($lat !== null && $lng !== null && abs($lat) <= 90 && abs($lng) <= 180) {
+                $deger = json_encode(['ad' => mb_substr(trim((string)($m['ad'] ?? 'Merkez')), 0, 120), 'lat' => $lat, 'lng' => $lng], JSON_UNESCAPED_UNICODE);
+                $pdo->prepare("REPLACE INTO settings (s_key, s_value) VALUES ('myhis_merkez', ?)")->execute([$deger]);
+            }
+        }
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();

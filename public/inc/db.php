@@ -28,7 +28,7 @@ function dbSurucu($pdo) {
 // Yeni kurulumda tablolar oluşturulur; mevcut kurulumda yalnızca
 // EKSİK kolonlar eklenir (mevcut veriye dokunulmaz).
 // ============================================================
-const SEMA_SURUMU = 4;
+const SEMA_SURUMU = 5;
 
 function semaTanimi() {
     $ts = 'VARCHAR(40) DEFAULT NULL';     // ISO tarih metni
@@ -45,6 +45,7 @@ function semaTanimi() {
             'telefon' => 'VARCHAR(40) DEFAULT NULL', 'email' => 'VARCHAR(160) DEFAULT NULL',
             'adres' => $metin, 'yetkiliKisi' => 'VARCHAR(160) DEFAULT NULL',
             'odemeVadesi' => $tam, 'gunlukKapasite' => $tam, 'notlar' => $metin,
+            'lat' => $sayi, 'lng' => $sayi, 'konumAdres' => 'VARCHAR(255) DEFAULT NULL',
             'aktif' => 'TINYINT(1) DEFAULT 1', 'createdAt' => $ts, 'updatedAt' => $ts,
         ],
         'urunler' => [

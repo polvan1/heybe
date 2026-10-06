@@ -30,3 +30,11 @@ Ayrıntılar için `KURULUM.md`. Sunucuda `config.example.php` dosyasını
 `pnpm run build:demo` → `dist-demo/`. Bu derleme sunucu gerektirmez: `src/data/demoSunucu.js`
 api.php'yi tarayıcı içinde taklit eder ve kurgusal örnek verilerle (`src/data/demoVeri.js`)
 çalışır. Demo kodu normal derlemeye girmez.
+
+## Üçüncü taraf veri ve servisler
+- Harita: [Leaflet](https://leafletjs.com) (BSD-2).
+- `src/data/istanbulIlceler.json`: İstanbul ilçe sınırları, [geoBoundaries](https://www.geoboundaries.org)
+  (TUR ADM2) verisinden `scripts/ilce-haritasi-uret.py` ile sadeleştirildi.
+  © OpenStreetMap katkıcıları, [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/).
+- Sokak haritası ve adres arama: OpenStreetMap karoları ve Nominatim (kullanım koşulları:
+  https://operations.osmfoundation.org/policies/).

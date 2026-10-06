@@ -4,7 +4,7 @@
 import { ApiHatasi } from './api';
 import { demoVerisiOlustur } from './demoVeri';
 
-const DEPO_ANAHTARI = 'hiserp_demo_v1';
+const DEPO_ANAHTARI = 'hiserp_demo_v2'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
 
 // public/inc/auth.php ile aynı kurallar
 const YETKI_YAZMA = {
@@ -18,7 +18,7 @@ const YETKI_YAZMA = {
 };
 const HERKES_YAZAR = ['myhis_bildirimler', 'myhis_islemGunlugu'];
 const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi',
-    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'raporlar', 'kullanicilar', 'ayarlar'];
+    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'raporlar', 'kullanicilar', 'ayarlar'];
 
 let durum = null;
 
@@ -28,7 +28,11 @@ function yukle() {
         const kayit = localStorage.getItem(DEPO_ANAHTARI);
         if (kayit) durum = JSON.parse(kayit);
     } catch (e) { /* depolama kapalı: bellekte çalış */ }
-    if (!durum || !durum.veri) durum = { veri: demoVerisiOlustur(), oturum: null, tema: 'light' };
+    if (!durum || !durum.veri) {
+        const veri = demoVerisiOlustur();
+        durum = { veri, oturum: null, tema: 'light', merkez: veri.merkez };
+        delete veri.merkez;
+    }
     return durum;
 }
 
@@ -163,6 +167,7 @@ export async function demoIstek(sorgu, govde) {
             return tam ? s : { id: s.id, ad: s.ad, rol: s.rol, firmaId: s.firmaId, aktif: s.aktif };
         });
         sonuc.myhis_tema = d.tema;
+        if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
         return sonuc;
     }
 
@@ -182,6 +187,10 @@ export async function demoIstek(sorgu, govde) {
         d.veri[k] = liste;
     });
     if (g.myhis_tema === 'light' || g.myhis_tema === 'dark') d.tema = g.myhis_tema;
+    if (g.myhis_merkez && Number.isFinite(+g.myhis_merkez.lat) && Number.isFinite(+g.myhis_merkez.lng)
+        && (yetkiVar(ben, 'ayarlar') || yetkiVar(ben, 'harita'))) {
+        d.merkez = { ad: String(g.myhis_merkez.ad || 'Merkez').slice(0, 120), lat: +g.myhis_merkez.lat, lng: +g.myhis_merkez.lng };
+    }
     kaydet();
     return { success: true };
 }

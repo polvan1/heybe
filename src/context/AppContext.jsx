@@ -18,6 +18,7 @@ export function AppProvider({ children }) {
     const [kumasStoklar, setKumasStoklar] = useState([]);
     const [kumasTurleri, setKumasTurleri] = useState([]);
     const [tema, setTemaState] = useState('light');
+    const [merkez, setMerkezState] = useState(null);
     const [currentUser, setCurrentUserState] = useState(null);
     const [kurulumGerekli, setKurulumGerekli] = useState(false);
 
@@ -27,20 +28,24 @@ export function AppProvider({ children }) {
         setCurrentUserState(user);
     }, []);
 
+    // db katmanı listeleri yerinde değiştirir; React'in değişikliği görmesi (ve useMemo'ların
+    // tazelenmesi) için her yenilemede yeni bir dizi referansı verilir.
     const refresh = useCallback(() => {
-        setFirmalar(db.getFirmalar());
-        setUrunler(db.getUrunler());
-        setPartiler(db.getPartiler());
-        setCariHareketler(db.getCariHareketler());
-        setIsAkisi(db.getIsAkisi());
-        setBildirimler(db.getBildirimler());
-        setStoklar(db.getStoklar());
-        setIrsaliyeler(db.getIrsaliyeler());
-        setKullanicilar(db.getKullanicilar());
-        setIslemGunlugu(db.getIslemGunlugu());
-        setKumasStoklar(db.getKumasStoklar());
-        setKumasTurleri(db.getKumasTurleri());
+        const yeni = (x) => (Array.isArray(x) ? [...x] : x);
+        setFirmalar(yeni(db.getFirmalar()));
+        setUrunler(yeni(db.getUrunler()));
+        setPartiler(yeni(db.getPartiler()));
+        setCariHareketler(yeni(db.getCariHareketler()));
+        setIsAkisi(yeni(db.getIsAkisi()));
+        setBildirimler(yeni(db.getBildirimler()));
+        setStoklar(yeni(db.getStoklar()));
+        setIrsaliyeler(yeni(db.getIrsaliyeler()));
+        setKullanicilar(yeni(db.getKullanicilar()));
+        setIslemGunlugu(yeni(db.getIslemGunlugu()));
+        setKumasStoklar(yeni(db.getKumasStoklar()));
+        setKumasTurleri(yeni(db.getKumasTurleri()));
         setTemaState(db.getTema());
+        setMerkezState(db.getMerkez());
     }, []);
 
     // Giriş yapılınca (veya kayıtlı oturum varsa) verileri sunucudan yükle
@@ -225,6 +230,8 @@ export function AppProvider({ children }) {
         getIrsaliyelerByFirma: db.getIrsaliyelerByFirma,
         kullaniciEkle, kullaniciGuncelle, kullaniciSil,
         toggleTema,
+        merkez,
+        merkezKaydet: (m) => { db.setMerkez(m); refresh(); },
         exportToCSV: db.exportToCSV,
     };
     if (loading) {

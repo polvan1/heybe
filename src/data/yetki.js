@@ -15,6 +15,7 @@ export const ROUTE_YETKI = {
     '/cari-hesaplar': 'cari_hesaplar',
     '/cari': 'cari_hesaplar',        // /cari/:id
     '/irsaliyeler': 'irsaliyeler',
+    '/harita': 'harita',
     '/raporlar': 'raporlar',
     '/kullanicilar': 'kullanicilar',
     '/ayarlar': 'ayarlar',
@@ -32,6 +33,7 @@ const YETKI_ROTA_SIRASI = [
     ['firmalar', '/firmalar'],
     ['cari_hesaplar', '/cari-hesaplar'],
     ['irsaliyeler', '/irsaliyeler'],
+    ['harita', '/harita'],
     ['raporlar', '/raporlar'],
     ['kullanicilar', '/kullanicilar'],
     ['ayarlar', '/ayarlar'],

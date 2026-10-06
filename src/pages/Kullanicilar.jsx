@@ -23,6 +23,7 @@ const TUM_YETKILER = [
     { key: 'firmalar', label: 'Firmalar' },
     { key: 'cari_hesaplar', label: 'Cari Hesaplar' },
     { key: 'irsaliyeler', label: 'İrsaliyeler' },
+    { key: 'harita', label: 'Harita ve Rota' },
     { key: 'raporlar', label: 'Raporlar' },
     { key: 'kullanicilar', label: 'Kullanıcılar' },
     { key: 'ayarlar', label: 'Ayarlar' },
@@ -30,7 +31,7 @@ const TUM_YETKILER = [
 
 const DEFAULT_YETKILER = {
     admin: TUM_YETKILER.map(y => y.key),
-    uretim: ['anasayfa', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'irsaliyeler'],
+    uretim: ['anasayfa', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'irsaliyeler', 'harita'],
     muhasebe: ['anasayfa', 'cari_hesaplar', 'raporlar', 'firmalar'],
     fasoncu: ['islerim'],
     izleyici: ['anasayfa', 'partiler', 'raporlar'],

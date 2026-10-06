@@ -14,6 +14,23 @@ sadece iki yeni tablo eklenir.
 | `veritabani_guncelleme.sql` | Yeni tablolar (irsaliyeler, kullanicilar, settings) |
 | `KURULUM.md` | Bu dosya |
 
+## v3.1 — Harita ve Sevkiyat Rota Planı
+
+- Yeni menü: **İLİŞKİLER → Harita ve Rota**. Yönetici otomatik görür; diğer kullanıcılara
+  **Kullanıcılar** sayfasından **"Harita ve Rota"** yetkisini verin.
+- **Üretim Yerleri:** firmaların konumunu haritaya dokunarak ya da adres yazarak girin.
+  Konumu değiştirmek için ayrıca **Firmalar** yetkisi gerekir. Önce **Araç çıkış noktası**nı seçin.
+- **Rota Planı:** teslim edilmemiş (taslak/onaylı) irsaliyeler listelenir; seçtikleriniz için
+  araç her alımı teslimattan önce yapacak şekilde en kısa sırayla planlanır. Rota Google
+  Haritalar'da açılabilir veya WhatsApp ile şoföre gönderilebilir.
+- Mesafeler kuş uçuşu × 1,3 ile tahmindir (yol ağı servisi kullanılmaz, ücret yok).
+- Sokak haritası ve adres arama OpenStreetMap servislerini kullanır (internet gerekir, ücretsiz,
+  düşük kullanım içindir). Sade harita ve ilçe adıyla arama internetsiz çalışır.
+- Veritabanına `firmalar.lat`, `firmalar.lng`, `firmalar.konumAdres` kolonları otomatik eklenir.
+- Ayrıca düzeltildi: Ürün kartındaki kesim/dikim/ütü fiyatları artık kaydediliyor (önceden
+  veritabanında kolonu olmadığı için sessizce kayboluyordu); koyu temada açılır listelerde
+  tekrarlanan ok görüntüsü.
+
 ## v3.0 — Güvenlik Güncellemesi (ÖNEMLİ: kurulumdan önce okuyun)
 
 Bu sürümle giriş ve yetki kontrolü **sunucuya** taşındı.

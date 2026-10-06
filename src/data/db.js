@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   stokHareketleri: 'myhis_stokHareketleri',
   irsaliyeler: 'myhis_irsaliyeler',
   tema: 'myhis_tema',
+  merkez: 'myhis_merkez',
   kullanicilar: 'myhis_kullanicilar',
   islemGunlugu: 'myhis_islemGunlugu',
   kumasStok: 'myhis_kumasStok',
@@ -57,6 +58,9 @@ function farkHesapla(key) {
   return { upsert, delete: silinen };
 }
 
+// Koleksiyon değil, tek değer olarak gönderilen ayarlar
+const AYAR_ANAHTARLARI = [STORAGE_KEYS.tema, STORAGE_KEYS.merkez];
+
 function schedulePersist(key) {
   pendingKeys.add(key);
   if (persistTimer) clearTimeout(persistTimer);
@@ -71,11 +75,11 @@ export async function flushPersist() {
 
   const payload = { degisiklikler: {} };
   keys.forEach(k => {
-    if (k === STORAGE_KEYS.tema) { payload[k] = inMemoryDb[k]; return; }
+    if (AYAR_ANAHTARLARI.includes(k)) { payload[k] = inMemoryDb[k]; return; }
     const fark = farkHesapla(k);
     if (fark.upsert.length || fark.delete.length) payload.degisiklikler[k] = fark;
   });
-  if (Object.keys(payload.degisiklikler).length === 0 && payload[STORAGE_KEYS.tema] === undefined) {
+  if (Object.keys(payload.degisiklikler).length === 0 && !AYAR_ANAHTARLARI.some(k => payload[k] !== undefined)) {
     return true;
   }
 
@@ -955,6 +959,20 @@ export function iptalIrsaliye(id) {
 // --- TEMA ---
 export function getTema() {
   return inMemoryDb[STORAGE_KEYS.tema] || 'light';
+}
+
+// Sevkiyat aracının çıkış noktası: { ad, lat, lng } ya da null
+export function getMerkez() {
+  const m = inMemoryDb[STORAGE_KEYS.merkez];
+  if (!m) return null;
+  if (typeof m === 'object') return m;
+  try { return JSON.parse(m); } catch (e) { return null; }
+}
+
+export function setMerkez(merkez) {
+  inMemoryDb[STORAGE_KEYS.merkez] = merkez;
+  schedulePersist(STORAGE_KEYS.merkez);
+  logIslem('Merkez Konumu Güncellendi', merkez?.ad || '');
 }
 
 export function setTema(tema) {
