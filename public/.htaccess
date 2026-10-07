@@ -1,17 +1,15 @@
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  # NOT: Uygulamayi sunucuda farkli bir klasore koyarsaniz
-  # asagidaki /dist/ yollarini o klasorun adiyla degistirin.
-  RewriteBase /dist/
-  RewriteRule ^index\.html$ - [L]
-  RewriteRule ^api\.php$ - [L]
-  RewriteRule ^uploads/ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /dist/index.html [L]
-</IfModule>
+# HİS ERP
+# Uygulama adresleri "#/" ile çalıştığı için (ör. /dist/#/partiler) sunucu tarafında
+# yönlendirme kuralına gerek yoktur; bu dosya hangi klasöre kurulursa kurulsun çalışır.
 
-# config.php dogrudan indirilemesin
-<Files "config.php">
+# Gizli/iç dosyalar web'den indirilemesin
+<FilesMatch "^(config\.php|config\.example\.php|\.ftp-deploy-sync-state\.json)$">
   Require all denied
-</Files>
+</FilesMatch>
+
+# index.html, service worker ve manifest her zaman taze gelsin (yeni sürüm hemen görünsün)
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|sw\.js|manifest\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

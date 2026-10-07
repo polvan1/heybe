@@ -1,0 +1,107 @@
+# HİS ERP — Sunucuya otomatik yükleme (FTP)
+#
+# - claude/** dallarına her gönderimde  → TEST klasörüne yüklenir
+# - main dalına her gönderimde (birleştirme) → CANLI klasöre yüklenir
+# - Actions sekmesinden "Run workflow" ile istenen hedefe elle de yüklenebilir
+#
+# Gerekli GitHub "Secrets" (Settings → Secrets and variables → Actions):
+#   FTP_SUNUCU        ör. ftp.myhis.com.tr  (ya da sunucu IP adresi)
+#   FTP_KULLANICI     cPanel FTP kullanıcı adı
+#   FTP_SIFRE         FTP şifresi
+#   FTP_CANLI_DIZIN   ör. /public_html/dist/   (sonunda / olmalı)
+#   FTP_TEST_DIZIN    ör. /public_html/test/   (sonunda / olmalı; boşsa test yüklemesi atlanır)
+# İsteğe bağlı "Variables": FTP_PROTOKOL = ftps (varsayılan) | ftp
+#
+# Sunucudaki config.php, backups/ ve uploads/ ASLA silinmez veya üzerine yazılmaz.
+
+name: Sunucuya yükle
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+    inputs:
+      hedef:
+        description: Nereye yüklensin?
+        type: choice
+        options: [test, canli]
+        default: test
+
+concurrency:
+  group: sunucuya-yukle-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  yukle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: pnpm kur
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Bağımlılıkları yükle
+        run: pnpm install --frozen-lockfile
+
+      - name: PHP sözdizimi kontrolü
+        run: |
+          for f in public/api.php public/inc/*.php; do php -l "$f"; done
+
+      - name: Derle
+        run: pnpm run build
+
+      - name: Hedefi belirle
+        id: hedef
+        env:
+          CANLI: ${{ secrets.FTP_CANLI_DIZIN }}
+          TEST: ${{ secrets.FTP_TEST_DIZIN }}
+          SUNUCU: ${{ secrets.FTP_SUNUCU }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then HEDEF="${{ inputs.hedef }}";
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then HEDEF=canli;
+          else HEDEF=test; fi
+          if [ "$HEDEF" = "canli" ]; then DIZIN="$CANLI"; else DIZIN="$TEST"; fi
+          echo "hedef=$HEDEF" >> "$GITHUB_OUTPUT"
+          if [ -z "$SUNUCU" ] || [ -z "$DIZIN" ]; then
+            echo "::warning::$HEDEF için FTP bilgileri (FTP_SUNUCU / FTP_${HEDEF^^}_DIZIN) tanımlı değil; yükleme atlandı."
+            echo "atla=1" >> "$GITHUB_OUTPUT"
+          else
+            case "$DIZIN" in */) ;; *) DIZIN="$DIZIN/";; esac
+            echo "dizin=$DIZIN" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: FTP ile yükle (${{ steps.hedef.outputs.hedef }})
+        if: steps.hedef.outputs.atla != '1'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SUNUCU }}
+          username: ${{ secrets.FTP_KULLANICI }}
+          password: ${{ secrets.FTP_SIFRE }}
+          protocol: ${{ vars.FTP_PROTOKOL || 'ftps' }}
+          local-dir: ./dist/
+          server-dir: ${{ steps.hedef.outputs.dizin }}
+          # Sadece değişen dosyalar gönderilir. Daha önce bu işlemle yüklenmemiş sunucu
+          # dosyalarına (config.php, backups/, uploads/) hiç dokunulmaz.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            config.php
+            backups/**
+            uploads/**
+
+      - name: Özet
+        if: steps.hedef.outputs.atla != '1'
+        run: echo "### ${{ steps.hedef.outputs.hedef }} ortamına yüklendi → ${{ steps.hedef.outputs.dizin }}" >> "$GITHUB_STEP_SUMMARY"

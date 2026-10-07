@@ -14,6 +14,39 @@ sadece iki yeni tablo eklenir.
 | `veritabani_guncelleme.sql` | Yeni tablolar (irsaliyeler, kullanicilar, settings) |
 | `KURULUM.md` | Bu dosya |
 
+## Otomatik Yükleme (GitHub → panel.myhis.com.tr)
+
+Kodda yapılan her değişiklik GitHub üzerinden sunucuya otomatik yüklenir
+(`.github/workflows/deploy.yml`). İki ortam vardır:
+
+| Ne zaman | Nereye |
+|---|---|
+| `claude/...` dalına her gönderim | **Test** klasörü (ör. `panel.myhis.com.tr/test/`) |
+| `main` dalına birleştirme | **Canlı** klasör (ör. `panel.myhis.com.tr/dist/`) |
+| Actions → "Sunucuya yükle" → **Run workflow** | Seçtiğiniz hedef |
+
+### Bir kerelik kurulum
+1. **cPanel → FTP Accounts**: Kullanıcı oluşturun (ör. `deploy@myhis.com.tr`), dizini
+   `public_html` olsun. Sunucu adı genelde `ftp.myhis.com.tr`'dir (cPanel'de "Configure FTP Client").
+2. **Test klasörü ve test veritabanı** (önerilir):
+   - cPanel → MySQL Databases: yeni boş veritabanı + kullanıcı (ör. `myhiscom_test`).
+   - İsterseniz phpMyAdmin'den canlı veritabanını Dışa Aktar → test veritabanına İçe Aktar.
+   - File Manager: `public_html/test/` klasörünü açın, içine `config.php` koyun
+     (`config.example.php`'yi doldurarak; **test veritabanı bilgileriyle**).
+   - ⚠️ Test sürümünü canlı veritabanına bağlamayın: yeni sürümde giriş yapan kullanıcının
+     şifresi yeni biçime yükseltilir ve o kişi **eski canlı sürüme giriş yapamaz**.
+3. **GitHub → depo → Settings → Secrets and variables → Actions → New repository secret**:
+   - `FTP_SUNUCU` = `ftp.myhis.com.tr`
+   - `FTP_KULLANICI` = FTP kullanıcı adı
+   - `FTP_SIFRE` = FTP şifresi
+   - `FTP_TEST_DIZIN` = `/public_html/test/`  (FTP kullanıcısının kök dizinine göre)
+   - `FTP_CANLI_DIZIN` = `/public_html/dist/`
+   - FTPS bağlantı hatası verirse **Variables** sekmesinde `FTP_PROTOKOL` = `ftp` ekleyin.
+4. Actions sekmesinden "Sunucuya yükle" → **Run workflow** → `test` ile ilk yüklemeyi deneyin.
+
+Şifreler GitHub'da şifreli saklanır; kodda, kayıtlarda ve depoda görünmez. Sunucudaki
+`config.php`, `backups/` ve `uploads/` hiçbir yüklemede silinmez veya değiştirilmez.
+
 ## v3.2 — Çoklu Araç ve Şoför Ekranı
 
 - **Araçlar:** Harita ve Rota → Rota Planı → "Araç ekle" (ad, plaka, şoför).

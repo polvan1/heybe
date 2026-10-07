@@ -21,6 +21,9 @@ pnpm run build              # dist/ klasörüne derler
   `php dev/yedek-yukle.php yedek.json`
 - Windows'ta `BASLAT.bat` ile de başlatılabilir.
 
+## Otomatik yükleme
+Her gönderimde GitHub Actions derleyip FTP ile sunucuya yükler (test/canlı). Kurulum: `KURULUM.md` → "Otomatik Yükleme".
+
 ## Sunucu kurulumu
 Ayrıntılar için `KURULUM.md`. Sunucuda `config.example.php` dosyasını
 `config.php` olarak kopyalayıp doldurun. `config.php`, `database.json`,
