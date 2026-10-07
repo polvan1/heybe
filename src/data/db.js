@@ -17,6 +17,8 @@ const STORAGE_KEYS = {
   islemGunlugu: 'myhis_islemGunlugu',
   kumasStok: 'myhis_kumasStok',
   kumasTurleri: 'myhis_kumasTurleri',
+  araclar: 'myhis_araclar',
+  seferler: 'myhis_seferler',
 };
 
 // Generic CRUD helpers
@@ -954,6 +956,95 @@ export function iptalIrsaliye(id) {
   const irs = getIrsaliyeById(id);
   logIslem('İrsaliye İptal Edildi', irs?.irsaliyeNo || id);
   return updateIrsaliye(id, { durum: 'iptal', iptalTarihi: new Date().toISOString() });
+}
+
+// --- ARAÇLAR VE SEFERLER (sevkiyat) ---
+export const SEFER_DURUM_LABELS = {
+  atandi: 'Şoföre atandı',
+  yolda: 'Yolda',
+  tamamlandi: 'Tamamlandı',
+  iptal: 'İptal',
+};
+
+export function getAraclar() {
+  return getAll(STORAGE_KEYS.araclar);
+}
+
+export function addArac(arac) {
+  const araclar = getAraclar();
+  const yeni = { id: generateId(), aktif: true, ...arac, createdAt: new Date().toISOString() };
+  araclar.push(yeni);
+  saveAll(STORAGE_KEYS.araclar, araclar);
+  logIslem('Araç Eklendi', `${yeni.ad}${yeni.plaka ? ' (' + yeni.plaka + ')' : ''}`);
+  return yeni;
+}
+
+export function updateArac(id, updates) {
+  const araclar = getAraclar();
+  const i = araclar.findIndex(a => a.id === id);
+  if (i === -1) return null;
+  araclar[i] = { ...araclar[i], ...updates };
+  saveAll(STORAGE_KEYS.araclar, araclar);
+  return araclar[i];
+}
+
+export function deleteArac(id) {
+  const silinen = getAraclar().find(a => a.id === id);
+  saveAll(STORAGE_KEYS.araclar, getAraclar().filter(a => a.id !== id));
+  logIslem('Araç Silindi', silinen?.ad || id);
+}
+
+export function getSeferler() {
+  return getAll(STORAGE_KEYS.seferler);
+}
+
+// Planlanan rotaları şoförlere gönderir: her araç için bir sefer + şoföre özel bildirim
+export function addSeferler(yeniSeferler) {
+  const seferler = getSeferler();
+  const simdi = new Date().toISOString();
+  const eklenen = yeniSeferler.map(s => ({
+    id: generateId(),
+    durum: 'atandi',
+    tarih: simdi,
+    createdAt: simdi,
+    updatedAt: simdi,
+    olusturanId: aktifKullanici?.id || null,
+    olusturanAd: aktifKullanici?.ad || '',
+    ...s,
+  }));
+  seferler.unshift(...eklenen);
+  saveAll(STORAGE_KEYS.seferler, seferler);
+  eklenen.forEach(s => {
+    const durakSayisi = (s.duraklar || []).filter(d => d.tip === 'durak').length;
+    if (s.soforId) {
+      addBildirim({
+        tip: 'sefer',
+        kullaniciId: s.soforId,
+        baslik: 'Yeni sefer atandı',
+        mesaj: `${durakSayisi} durak · ~${Math.round(s.toplamKm || 0)} km. Görevlerim sayfasından başlayın.`,
+        link: '/gorevlerim',
+      });
+    }
+    logIslem('Sefer Oluşturuldu', `${s.aracAdi || ''} — ${durakSayisi} durak`);
+  });
+  return eklenen;
+}
+
+// Şoför işlemleri sunucuda yapılır (irsaliye durumları da orada güncellenir)
+export async function seferDurakIsle(seferId, durakNo, islem = 'tamamla') {
+  await flushPersist();
+  await apiIstek('sefer=durak', { seferId, durakNo, islem });
+  await refetchFromServer();
+}
+
+export async function seferIptalEt(seferId) {
+  await flushPersist();
+  await apiIstek('sefer=iptal', { seferId });
+  await refetchFromServer();
+}
+
+export async function konumGonder(lat, lng) {
+  await apiIstek('sefer=konum', { lat, lng });
 }
 
 // --- TEMA ---

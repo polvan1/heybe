@@ -3,7 +3,7 @@ import {
     LayoutDashboard, Layers, GitBranch, CalendarClock,
     Package, Scissors, Factory, Wallet, BarChart3,
     Users, Settings, ChevronLeft, ChevronRight,
-    FileText, ClipboardList, ScrollText, PackagePlus, MapPinned,
+    FileText, ClipboardList, ScrollText, PackagePlus, MapPinned, Truck,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { hasYetki } from '../data/yetki';
@@ -18,6 +18,7 @@ const NAV_SECTIONS = [
         title: 'ÜRETİM',
         items: [
             { to: '/islerim', icon: ClipboardList, label: 'İşlerim', yetki: 'islerim' },
+            { to: '/gorevlerim', icon: Truck, label: 'Görevlerim', yetki: 'gorevlerim' },
             { to: '/partiler', icon: Layers, label: 'Partiler', yetki: 'partiler' },
             { to: '/is-akisi', icon: GitBranch, label: 'İş Akışı', yetki: 'is_akisi' },
             { to: '/is-talep-takvimi', icon: CalendarClock, label: 'Takvim', yetki: 'takvim' },

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, MapPinned, Route as RouteIcon, Search, Crosshair, X, Navigation, Share2, Home, AlertTriangle, Check } from 'lucide-react';
+import { MapPin, MapPinned, Route as RouteIcon, Search, Crosshair, X, Home, AlertTriangle, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { hasYetki } from '../data/yetki';
-import { FIRMA_TIP_LABELS, IRSALIYE_DURUM_LABELS } from '../data/db';
+import { FIRMA_TIP_LABELS } from '../data/db';
 import HaritaGorunum from '../components/HaritaGorunum';
 import { adresAra } from '../utils/adresAra';
-import { rotaPlanla, siraliRotaKm, googleHaritaLinki, konumVarMi } from '../utils/rota';
+import { konumVarMi } from '../utils/rota';
+import SevkPlani from '../components/SevkPlani';
 
 const DEMO = import.meta.env.VITE_DEMO === '1';
 const TIP_FILTRELER = [
@@ -16,9 +17,6 @@ const TIP_FILTRELER = [
     { value: 'utupaketci', label: 'Ütü/Paket' },
     { value: 'baskici', label: 'Baskıcı' },
 ];
-const BEKLEYEN_IRSALIYE = ['taslak', 'onaylandi'];
-const km = (x) => x.toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' km';
-const sure = (dk) => (dk >= 60 ? `${Math.floor(dk / 60)} sa ${dk % 60} dk` : `${dk} dk`);
 
 // Firmanın şu an üzerindeki aktif partiler (aşamasına göre)
 function aktifPartiler(firma, partiler) {
@@ -30,7 +28,7 @@ function aktifPartiler(firma, partiler) {
 }
 
 export default function Harita() {
-    const { firmalar, partiler, irsaliyeler, currentUser, firmaGuncelle, merkez, merkezKaydet } = useApp();
+    const { firmalar, partiler, currentUser, firmaGuncelle, merkez, merkezKaydet } = useApp();
     const [sekme, setSekme] = useState('yerler');
     const [mod, setMod] = useState(DEMO ? 'sade' : 'sokak');
     const [filtre, setFiltre] = useState('hepsi');
@@ -41,9 +39,7 @@ export default function Harita() {
     const [aramaUyari, setAramaUyari] = useState('');
     const [araniyor, setAraniyor] = useState(false);
     const [odak, setOdak] = useState(0);
-    const [baslangicId, setBaslangicId] = useState('merkez');
-    const [donus, setDonus] = useState(true);
-    const [haricTutulan, setHaricTutulan] = useState(() => new Set());
+    const [sevkHaritasi, setSevkHaritasi] = useState(null); // rota sekmesinin çizdiği rotalar ve araçlar
 
     const firmaDuzenleyebilir = hasYetki(currentUser, 'firmalar');
     const merkezDuzenleyebilir = hasYetki(currentUser, 'harita') || hasYetki(currentUser, 'ayarlar');
@@ -88,59 +84,6 @@ export default function Harita() {
         ...(konumVarMi(merkez) ? [{ id: 'merkez', ad: merkez.ad || 'Merkez', konum: merkez }] : []),
         ...aktifFirmalar.filter(konumVarMi).map(f => ({ id: f.id, ad: f.ad, konum: { lat: +f.lat, lng: +f.lng, ad: f.ad } })),
     ];
-    const baslangic = baslangicSecenekleri.find(b => b.id === baslangicId) || baslangicSecenekleri[0];
-
-    const bekleyenler = useMemo(() => irsaliyeler
-        .filter(i => BEKLEYEN_IRSALIYE.includes(i.durum))
-        .map(i => {
-            const g = firmaById[i.gonderenFirmaId], a = firmaById[i.alanFirmaId];
-            const eksik = [g, a].filter(f => !f || !konumVarMi(f)).map(f => f?.ad || 'Bilinmeyen firma');
-            return {
-                irsaliye: i, eksik,
-                gorev: eksik.length ? null : {
-                    id: i.id, etiket: `${i.irsaliyeNo || ''} · ${i.partiNo || ''}`.trim(),
-                    adet: +i.toplamAdet || 0,
-                    alim: { ad: g.ad, lat: +g.lat, lng: +g.lng, firmaId: g.id },
-                    teslim: { ad: a.ad, lat: +a.lat, lng: +a.lng, firmaId: a.id },
-                },
-            };
-        })
-        .sort((x, y) => String(x.irsaliye.tarih || '').localeCompare(String(y.irsaliye.tarih || ''))), [irsaliyeler, firmaById]);
-
-    const seciliGorevler = bekleyenler.filter(b => b.gorev && !haricTutulan.has(b.irsaliye.id)).map(b => b.gorev);
-    // Girdi (başlangıç, görevler ve konumları, dönüş) değişmedikçe yeniden hesaplanmaz
-    const planAnahtari = JSON.stringify([baslangic?.konum, seciliGorevler, donus]);
-    const plan = useMemo(() => (baslangic && seciliGorevler.length
-        ? rotaPlanla({ baslangic: baslangic.konum, gorevler: seciliGorevler, donus })
-        : null
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    ), [planAnahtari]);
-    const siraliKm = plan ? siraliRotaKm({ baslangic: baslangic.konum, gorevler: seciliGorevler, donus }) : 0;
-    const kazanc = plan && siraliKm > 0 ? Math.round((1 - plan.toplamKm / siraliKm) * 100) : 0;
-    const gLink = plan ? googleHaritaLinki(plan.duraklar) : null;
-
-    const rotaMetni = () => {
-        if (!plan) return '';
-        const satirlar = [`Sevkiyat rotası — ${new Date().toLocaleDateString('tr-TR')}`, `Toplam ~${km(plan.toplamKm)}, ~${sure(plan.sureDk)}`, ''];
-        plan.duraklar.forEach((d, i) => {
-            if (d.tip === 'baslangic') satirlar.push(`Çıkış: ${baslangic.ad}`);
-            else if (d.tip === 'donus') satirlar.push(`Dönüş: ${baslangic.ad}`);
-            else {
-                satirlar.push(`${i}. ${d.konum.ad}`);
-                d.teslimler.forEach(g => satirlar.push(`   ↓ Bırak: ${g.etiket} (${g.adet} ad)`));
-                d.alimlar.forEach(g => satirlar.push(`   ↑ Al: ${g.etiket} (${g.adet} ad)`));
-            }
-        });
-        if (gLink) satirlar.push('', gLink.url);
-        return satirlar.join('\n');
-    };
-
-    const gorevDegistir = (id) => setHaricTutulan(s => {
-        const y = new Set(s);
-        if (y.has(id)) y.delete(id); else y.add(id);
-        return y;
-    });
-
     const hedefAdi = hedef === 'merkez' ? 'Araç çıkış noktası' : firmaById[hedef]?.ad;
 
     return (
@@ -173,12 +116,13 @@ export default function Harita() {
                 mod={mod}
                 noktalar={haritaNoktalari}
                 merkez={konumVarMi(merkez) ? merkez : null}
-                rota={sekme === 'rota' ? plan?.duraklar : null}
+                rotalar={sekme === 'rota' ? sevkHaritasi?.rotalar : null}
+                araclar={sekme === 'rota' ? sevkHaritasi?.araclar || [] : []}
                 seciliId={seciliId}
                 secimModu={!!hedef}
                 onHaritaTikla={(konum) => { if (hedef) konumuKaydet(konum); }}
                 onNoktaTikla={(id) => { setSeciliId(id); setSekme('yerler'); document.getElementById('firma-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}
-                odakAnahtari={`${sekme}-${odak}-${filtre}`}
+                odakAnahtari={`${sekme}-${odak}-${filtre}-${sevkHaritasi?.rotalar?.length || 0}`}
             />
             <div className="harita-lejant" aria-label="Renk açıklaması">
                 <span><i className="harita-lejant-nokta harita-nokta--kesim" /> Kesimhane</span>
@@ -274,94 +218,7 @@ export default function Harita() {
                 </section>
             ) : (
                 <section className="harita-panel">
-                    {!baslangicSecenekleri.length ? (
-                        <div className="card harita-bos">
-                            <p>Rota planlamak için önce <strong>Üretim Yerleri</strong> sekmesinden araç çıkış noktasını ve firma konumlarını girin.</p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="card harita-rota-ayar">
-                                <div className="form-group">
-                                    <label className="form-label" htmlFor="rota-baslangic">Araç nereden çıkıyor?</label>
-                                    <select id="rota-baslangic" className="form-input" value={baslangic?.id} onChange={e => setBaslangicId(e.target.value)}>
-                                        {baslangicSecenekleri.map(b => <option key={b.id} value={b.id}>{b.ad}</option>)}
-                                    </select>
-                                </div>
-                                <label className="harita-onay">
-                                    <input type="checkbox" checked={donus} onChange={e => setDonus(e.target.checked)} />
-                                    İş bitince çıkış noktasına dön
-                                </label>
-                            </div>
-
-                            <h3 className="harita-baslik">Bekleyen sevkiyatlar ({bekleyenler.length})</h3>
-                            {bekleyenler.length === 0 ? (
-                                <p className="harita-not">Teslim edilmemiş irsaliye yok. Taslak ya da onaylanmış irsaliyeler burada listelenir.</p>
-                            ) : (
-                                <ul className="harita-gorevler">
-                                    {bekleyenler.map(({ irsaliye: i, gorev, eksik }) => (
-                                        <li key={i.id} className={`card harita-gorev ${!gorev ? 'harita-gorev--pasif' : ''}`}>
-                                            <label>
-                                                <input type="checkbox" disabled={!gorev}
-                                                    checked={!!gorev && !haricTutulan.has(i.id)} onChange={() => gorevDegistir(i.id)} />
-                                                <span className="harita-gorev-icerik">
-                                                    <span className="harita-gorev-ust">
-                                                        <strong>{i.irsaliyeNo}</strong> · {i.partiNo}
-                                                        <span className="harita-gorev-durum">{IRSALIYE_DURUM_LABELS[i.durum]}</span>
-                                                    </span>
-                                                    <span className="harita-gorev-yol">{i.gonderenFirmaAdi} → {i.alanFirmaAdi}</span>
-                                                    <span className="harita-gorev-adet">{Number(i.toplamAdet || 0).toLocaleString('tr-TR')} adet · {i.urunAdi}</span>
-                                                    {!gorev && <span className="harita-konum-yok"><AlertTriangle size={13} /> Konum eksik: {eksik.join(', ')}</span>}
-                                                </span>
-                                            </label>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-
-                            {plan && (
-                                <div className="card harita-sonuc">
-                                    <div className="harita-ozet">
-                                        <div><span>Toplam yol</span><strong>~{km(plan.toplamKm)}</strong></div>
-                                        <div><span>Tahmini süre</span><strong>~{sure(plan.sureDk)}</strong></div>
-                                        <div><span>Durak</span><strong>{plan.duraklar.filter(d => d.tip === 'durak').length}</strong></div>
-                                    </div>
-                                    {kazanc > 0 && (
-                                        <p className="harita-kazanc">İrsaliyeleri tarih sırasıyla tek tek taşımaya göre <strong>%{kazanc} daha kısa</strong> ({km(siraliKm)} yerine).</p>
-                                    )}
-                                    <ol className="harita-duraklar">
-                                        {plan.duraklar.map((d, i) => (
-                                            <li key={i} className={`harita-durak-satir harita-durak-satir--${d.tip}`}>
-                                                <span className="harita-durak-no">{d.tip === 'durak' ? i : d.tip === 'baslangic' ? 'Ç' : 'D'}</span>
-                                                <div>
-                                                    <strong>{d.tip === 'baslangic' ? `Çıkış: ${baslangic.ad}` : d.tip === 'donus' ? `Dönüş: ${baslangic.ad}` : d.konum.ad}</strong>
-                                                    {d.km > 0 && <span className="harita-durak-km">+{km(d.km)}</span>}
-                                                    {d.teslimler.map(g => <span key={'t' + g.id} className="harita-is harita-is--birak">Bırak: {g.etiket} ({g.adet.toLocaleString('tr-TR')} ad)</span>)}
-                                                    {d.alimlar.map(g => <span key={'a' + g.id} className="harita-is harita-is--al">Al: {g.etiket} ({g.adet.toLocaleString('tr-TR')} ad)</span>)}
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ol>
-                                    <div className="harita-rota-aksiyon">
-                                        {gLink && (
-                                            <a className="btn btn-primary" href={gLink.url} target="_blank" rel="noopener noreferrer">
-                                                <Navigation size={16} /> Google Haritalar'da aç
-                                            </a>
-                                        )}
-                                        <a className="btn btn-ghost" href={`https://api.whatsapp.com/send?text=${encodeURIComponent(rotaMetni())}`} target="_blank" rel="noopener noreferrer">
-                                            <Share2 size={16} /> WhatsApp ile gönder
-                                        </a>
-                                    </div>
-                                    {gLink?.eksikDurak > 0 && (
-                                        <p className="harita-not">Google Haritalar en fazla 9 ara durak kabul eder; son {gLink.eksikDurak} durak bağlantıya eklenmedi.</p>
-                                    )}
-                                    <p className="harita-not">
-                                        Mesafeler kuş uçuşu × 1,3 yol katsayısıyla tahmini hesaplanır; süreye durak başı 10 dk yükleme eklenir.
-                                        {plan.yontem === 'kesin' ? ' Bu sıra seçilen sevkiyatlar için en kısa sıradır.' : ' Çok sayıda sevkiyat olduğu için hızlı yaklaşık çözüm kullanıldı.'}
-                                    </p>
-                                </div>
-                            )}
-                        </>
-                    )}
+                    <SevkPlani baslangicSecenekleri={baslangicSecenekleri} firmaById={firmaById} onHaritaVerisi={setSevkHaritasi} />
                 </section>
             )}
         </div>

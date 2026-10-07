@@ -28,7 +28,7 @@ function dbSurucu($pdo) {
 // Yeni kurulumda tablolar oluşturulur; mevcut kurulumda yalnızca
 // EKSİK kolonlar eklenir (mevcut veriye dokunulmaz).
 // ============================================================
-const SEMA_SURUMU = 5;
+const SEMA_SURUMU = 6;
 
 function semaTanimi() {
     $ts = 'VARCHAR(40) DEFAULT NULL';     // ISO tarih metni
@@ -79,6 +79,18 @@ function semaTanimi() {
         'bildirimler' => [
             'tip' => 'VARCHAR(40) DEFAULT NULL', 'baslik' => 'VARCHAR(255) DEFAULT NULL',
             'mesaj' => $metin, 'link' => 'VARCHAR(255) DEFAULT NULL', 'okundu' => $bool, 'tarih' => $ts,
+            'kullaniciId' => $ref,   // doluysa sadece o kullanıcıya (ör. şoföre) gösterilir
+        ],
+        'araclar' => [
+            'ad' => 'VARCHAR(80) DEFAULT NULL', 'plaka' => 'VARCHAR(20) DEFAULT NULL', 'soforId' => $ref,
+            'renk' => 'VARCHAR(20) DEFAULT NULL', 'aktif' => 'TINYINT(1) DEFAULT 1', 'notlar' => $metin,
+            'sonLat' => $sayi, 'sonLng' => $sayi, 'sonKonumZamani' => $ts, 'createdAt' => $ts,
+        ],
+        'seferler' => [
+            'aracId' => $ref, 'soforId' => $ref, 'tarih' => $ts, 'durum' => "VARCHAR(20) DEFAULT 'atandi'",
+            'duraklar' => $json, 'toplamKm' => $sayi, 'sureDk' => $tam,
+            'olusturanId' => $ref, 'olusturanAd' => 'VARCHAR(120) DEFAULT NULL',
+            'baslamaZamani' => $ts, 'bitisZamani' => $ts, 'createdAt' => $ts, 'updatedAt' => $ts,
         ],
         'stoklar' => [
             'ad' => 'VARCHAR(255) DEFAULT NULL', 'tip' => 'VARCHAR(40) DEFAULT NULL',

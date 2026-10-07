@@ -14,6 +14,7 @@ const ITEMS = [
 export default function BottomNav() {
     const { currentUser } = useApp();
     const items = ITEMS.filter(i => hasYetki(currentUser, i.yetki));
+    if (items.length === 0) return null; // ör. şoför: alt menüde gösterilecek sayfa yok
 
     return (
         <nav className="bottom-nav">

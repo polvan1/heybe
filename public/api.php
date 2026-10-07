@@ -12,6 +12,7 @@
 //   POST api.php?foto=upload|sil
 //   POST api.php?irsaliye_oku=1
 //   *    api.php?push=subscribe|unsubscribe|son|test
+//   POST api.php?sefer=durak|konum             (şoför: durak tamamla, konum paylaş)
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -50,6 +51,7 @@ require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/sync.php';
 require __DIR__ . '/inc/push.php';
 require __DIR__ . '/inc/dosya.php';
+require __DIR__ . '/inc/sefer.php';
 
 // ---- CSRF KORUMASI ----
 // Değişiklik yapan her istek özel bir başlık taşımalı. Tarayıcılar başka bir
@@ -84,6 +86,7 @@ if (isset($_GET['kullanici']))    kullaniciIstegi($pdo, (string)$_GET['kullanici
 if (isset($_GET['foto']))         fotoIstegi($pdo);
 if (isset($_GET['irsaliye_oku'])) irsaliyeOkuIstegi($pdo);
 if (isset($_GET['push']))         pushIstegi($pdo, (string)$_GET['push']);
+if (isset($_GET['sefer']))        seferIstegi($pdo, (string)$_GET['sefer']);
 
 $ben = girisGerekli($pdo);
 
@@ -104,6 +107,6 @@ if ($yeniBildirim) {
         @flush();
     }
     ignore_user_abort(true);
-    sendPushToAll($pdo);
+    sendPushToAll($pdo, $yeniBildirim === true ? null : $yeniBildirim);
 }
 exit;

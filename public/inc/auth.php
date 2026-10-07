@@ -7,10 +7,10 @@ const OTURUM_SURESI = 30 * 24 * 3600;   // 30 gün (telefonda sürekli giriş is
 const MAX_HATALI_GIRIS = 10;            // bu kadar hatalı denemeden sonra...
 const KILIT_SURESI = 15 * 60;           // ...15 dakika bekletilir
 
-const ROLLER = ['admin', 'uretim', 'muhasebe', 'fasoncu', 'izleyici'];
+const ROLLER = ['admin', 'uretim', 'muhasebe', 'fasoncu', 'sofor', 'izleyici'];
 
 const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi',
-    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'raporlar', 'kullanicilar', 'ayarlar'];
+    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar'];
 
 // Hangi sayfa yetkisi hangi veri gruplarına YAZMA izni verir.
 // (src/data/db.js içindeki işlemlerin dokunduğu koleksiyonlara göre)
@@ -22,6 +22,7 @@ const YETKI_YAZMA = [
     'firmalar'      => ['myhis_firmalar'],
     'cari_hesaplar' => ['myhis_cariHareketler', 'myhis_partiler'],
     'irsaliyeler'   => ['myhis_irsaliyeler'],
+    'harita'        => ['myhis_araclar', 'myhis_seferler'],   // sevk sorumlusu: araç ve sefer planlar
 ];
 // Giriş yapmış herkesin yazabildiği gruplar (bildirim okundu, işlem günlüğü)
 const HERKES_YAZAR = ['myhis_bildirimler', 'myhis_islemGunlugu'];

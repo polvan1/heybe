@@ -4,7 +4,7 @@
 import { ApiHatasi } from './api';
 import { demoVerisiOlustur } from './demoVeri';
 
-const DEPO_ANAHTARI = 'hiserp_demo_v2'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
+const DEPO_ANAHTARI = 'hiserp_demo_v3'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
 
 // public/inc/auth.php ile aynı kurallar
 const YETKI_YAZMA = {
@@ -15,34 +15,55 @@ const YETKI_YAZMA = {
     firmalar: ['myhis_firmalar'],
     cari_hesaplar: ['myhis_cariHareketler', 'myhis_partiler'],
     irsaliyeler: ['myhis_irsaliyeler'],
+    harita: ['myhis_araclar', 'myhis_seferler'],
 };
 const HERKES_YAZAR = ['myhis_bildirimler', 'myhis_islemGunlugu'];
 const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi',
-    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'raporlar', 'kullanicilar', 'ayarlar'];
+    'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar'];
 
 let durum = null;
 
-function yukle() {
-    if (durum) return durum;
+// Veri her istekte depodan okunur: aynı tarayıcıda iki sekme açıkken (ör. biri sevk
+// sorumlusu, biri şoför) birinin yaptığı değişikliği diğeri de görür.
+// Oturum ise sekmeye özeldir (sessionStorage), böylece iki sekmede farklı kişi girebilir.
+const OTURUM_ANAHTARI = 'hiserp_demo_oturum';
+let bellekOturum = null;
+
+// Depodan taze oku: her isteğin başında BİR kez çağrılır (istek içinde aynı nesne kullanılır)
+function depodanOku() {
     try {
         const kayit = localStorage.getItem(DEPO_ANAHTARI);
         if (kayit) durum = JSON.parse(kayit);
     } catch (e) { /* depolama kapalı: bellekte çalış */ }
     if (!durum || !durum.veri) {
         const veri = demoVerisiOlustur();
-        durum = { veri, oturum: null, tema: 'light', merkez: veri.merkez };
+        durum = { veri, tema: 'light', merkez: veri.merkez };
         delete veri.merkez;
+        kaydet();
     }
+    try { bellekOturum = sessionStorage.getItem(OTURUM_ANAHTARI) || bellekOturum; } catch (e) { /* bellekte */ }
+    durum.oturum = bellekOturum;
     return durum;
 }
 
+function yukle() {
+    return durum || depodanOku();
+}
+
+function oturumAyarla(id) {
+    bellekOturum = id;
+    try { if (id) sessionStorage.setItem(OTURUM_ANAHTARI, id); else sessionStorage.removeItem(OTURUM_ANAHTARI); } catch (e) { /* bellekte */ }
+}
+
 function kaydet() {
-    try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(durum)); } catch (e) { /* bellekte devam */ }
+    const { oturum, ...paylasilan } = durum; // oturum sekmeye özel, paylaşılmaz
+    try { localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(paylasilan)); } catch (e) { /* bellekte devam */ }
 }
 
 export function demoSifirla() {
     try { localStorage.removeItem(DEPO_ANAHTARI); } catch (e) { /* yoksay */ }
     durum = null;
+    oturumAyarla(null);
 }
 
 const kopya = (x) => JSON.parse(JSON.stringify(x));
@@ -78,7 +99,7 @@ const bekle = () => new Promise(r => setTimeout(r, 60));
 
 export async function demoIstek(sorgu, govde) {
     await bekle();
-    const d = yukle();
+    const d = depodanOku();
     const p = new URLSearchParams(sorgu);
     const g = govde || {};
 
@@ -89,10 +110,10 @@ export async function demoIstek(sorgu, govde) {
             const aranan = String(g.kimlik || '').trim().toLocaleLowerCase('tr');
             const k = d.veri.kullanicilar.find(u => [u.email, u.ad].some(x => x && x.toLocaleLowerCase('tr') === aranan));
             if (!k || k.aktif === false || k.sifre !== String(g.sifre || '')) hata(401, 'hatali_giris', 'Kullanıcı adı veya şifre hatalı.');
-            d.oturum = k.id; kaydet();
+            oturumAyarla(k.id); d.oturum = k.id;
             return { success: true, kullanici: guvenli(k) };
         }
-        if (islem === 'cikis') { d.oturum = null; kaydet(); return { success: true }; }
+        if (islem === 'cikis') { oturumAyarla(null); d.oturum = null; return { success: true }; }
         hata(400, 'bilinmeyen', 'Demo modunda desteklenmiyor.');
     }
 
@@ -157,10 +178,77 @@ export async function demoIstek(sorgu, govde) {
         hata(400, 'demo', 'Telefon bildirimleri demo modunda kapalıdır; gerçek sunucuda (HTTPS) çalışır.');
     }
 
+    // Şoför işlemleri (public/inc/sefer.php ile aynı kurallar)
+    if (p.has('sefer')) {
+        const ben = girisGerekli();
+        const islem = p.get('sefer');
+        const simdi = new Date().toISOString();
+        if (islem === 'konum') {
+            d.veri.myhis_araclar.forEach(a => { if (a.soforId === ben.id) Object.assign(a, { sonLat: +g.lat, sonLng: +g.lng, sonKonumZamani: simdi }); });
+            kaydet();
+            return { success: true };
+        }
+        const s = d.veri.myhis_seferler.find(x => x.id === g.seferId);
+        if (!s) hata(404, 'yok', 'Sefer bulunamadı.');
+        if (islem === 'iptal') {
+            if (!yetkiVar(ben, 'harita')) hata(403, 'yetki_yok', 'Bu işlem için yetkiniz yok.');
+            if (s.durum === 'tamamlandi') hata(400, 'bitti', 'Tamamlanmış sefer iptal edilemez.');
+            Object.assign(s, { durum: 'iptal', bitisZamani: simdi, updatedAt: simdi });
+            if (s.soforId) d.veri.myhis_bildirimler.unshift({ id: yeniId(), tip: 'sefer', baslik: 'Seferiniz iptal edildi', mesaj: `${ben.ad} seferi iptal etti.`, link: '/gorevlerim', okundu: false, tarih: simdi, kullaniciId: s.soforId });
+            gunluk(ben, 'Sefer İptal Edildi', s.aracAdi || s.id); kaydet();
+            return { success: true };
+        }
+        if (islem === 'durak') {
+            if (s.soforId !== ben.id && !yetkiVar(ben, 'harita')) hata(403, 'yetki_yok', 'Bu sefer size atanmamış.');
+            if (s.durum === 'iptal') hata(400, 'iptal', 'Bu sefer iptal edilmiş.');
+            const durak = s.duraklar?.[g.durakNo];
+            if (!durak || durak.tip !== 'durak') hata(400, 'durak', 'Geçersiz durak.');
+            const geriAl = g.islem === 'geri_al';
+            if (geriAl) { durak.durum = 'bekliyor'; delete durak.tamamlanmaZamani; }
+            else if (durak.durum !== 'tamamlandi') {
+                durak.durum = 'tamamlandi'; durak.tamamlanmaZamani = simdi;
+                const irs = (id) => d.veri.myhis_irsaliyeler.find(i => i.id === id);
+                (durak.alimlar || []).forEach(x => { const i = irs(x.irsaliyeId); if (i && i.durum === 'taslak') Object.assign(i, { durum: 'onaylandi', onayTarihi: simdi, updatedAt: simdi }); });
+                (durak.teslimler || []).forEach(x => { const i = irs(x.irsaliyeId); if (i) Object.assign(i, { durum: 'teslim_edildi', teslimTarihi: simdi, updatedAt: simdi }); });
+            }
+            const isler = s.duraklar.filter(x => x.tip === 'durak');
+            const biten = isler.filter(x => x.durum === 'tamamlandi').length;
+            s.durum = biten === isler.length ? 'tamamlandi' : biten ? 'yolda' : 'atandi';
+            s.bitisZamani = s.durum === 'tamamlandi' ? simdi : null;
+            if (biten && !s.baslamaZamani) s.baslamaZamani = simdi;
+            s.updatedAt = simdi;
+            if (!geriAl) {
+                const teslim = (durak.teslimler || []).map(x => x.etiket);
+                const mesaj = `${ben.ad} — ${durak.ad}${teslim.length ? ': ' + teslim.join(', ') + ' teslim edildi' : ': yük alındı'}`;
+                d.veri.myhis_bildirimler.unshift({ id: yeniId(), tip: 'sefer', baslik: s.durum === 'tamamlandi' ? 'Sefer tamamlandı' : `Durak tamamlandı (${biten}/${isler.length})`, mesaj, link: '/harita', okundu: false, tarih: simdi, kullaniciId: null });
+                gunluk(ben, 'Durak Tamamlandı', mesaj);
+            }
+            kaydet();
+            return { success: true, sefer: kopya(s) };
+        }
+        hata(400, 'bilinmeyen', 'Bilinmeyen işlem.');
+    }
+
     const ben = girisGerekli();
     if (govde === undefined) {
         const sonuc = {};
+        if (ben.rol === 'sofor') {
+            // Şoför sadece kendi seferlerini ve onlarla ilgili verileri görür (sync.php soforVerisi)
+            Object.keys(d.veri).forEach(k => { if (k.startsWith('myhis_')) sonuc[k] = []; });
+            const seferler = d.veri.myhis_seferler.filter(s => s.soforId === ben.id);
+            const irsIdleri = new Set(seferler.flatMap(s => (s.duraklar || []).flatMap(x => [...(x.alimlar || []), ...(x.teslimler || [])].map(y => y.irsaliyeId))));
+            sonuc.myhis_seferler = kopya(seferler);
+            sonuc.myhis_irsaliyeler = kopya(d.veri.myhis_irsaliyeler.filter(i => irsIdleri.has(i.id)));
+            sonuc.myhis_firmalar = d.veri.myhis_firmalar.map(({ id, ad, tip, telefon, adres, yetkiliKisi, lat, lng, konumAdres, aktif }) => ({ id, ad, tip, telefon, adres, yetkiliKisi, lat, lng, konumAdres, aktif }));
+            sonuc.myhis_araclar = kopya(d.veri.myhis_araclar.filter(a => a.soforId === ben.id));
+            sonuc.myhis_bildirimler = kopya(d.veri.myhis_bildirimler.filter(b => b.kullaniciId === ben.id));
+            sonuc.myhis_kullanicilar = [{ id: ben.id, ad: ben.ad, rol: ben.rol, firmaId: ben.firmaId, aktif: true }];
+            sonuc.myhis_tema = d.tema;
+            if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
+            return sonuc;
+        }
         Object.keys(d.veri).forEach(k => { if (k.startsWith('myhis_')) sonuc[k] = kopya(d.veri[k]); });
+        sonuc.myhis_bildirimler = sonuc.myhis_bildirimler.filter(b => !b.kullaniciId || b.kullaniciId === ben.id);
         const tam = yetkiVar(ben, 'kullanicilar');
         sonuc.myhis_kullanicilar = d.veri.kullanicilar.map(u => {
             const s = guvenli(u);

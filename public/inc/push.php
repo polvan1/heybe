@@ -43,10 +43,19 @@ function vapidJwt($audience) {
 }
 
 // Tüm kayıtlı cihazlara payload'sız push gönder (uyandırma sinyali)
-function sendPushToAll($pdo) {
+// $kullaniciIdler: null → tüm cihazlar; dizi → sadece bu kullanıcıların cihazları
+function sendPushToAll($pdo, $kullaniciIdler = null) {
     global $VAPID_PUBLIC;
+    if (empty($VAPID_PUBLIC)) return;
     try {
-        $subs = $pdo->query("SELECT id, endpoint FROM push_subscriptions")->fetchAll();
+        if (is_array($kullaniciIdler)) {
+            if (!$kullaniciIdler) return;
+            $stmt = $pdo->prepare("SELECT id, endpoint FROM push_subscriptions WHERE kullaniciId IN (" . implode(',', array_fill(0, count($kullaniciIdler), '?')) . ")");
+            $stmt->execute(array_values($kullaniciIdler));
+            $subs = $stmt->fetchAll();
+        } else {
+            $subs = $pdo->query("SELECT id, endpoint FROM push_subscriptions")->fetchAll();
+        }
     } catch (Exception $e) {
         return;
     }
@@ -137,7 +146,11 @@ function pushIstegi($pdo, $action) {
     if ($action === 'son') {
         // Service worker'ın push sonrası çektiği en yeni bildirim
         try {
-            $rows = $pdo->query("SELECT * FROM bildirimler ORDER BY tarih DESC LIMIT 1")->fetchAll();
+            // Bu kullanıcının görebileceği en yeni bildirim (şoför sadece kendine gelenleri)
+            $kosul = $ben['rol'] === 'sofor' ? 'kullaniciId = ?' : '(kullaniciId IS NULL OR kullaniciId = ?)';
+            $stmt = $pdo->prepare("SELECT * FROM bildirimler WHERE $kosul ORDER BY tarih DESC LIMIT 1");
+            $stmt->execute([$ben['id']]);
+            $rows = $stmt->fetchAll();
             echo json_encode(['bildirim' => count($rows) ? $rows[0] : null], JSON_UNESCAPED_UNICODE);
         } catch (Exception $e) {
             echo json_encode(['bildirim' => null]);

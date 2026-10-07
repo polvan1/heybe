@@ -21,9 +21,11 @@ const TABLO_HARITASI = [
     'myhis_islemGunlugu'    => 'islem_gunlugu',
     'myhis_kumasStok'       => 'kumas_stok',
     'myhis_kumasTurleri'    => 'kumas_turleri',
+    'myhis_araclar'         => 'araclar',
+    'myhis_seferler'        => 'seferler',
 ];
 
-const JSON_KOLONLAR = ['asorti', 'fiyatlar', 'renkler', 'teslimatGecmisi', 'firmaAtamalari', 'yetkiler', 'fotolar', 'firmaFiyatlari'];
+const JSON_KOLONLAR = ['asorti', 'fiyatlar', 'renkler', 'teslimatGecmisi', 'firmaAtamalari', 'yetkiler', 'fotolar', 'firmaFiyatlari', 'duraklar'];
 const BOOL_KOLONLAR = ['aktif', 'okundu', 'hesaplandi', 'tamamlandi', 'arsivde'];
 
 function satirCoz($satir) {
@@ -62,13 +64,50 @@ function tabloOku($pdo, $tablo) {
     return array_map('satirCoz', $satirlar);
 }
 
+// Hedefli bildirim: kullaniciId doluysa sadece o kişi görür
+function bildirimGorurMu($b, $ben) {
+    return empty($b['kullaniciId']) || $b['kullaniciId'] === $ben['id'];
+}
+
+// Şoför sadece işini yapmak için gerekeni görür: kendi seferleri, o seferlerdeki
+// irsaliyeler, firmaların adres/konum/telefonu, kendisine gelen bildirimler.
+function soforVerisi($pdo, $ben) {
+    $sonuc = array_fill_keys(array_keys(TABLO_HARITASI), []);
+    $seferler = array_values(array_filter(tabloOku($pdo, 'seferler'), fn($s) => ($s['soforId'] ?? null) === $ben['id']));
+    $irsaliyeIdleri = [];
+    foreach ($seferler as $s) {
+        foreach ((array)($s['duraklar'] ?? []) as $d) {
+            foreach (array_merge((array)($d['alimlar'] ?? []), (array)($d['teslimler'] ?? [])) as $g) {
+                if (!empty($g['irsaliyeId'])) $irsaliyeIdleri[$g['irsaliyeId']] = true;
+            }
+        }
+    }
+    $sonuc['myhis_seferler'] = $seferler;
+    $sonuc['myhis_irsaliyeler'] = array_values(array_filter(tabloOku($pdo, 'irsaliyeler'), fn($i) => isset($irsaliyeIdleri[$i['id']])));
+    $sonuc['myhis_firmalar'] = array_map(fn($f) => array_intersect_key($f, array_flip(['id', 'ad', 'tip', 'telefon', 'adres', 'yetkiliKisi', 'lat', 'lng', 'konumAdres', 'aktif'])), tabloOku($pdo, 'firmalar'));
+    $sonuc['myhis_araclar'] = array_values(array_filter(tabloOku($pdo, 'araclar'), fn($a) => ($a['soforId'] ?? null) === $ben['id']));
+    $sonuc['myhis_bildirimler'] = array_values(array_filter(tabloOku($pdo, 'bildirimler'), fn($b) => ($b['kullaniciId'] ?? null) === $ben['id']));
+    $sonuc['myhis_kullanicilar'] = [array_intersect_key(kullaniciGuvenli($ben), array_flip(['id', 'ad', 'rol', 'firmaId', 'aktif']))];
+    return $sonuc;
+}
+
 // GET: kullanıcının görebileceği tüm veriler
 function veriOku($pdo, $ben) {
+    if ($ben['rol'] === 'sofor') {
+        $sonuc = soforVerisi($pdo, $ben);
+        try {
+            foreach ($pdo->query("SELECT s_key, s_value FROM settings")->fetchAll() as $s) {
+                if (in_array($s['s_key'], ['myhis_tema', 'myhis_merkez'], true)) $sonuc[$s['s_key']] = $s['s_value'];
+            }
+        } catch (Exception $e) {}
+        return $sonuc;
+    }
     $sonuc = [];
     foreach (TABLO_HARITASI as $anahtar => $tablo) {
         if ($tablo === 'kullanicilar') continue;
         $sonuc[$anahtar] = tabloOku($pdo, $tablo);
     }
+    $sonuc['myhis_bildirimler'] = array_values(array_filter($sonuc['myhis_bildirimler'], fn($b) => bildirimGorurMu($b, $ben)));
 
     // Kullanıcılar: şifre hash'i ASLA dönmez. Kullanıcı yönetimi yetkisi
     // olmayanlar sadece ad/rol gibi temel bilgileri görür.
@@ -109,14 +148,19 @@ function veriYaz($pdo, $ben, $govde) {
     gunlukYedek($pdo);
 
     // Yeni bildirim var mı? (push için; yazmadan önce kontrol)
+    // Dönüş: false (push yok), true (herkese) ya da hedef kullanıcı id listesi
     $yeniBildirim = false;
     if (!empty($degisiklikler['myhis_bildirimler']['upsert'])) {
         $sorgu = $pdo->prepare("SELECT 1 FROM bildirimler WHERE id = ?");
+        $hedefler = [];
         foreach ($degisiklikler['myhis_bildirimler']['upsert'] as $b) {
             if (!isset($b['id'])) continue;
             $sorgu->execute([$b['id']]);
-            if (!$sorgu->fetchColumn()) { $yeniBildirim = true; break; }
+            if ($sorgu->fetchColumn()) continue;
+            if (empty($b['kullaniciId'])) { $yeniBildirim = true; break; }
+            $hedefler[$b['kullaniciId']] = true;
         }
+        if ($yeniBildirim !== true && $hedefler) $yeniBildirim = array_keys($hedefler);
     }
 
     $pdo->beginTransaction();

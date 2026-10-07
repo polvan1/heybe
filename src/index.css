@@ -3040,3 +3040,79 @@ tr:last-child td {
 .harita-rota-aksiyon { display: flex; gap: 8px; flex-wrap: wrap; }
 .harita-rota-aksiyon .btn { display: inline-flex; gap: 6px; align-items: center; text-decoration: none; flex: 1 1 200px; justify-content: center; }
 .harita-bos { padding: 16px; font-size: 0.85rem; color: var(--text-secondary); }
+
+/* --- Çoklu araç: araç başına renk (6 renk döngüsü) --- */
+:root {
+  --arac-0: #e11d48; --arac-1: #2563eb; --arac-2: #059669;
+  --arac-3: #d97706; --arac-4: #7c3aed; --arac-5: #0891b2;
+}
+[data-theme="dark"] {
+  --arac-0: #fb7185; --arac-1: #60a5fa; --arac-2: #34d399;
+  --arac-3: #fbbf24; --arac-4: #a78bfa; --arac-5: #22d3ee;
+}
+.harita-renk-0 { --arac: var(--arac-0); } .harita-renk-1 { --arac: var(--arac-1); }
+.harita-renk-2 { --arac: var(--arac-2); } .harita-renk-3 { --arac: var(--arac-3); }
+.harita-renk-4 { --arac: var(--arac-4); } .harita-renk-5 { --arac: var(--arac-5); }
+path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
+.harita-durak[class*="harita-renk-"] span { background: var(--arac); }
+.harita-durak--tamam span { opacity: 0.55; }
+.harita-arac span {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--bg-secondary); border: 3px solid var(--arac, var(--harita-rota));
+  font-size: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.arac-renk { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--arac); flex-shrink: 0; }
+
+/* --- Sevk planı: araçlar ve seferler --- */
+.sevk-baslik { display: flex; align-items: center; justify-content: space-between; }
+.sefer-kart { padding: 12px 14px; display: grid; gap: 8px; }
+.sefer-ust { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; }
+.sefer-sofor { color: var(--text-muted); font-size: 0.8rem; }
+.sefer-durum { margin-left: auto; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--bg-tertiary); color: var(--text-secondary); }
+.sefer-durum--yolda { background: color-mix(in srgb, var(--accent-primary) 15%, transparent); color: var(--accent-primary); }
+.sefer-durum--tamamlandi { background: color-mix(in srgb, var(--accent-success) 15%, transparent); color: var(--accent-success); }
+.sefer-durum--iptal { background: color-mix(in srgb, var(--accent-danger) 12%, transparent); color: var(--accent-danger); }
+.sefer-ilerleme { height: 6px; border-radius: 999px; background: var(--bg-tertiary); overflow: hidden; }
+.sefer-ilerleme span { display: block; height: 100%; background: var(--arac, var(--accent-primary)); transition: width 0.4s ease; }
+.sefer-alt { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; color: var(--text-secondary); }
+.sefer-iptal { justify-self: start; display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; font-size: 0.78rem; color: var(--accent-danger); }
+.arac-plaka { font-size: 0.72rem; font-weight: 600; padding: 1px 6px; border: 1px solid var(--border-color); border-radius: 4px; letter-spacing: 0.04em; }
+.harita-gorev { position: relative; }
+.arac-sil { position: absolute; top: 10px; right: 10px; color: var(--text-muted); }
+.arac-formu { padding: 14px; display: grid; gap: 10px; }
+.arac-formu .form-group { margin: 0; }
+.arac-formu-satir { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.arac-ekle { justify-self: start; display: inline-flex; gap: 6px; align-items: center; }
+.arac-plan { display: grid; gap: 8px; padding: 12px 0 4px; border-top: 1px solid var(--border-color); }
+.arac-plan:first-of-type { border-top: 0; }
+.arac-plan .harita-durak-no { background: var(--arac, var(--harita-rota)); }
+.arac-plan .harita-durak-satir--baslangic .harita-durak-no, .arac-plan .harita-durak-satir--donus .harita-durak-no { background: var(--text-primary); }
+.arac-plan-ozet { margin-left: auto; font-size: 0.78rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.sevk-gonder { display: inline-flex; gap: 8px; align-items: center; justify-content: center; width: 100%; }
+
+/* --- Şoför ekranı (Görevlerim) --- */
+.gorev-sayfa { display: grid; gap: 12px; min-width: 0; }
+.gorev-bos { padding: 28px 18px; display: grid; gap: 8px; justify-items: center; text-align: center; color: var(--text-secondary); }
+.gorev-bos h2 { font-size: 1.05rem; color: var(--text-primary); margin: 0; }
+.gorev-bos p { margin: 0; font-size: 0.85rem; }
+.gorev-yeni { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 6px; background: var(--accent-success); color: #fff; font-weight: 600; font-size: 0.88rem; }
+.gorev-yeni span { flex: 1; }
+.gorev-yeni .btn-icon { color: #fff; font-size: 1.2rem; }
+.gorev-ozet { padding: 14px; display: grid; gap: 10px; }
+.gorev-tum-rota, .gorev-tamamla, .gorev-bildirim { display: inline-flex; gap: 8px; align-items: center; justify-content: center; text-decoration: none; width: 100%; }
+.gorev-siradaki { padding: 16px; display: grid; gap: 8px; border: 2px solid var(--accent-primary); }
+.gorev-siradaki h2 { font-size: 1.25rem; margin: 0; overflow-wrap: anywhere; }
+.gorev-etiket { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent-primary); }
+.gorev-aksiyonlar { display: flex; flex-wrap: wrap; gap: 8px; }
+.gorev-aksiyonlar .btn { flex: 1 1 140px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; text-decoration: none; }
+.gorev-tamamla { min-height: 52px; font-size: 1rem; }
+.gorev-konum { padding: 12px 14px; display: grid; gap: 6px; }
+.gorev-duraklar { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.gorev-durak { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; }
+.gorev-durak--tamam { opacity: 0.65; }
+.gorev-durak--tamam .harita-durak-no { background: var(--accent-success); }
+.gorev-durak--siradaki { border-color: var(--accent-primary); }
+.gorev-durak-icerik { flex: 1; min-width: 0; display: grid; gap: 4px; font-size: 0.85rem; }
+.gorev-durak-zaman { display: inline-flex; gap: 6px; align-items: center; font-size: 0.75rem; color: var(--accent-success); }
+.harita-is { display: inline-flex; gap: 6px; align-items: center; }
+.harita-is svg { flex-shrink: 0; }

@@ -17,6 +17,8 @@ export function AppProvider({ children }) {
     const [islemGunlugu, setIslemGunlugu] = useState([]);
     const [kumasStoklar, setKumasStoklar] = useState([]);
     const [kumasTurleri, setKumasTurleri] = useState([]);
+    const [araclar, setAraclar] = useState([]);
+    const [seferler, setSeferler] = useState([]);
     const [tema, setTemaState] = useState('light');
     const [merkez, setMerkezState] = useState(null);
     const [currentUser, setCurrentUserState] = useState(null);
@@ -44,6 +46,8 @@ export function AppProvider({ children }) {
         setIslemGunlugu(yeni(db.getIslemGunlugu()));
         setKumasStoklar(yeni(db.getKumasStoklar()));
         setKumasTurleri(yeni(db.getKumasTurleri()));
+        setAraclar(yeni(db.getAraclar()));
+        setSeferler(yeni(db.getSeferler()));
         setTemaState(db.getTema());
         setMerkezState(db.getMerkez());
     }, []);
@@ -231,6 +235,16 @@ export function AppProvider({ children }) {
         kullaniciEkle, kullaniciGuncelle, kullaniciSil,
         toggleTema,
         merkez,
+        araclar, seferler,
+        aracEkle: (a) => { const r = db.addArac(a); refresh(); return r; },
+        aracGuncelle: (id, u) => { db.updateArac(id, u); refresh(); },
+        aracSil: (id) => { db.deleteArac(id); refresh(); },
+        seferleriGonder: (liste) => { const r = db.addSeferler(liste); refresh(); return r; },
+        seferDurakIsle: async (seferId, durakNo, islem) => { await db.seferDurakIsle(seferId, durakNo, islem); refresh(); },
+        seferIptal: async (seferId) => { await db.seferIptalEt(seferId); refresh(); },
+        konumGonder: db.konumGonder,
+        // Sunucudan hemen tazele (şoför ekranı ve canlı takip için)
+        sunucudanYenile: async () => { if (await db.refetchFromServer()) refresh(); },
         merkezKaydet: (m) => { db.setMerkez(m); refresh(); },
         exportToCSV: db.exportToCSV,
     };

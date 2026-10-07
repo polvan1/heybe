@@ -64,6 +64,7 @@ export default function Login() {
                         <div className="demo-giris-butonlar">
                             <button type="button" className="btn btn-ghost" onClick={() => { setKimlik('demo@hiserp.app'); setSifre('demo123'); }}>Yönetici</button>
                             <button type="button" className="btn btn-ghost" onClick={() => { setKimlik('fasoncu@hiserp.app'); setSifre('demo123'); }}>Fasoncu</button>
+                            <button type="button" className="btn btn-ghost" onClick={() => { setKimlik('sofor@hiserp.app'); setSifre('demo123'); }}>Şoför</button>
                         </div>
                         <small>Örnek verilerle çalışır; yaptığınız değişiklikler sadece bu tarayıcıda saklanır.</small>
                     </div>

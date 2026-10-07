@@ -14,6 +14,23 @@ sadece iki yeni tablo eklenir.
 | `veritabani_guncelleme.sql` | Yeni tablolar (irsaliyeler, kullanicilar, settings) |
 | `KURULUM.md` | Bu dosya |
 
+## v3.2 — Çoklu Araç ve Şoför Ekranı
+
+- **Araçlar:** Harita ve Rota → Rota Planı → "Araç ekle" (ad, plaka, şoför).
+- **Şoför hesabı:** Kullanıcılar sayfasında rolü **Şoför** olan kullanıcı ekleyin (yetkisi
+  otomatik "Görevlerim" olur). Şoför sadece kendi seferlerini, o seferlerdeki irsaliyeleri ve
+  firmaların adres/telefon/konumunu görür; fiyat, cari, parti gibi verilere erişemez.
+- **Planlama:** Seçili araçlar arasında sevkiyatlar, en geç biten araç mümkün olduğunca erken
+  bitecek şekilde dağıtılır; her aracın sırası ayrıca optimize edilir.
+- **Şoförlere gönder:** Her araç için bir sefer oluşur, şoförün telefonuna bildirim düşer.
+  Şoför "Görevlerim" ekranında sıradaki durağı, yol tarifini, firma telefonunu görür ve
+  "Bu durak tamamlandı" der → irsaliye otomatik "teslim edildi" olur, sevk sorumlusuna bildirim gider.
+- **Canlı takip:** Şoför "Konumumu paylaş" derse konumu yarım dakikada bir gönderilir (ekran
+  açıkken); sevk ekranında araç haritada görünür. Sevk ekranı 20 sn'de bir, şoför ekranı 15 sn'de
+  bir kendini yeniler. Bildirimler için şoför telefonunda "Yeni sefer gelince telefonuma bildir"
+  düğmesine bir kez basmalı (HTTPS ve VAPID anahtarları gerekir).
+- Veritabanına `araclar`, `seferler` tabloları ve `bildirimler.kullaniciId` kolonu otomatik eklenir.
+
 ## v3.1 — Harita ve Sevkiyat Rota Planı
 
 - Yeni menü: **İLİŞKİLER → Harita ve Rota**. Yönetici otomatik görür; diğer kullanıcılara

@@ -37,7 +37,7 @@ function ilceKatmani() {
 }
 
 export default function HaritaGorunum({
-    mod = 'sade', noktalar = [], merkez = null, rota = null, seciliId = null,
+    mod = 'sade', noktalar = [], merkez = null, rota = null, rotalar = null, araclar = [], seciliId = null,
     secimModu = false, onHaritaTikla, onNoktaTikla, odakAnahtari,
 }) {
     const kapRef = useRef(null);
@@ -57,6 +57,7 @@ export default function HaritaGorunum({
         yakinlik();
         katmanRef.current.noktalar = L.layerGroup().addTo(harita);
         katmanRef.current.rota = L.layerGroup().addTo(harita);
+        katmanRef.current.araclar = L.layerGroup().addTo(harita);
         haritaRef.current = harita;
         // Kapsayıcı boyutu sonradan değişirse (sekme/ekran dönmesi) haritayı yeniden ölç
         const gozlemci = new ResizeObserver(() => harita.invalidateSize());
@@ -104,27 +105,45 @@ export default function HaritaGorunum({
         }
     }, [noktalar, merkez, seciliId]);
 
-    // Rota çizgisi ve numaralı duraklar
+    // Rota çizgileri ve numaralı duraklar. rotalar: [{ renk: 0-5, duraklar }] (araç başına bir rota)
+    const tumRotalar = rotalar || (rota ? [{ renk: 0, duraklar: rota }] : []);
+    const rotaAnahtari = JSON.stringify(tumRotalar.map(r => [r.renk, r.duraklar.map(d => [d.konum.lat, d.konum.lng, d.tamam ? 1 : 0])]));
     useEffect(() => {
         const grup = katmanRef.current.rota;
         grup.clearLayers();
-        if (!rota || rota.length < 2) return;
-        const cizgi = rota.map(d => [d.konum.lat, d.konum.lng]);
-        L.polyline(cizgi, { className: 'harita-rota', weight: 4 }).addTo(grup);
-        rota.forEach((d, i) => {
-            if (d.tip !== 'durak') return;
-            L.marker([d.konum.lat, d.konum.lng], {
-                icon: L.divIcon({ className: 'harita-durak', html: `<span>${i}</span>`, iconSize: [24, 24] }),
-                zIndexOffset: 1000,
-            }).addTo(grup);
-        });
-    }, [rota]);
+        for (const r of tumRotalar) {
+            if (!r.duraklar || r.duraklar.length < 2) continue;
+            const cizgi = r.duraklar.map(d => [d.konum.lat, d.konum.lng]);
+            L.polyline(cizgi, { className: `harita-rota harita-renk-${r.renk % 6}`, weight: 4 }).addTo(grup);
+            r.duraklar.forEach((d, i) => {
+                if (d.tip !== 'durak') return;
+                L.marker([d.konum.lat, d.konum.lng], {
+                    icon: L.divIcon({ className: `harita-durak harita-renk-${r.renk % 6} ${d.tamam ? 'harita-durak--tamam' : ''}`, html: `<span>${d.tamam ? '✓' : i}</span>`, iconSize: [24, 24] }),
+                    zIndexOffset: 1000,
+                }).addTo(grup);
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rotaAnahtari]);
+
+    // Araçların son bilinen konumları (şoför konum paylaşıyorsa)
+    useEffect(() => {
+        const grup = katmanRef.current.araclar;
+        grup.clearLayers();
+        for (const a of araclar) {
+            L.marker([a.lat, a.lng], {
+                icon: L.divIcon({ className: `harita-arac harita-renk-${(a.renk || 0) % 6}`, html: '<span>🚚</span>', iconSize: [30, 30] }),
+                zIndexOffset: 2000,
+            }).bindTooltip(metin(a.etiket), { direction: 'top', offset: [0, -14], className: 'harita-ipucu', permanent: true }).addTo(grup);
+        }
+    }, [araclar]);
 
     // Görünür alanı içeriğe göre ayarla
     useEffect(() => {
         const harita = haritaRef.current;
-        const pts = rota?.length ? rota.map(d => [d.konum.lat, d.konum.lng]) : noktalar.map(n => [n.lat, n.lng]);
-        if (merkez && !rota?.length) pts.push([merkez.lat, merkez.lng]);
+        const rotaNoktalari = tumRotalar.flatMap(r => r.duraklar.map(d => [d.konum.lat, d.konum.lng]));
+        const pts = rotaNoktalari.length ? rotaNoktalari : noktalar.map(n => [n.lat, n.lng]);
+        if (merkez && !rotaNoktalari.length) pts.push([merkez.lat, merkez.lng]);
         if (pts.length >= 2) harita.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 14 });
         else if (pts.length === 1) harita.setView(pts[0], 14);
         // eslint-disable-next-line react-hooks/exhaustive-deps

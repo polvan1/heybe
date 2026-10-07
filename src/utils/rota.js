@@ -181,3 +181,105 @@ export function googleHaritaLinki(duraklar) {
     if (ara.length) p.set('waypoints', ara.join('|'));
     return { url: 'https://www.google.com/maps/dir/?' + p.toString(), eksikDurak: Math.max(0, geri.length - 9) };
 }
+
+// ============================================================
+// ÇOKLU ARAÇ
+// Görevler araçlara dağıtılır; hedef: en geç biten aracın bitiş süresini en aza
+// indirmek (herkes mümkün olduğunca erken işini bitirsin), eşitlikte toplam km.
+// Her aracın kendi sırası yukarıdaki tek araç çözücüsüyle bulunur.
+// araclar: [{ id, baslangic: {ad, lat, lng}, donus }]
+// Dönüş: { planlar: [{ aracId, plan|null, gorevler }], enUzunDk, toplamKm }
+// ============================================================
+function planSuresi(p) {
+    return p ? p.sureDk : 0;
+}
+
+export function cokluAracPlanla({ araclar, gorevler }) {
+    const uygun = araclar.filter(a => konumVarMi(a.baslangic));
+    if (!uygun.length || !gorevler.length) return null;
+
+    const onbellek = new Map();
+    const coz = (arac, liste) => {
+        if (!liste.length) return null;
+        const anahtar = arac.id + '|' + liste.map(g => g.id).sort().join(',');
+        if (!onbellek.has(anahtar)) onbellek.set(anahtar, rotaPlanla({ baslangic: arac.baslangic, gorevler: liste, donus: arac.donus }));
+        return onbellek.get(anahtar);
+    };
+    const degerlendir = (atama) => {
+        const planlar = uygun.map((a, i) => coz(a, atama[i]));
+        return {
+            planlar,
+            enUzun: Math.max(...planlar.map(planSuresi)),
+            toplamKm: planlar.reduce((t, p) => t + (p ? p.toplamKm : 0), 0),
+        };
+    };
+    const dahaIyi = (x, y) => x.enUzun < y.enUzun - 0.5 || (Math.abs(x.enUzun - y.enUzun) <= 0.5 && x.toplamKm < y.toplamKm - 1e-6);
+
+    // 1) Açgözlü yerleştirme: uzun taşımalar önce, her biri en az zarar verdiği araca
+    const sirali = gorevler.slice().sort((a, b) => yolKm(b.alim, b.teslim) - yolKm(a.alim, a.teslim));
+    let atama = uygun.map(() => []);
+    for (const g of sirali) {
+        let enIyi = null, enIyiI = 0;
+        uygun.forEach((_, i) => {
+            const deneme = atama.map((l, j) => (j === i ? [...l, g] : l));
+            const d = degerlendir(deneme);
+            if (!enIyi || dahaIyi(d, enIyi)) { enIyi = d; enIyiI = i; }
+        });
+        atama[enIyiI].push(g);
+    }
+
+    // 2) İyileştirme: bir görevi başka araca taşı ya da iki aracın görevini takas et
+    let mevcut = degerlendir(atama);
+    for (let tur = 0; tur < 40; tur++) {
+        let iyilesti = false;
+        for (let i = 0; i < atama.length && !iyilesti; i++) {
+            for (const g of atama[i]) {
+                for (let j = 0; j < atama.length && !iyilesti; j++) {
+                    if (i === j) continue;
+                    // taşıma
+                    const tasima = atama.map((l, k) => (k === i ? l.filter(x => x !== g) : k === j ? [...l, g] : l));
+                    const dt = degerlendir(tasima);
+                    if (dahaIyi(dt, mevcut)) { atama = tasima; mevcut = dt; iyilesti = true; break; }
+                    // takas
+                    for (const h of atama[j]) {
+                        const takas = atama.map((l, k) => (k === i ? [...l.filter(x => x !== g), h] : k === j ? [...l.filter(x => x !== h), g] : l));
+                        const dk = degerlendir(takas);
+                        if (dahaIyi(dk, mevcut)) { atama = takas; mevcut = dk; iyilesti = true; break; }
+                    }
+                }
+                if (iyilesti) break;
+            }
+        }
+        if (!iyilesti) break;
+    }
+
+    return {
+        planlar: uygun.map((a, i) => ({ aracId: a.id, plan: mevcut.planlar[i], gorevler: atama[i] })),
+        enUzunDk: mevcut.enUzun,
+        toplamKm: mevcut.toplamKm,
+    };
+}
+
+export const kmYazi = (x) => (+x || 0).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' km';
+export const sureYazi = (dk) => (dk >= 60 ? `${Math.floor(dk / 60)} sa ${dk % 60} dk` : `${Math.round(dk)} dk`);
+
+// Planlanan durakları sefer kaydına çevirir (şoför ekranı ve sunucu bu yapıyı kullanır)
+export function seferDuraklari(duraklar) {
+    const is = (g) => ({ irsaliyeId: g.id, etiket: g.etiket, adet: g.adet, urunAdi: g.urunAdi || '' });
+    return duraklar.map(d => ({
+        tip: d.tip,
+        ad: d.konum.ad || '',
+        lat: +d.konum.lat,
+        lng: +d.konum.lng,
+        firmaId: d.konum.firmaId || null,
+        km: Math.round(d.km * 10) / 10,
+        alimlar: d.alimlar.map(is),
+        teslimler: d.teslimler.map(is),
+        durum: d.tip === 'durak' ? 'bekliyor' : null,
+    }));
+}
+
+// Kayıtlı sefer duraklarını haritanın beklediği biçime çevirir
+export function seferHaritaDuraklari(sefer) {
+    return (sefer.duraklar || []).map(d => ({ tip: d.tip, konum: { lat: d.lat, lng: d.lng, ad: d.ad }, tamam: d.durum === 'tamamlandi' }));
+}

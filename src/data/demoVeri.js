@@ -188,8 +188,15 @@ export function demoVerisiOlustur() {
         myhis_islemGunlugu: gunluk,
         myhis_kumasStok: kumasStok,
         myhis_kumasTurleri: kumasTurleri,
+        myhis_araclar: [
+            { id: 'arc_demo_1', ad: 'Kamyonet 1', plaka: '34 HIS 101', soforId: 'usr_demo_sofor1', aktif: true, createdAt: tarih(30) },
+            { id: 'arc_demo_2', ad: 'Kamyonet 2', plaka: '34 HIS 102', soforId: 'usr_demo_sofor2', aktif: true, createdAt: tarih(30) },
+        ],
+        myhis_seferler: [],
         kullanicilar: [
-            { id: 'usr_demo_admin', ad: 'Demo Yönetici', email: 'demo@hiserp.app', telefon: '', rol: 'admin', yetkiler: ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'raporlar', 'kullanicilar', 'ayarlar'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(60) },
+            { id: 'usr_demo_admin', ad: 'Demo Yönetici', email: 'demo@hiserp.app', telefon: '', rol: 'admin', yetkiler: ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(60) },
+            { id: 'usr_demo_sofor1', ad: 'Şoför Ali', email: 'sofor@hiserp.app', telefon: '', rol: 'sofor', yetkiler: ['gorevlerim'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(30) },
+            { id: 'usr_demo_sofor2', ad: 'Şoför Veli', email: 'sofor2@hiserp.app', telefon: '', rol: 'sofor', yetkiler: ['gorevlerim'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(30) },
             { id: 'usr_demo_fason', ad: 'Akın Konfeksiyon', email: 'fasoncu@hiserp.app', telefon: '', rol: 'fasoncu', yetkiler: ['islerim'], aktif: true, firmaId: firmalar[2].id, sifre: 'demo123', createdAt: tarih(40) },
         ],
     };

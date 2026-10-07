@@ -9,6 +9,7 @@ const ROLLER = [
     { value: 'uretim', label: 'Üretim Sorumlusu', desc: 'Parti ve iş akışı yönetimi' },
     { value: 'muhasebe', label: 'Muhasebe', desc: 'Cari hesaplar ve raporlar' },
     { value: 'fasoncu', label: 'Fasoncu', desc: 'Sadece izin verilen sayfalar' },
+    { value: 'sofor', label: 'Şoför', desc: 'Kendisine atanan seferler (Görevlerim)' },
     { value: 'izleyici', label: 'İzleyici', desc: 'Sadece görüntüleme' },
 ];
 
@@ -24,6 +25,7 @@ const TUM_YETKILER = [
     { key: 'cari_hesaplar', label: 'Cari Hesaplar' },
     { key: 'irsaliyeler', label: 'İrsaliyeler' },
     { key: 'harita', label: 'Harita ve Rota' },
+    { key: 'gorevlerim', label: 'Görevlerim (Şoför)' },
     { key: 'raporlar', label: 'Raporlar' },
     { key: 'kullanicilar', label: 'Kullanıcılar' },
     { key: 'ayarlar', label: 'Ayarlar' },
@@ -34,6 +36,7 @@ const DEFAULT_YETKILER = {
     uretim: ['anasayfa', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'irsaliyeler', 'harita'],
     muhasebe: ['anasayfa', 'cari_hesaplar', 'raporlar', 'firmalar'],
     fasoncu: ['islerim'],
+    sofor: ['gorevlerim'],
     izleyici: ['anasayfa', 'partiler', 'raporlar'],
 };
 
@@ -134,6 +137,7 @@ export default function Kullanicilar() {
             uretim: { bg: '#fff4ce', color: '#d83b01', border: '#ffeb9c' },
             muhasebe: { bg: '#dff6dd', color: '#107c10', border: '#c1e1bc' },
             fasoncu: { bg: '#f4f4fc', color: '#5c2d91', border: '#e2e2f6' },
+            sofor: { bg: '#fde7e9', color: '#a4262c', border: '#f9c8cc' },
             izleyici: { bg: '#f3f2f1', color: '#605e5c', border: '#edebe9' },
         };
         const c = colors[rol] || colors.izleyici;

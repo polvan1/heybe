@@ -16,6 +16,7 @@ export const ROUTE_YETKI = {
     '/cari': 'cari_hesaplar',        // /cari/:id
     '/irsaliyeler': 'irsaliyeler',
     '/harita': 'harita',
+    '/gorevlerim': 'gorevlerim',
     '/raporlar': 'raporlar',
     '/kullanicilar': 'kullanicilar',
     '/ayarlar': 'ayarlar',
@@ -25,6 +26,7 @@ export const ROUTE_YETKI = {
 const YETKI_ROTA_SIRASI = [
     ['anasayfa', '/'],
     ['islerim', '/islerim'],
+    ['gorevlerim', '/gorevlerim'],
     ['partiler', '/partiler'],
     ['is_akisi', '/is-akisi'],
     ['takvim', '/is-talep-takvimi'],
