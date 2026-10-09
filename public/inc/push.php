@@ -26,6 +26,46 @@ function derToRawSignature($der) {
     return strlen($out) === 64 ? $out : false;
 }
 
+// VAPID anahtarları config.php'de yoksa sunucu ilk ihtiyaçta kendisi üretir ve
+// web'den erişilemeyen gizli/ klasöründe saklar. Böylece bildirimler ek ayar
+// gerektirmeden çalışır.
+function vapidHazirla() {
+    global $VAPID_SUBJECT, $VAPID_PUBLIC, $VAPID_PRIVATE_PEM;
+    if (empty($VAPID_SUBJECT)) {
+        $host = preg_replace('/[^a-z0-9.\-]/i', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
+        $VAPID_SUBJECT = 'mailto:admin@' . preg_replace('/^www\./', '', $host);
+    }
+    if (!empty($VAPID_PUBLIC) && !empty($VAPID_PRIVATE_PEM)) return true;
+
+    $dizin = veriDizini() . '/gizli';
+    $dosya = $dizin . '/vapid.json';
+    if (is_file($dosya)) {
+        $k = json_decode((string)@file_get_contents($dosya), true);
+        if (!empty($k['public']) && !empty($k['private'])) {
+            $VAPID_PUBLIC = $k['public'];
+            $VAPID_PRIVATE_PEM = $k['private'];
+            return true;
+        }
+    }
+    if (!function_exists('openssl_pkey_new')) return false;
+    $anahtar = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
+    if (!$anahtar || !openssl_pkey_export($anahtar, $pem)) return false;
+    $d = openssl_pkey_get_details($anahtar);
+    if (empty($d['ec']['x']) || empty($d['ec']['y'])) return false;
+    $public = b64url_encode("\x04" . str_pad($d['ec']['x'], 32, "\0", STR_PAD_LEFT) . str_pad($d['ec']['y'], 32, "\0", STR_PAD_LEFT));
+
+    if (!is_dir($dizin)) {
+        @mkdir($dizin, 0700, true);
+        @file_put_contents($dizin . '/.htaccess', "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n");
+        @file_put_contents($dizin . '/index.html', '');
+    }
+    if (@file_put_contents($dosya, json_encode(['public' => $public, 'private' => $pem])) === false) return false;
+    @chmod($dosya, 0600);
+    $VAPID_PUBLIC = $public;
+    $VAPID_PRIVATE_PEM = $pem;
+    return true;
+}
+
 function vapidJwt($audience) {
     global $VAPID_SUBJECT, $VAPID_PRIVATE_PEM;
     $header = b64url_encode(json_encode(['typ' => 'JWT', 'alg' => 'ES256']));
@@ -46,7 +86,7 @@ function vapidJwt($audience) {
 // $kullaniciIdler: null → tüm cihazlar; dizi → sadece bu kullanıcıların cihazları
 function sendPushToAll($pdo, $kullaniciIdler = null) {
     global $VAPID_PUBLIC;
-    if (empty($VAPID_PUBLIC)) return;
+    if (!vapidHazirla()) return;
     try {
         if (is_array($kullaniciIdler)) {
             if (!$kullaniciIdler) return;
@@ -101,6 +141,7 @@ function pushIstegi($pdo, $action) {
     if ($action === 'anahtar') {
         // Ön yüz abone olurken bu public key'i kullanır (config.php tek kaynak)
         global $VAPID_PUBLIC;
+        vapidHazirla();
         jsonYanit(['publicKey' => (string)$VAPID_PUBLIC]);
     }
 

@@ -10,9 +10,15 @@
 #   FTP_SIFRE         FTP şifresi
 #   FTP_CANLI_DIZIN   ör. /public_html/dist/   (sonunda / olmalı)
 #   FTP_TEST_DIZIN    ör. /public_html/test/   (sonunda / olmalı; boşsa test yüklemesi atlanır)
+# Veritabanı (config.php bunlardan OTOMATİK üretilir; yoksa sunucudaki config.php'ye dokunulmaz):
+#   TEST_DB_ADI, TEST_DB_KULLANICI, TEST_DB_SIFRE      → test ortamı
+#   CANLI_DB_ADI, CANLI_DB_KULLANICI, CANLI_DB_SIFRE   → canlı ortam
+#   DB_SUNUCU (isteğe bağlı, varsayılan localhost), ANTHROPIC_API_KEY (isteğe bağlı)
+#   ⚠️ config.php bir kez buradan yüklendiyse bu secret'ları SİLMEYİN: sonraki yüklemede
+#      sunucudaki config.php de kaldırılır (yükleme aracı kendi yüklediği dosyaları eşitler).
 # İsteğe bağlı "Variables": FTP_PROTOKOL = ftps (varsayılan) | ftp
 #
-# Sunucudaki config.php, backups/ ve uploads/ ASLA silinmez veya üzerine yazılmaz.
+# Sunucudaki backups/, uploads/ ve gizli/ (bildirim anahtarları) ASLA silinmez veya değişmez.
 
 name: Sunucuya yükle
 
@@ -75,12 +81,28 @@ jobs:
           else HEDEF=test; fi
           if [ "$HEDEF" = "canli" ]; then DIZIN="$CANLI"; else DIZIN="$TEST"; fi
           echo "hedef=$HEDEF" >> "$GITHUB_OUTPUT"
+          echo "onek=${HEDEF^^}" >> "$GITHUB_OUTPUT"
           if [ -z "$SUNUCU" ] || [ -z "$DIZIN" ]; then
             echo "::warning::$HEDEF için FTP bilgileri (FTP_SUNUCU / FTP_${HEDEF^^}_DIZIN) tanımlı değil; yükleme atlandı."
             echo "atla=1" >> "$GITHUB_OUTPUT"
           else
             case "$DIZIN" in */) ;; *) DIZIN="$DIZIN/";; esac
             echo "dizin=$DIZIN" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: config.php oluştur
+        if: steps.hedef.outputs.atla != '1'
+        env:
+          DB_ADI: ${{ secrets[format('{0}_DB_ADI', steps.hedef.outputs.onek)] }}
+          DB_KULLANICI: ${{ secrets[format('{0}_DB_KULLANICI', steps.hedef.outputs.onek)] }}
+          DB_SIFRE: ${{ secrets[format('{0}_DB_SIFRE', steps.hedef.outputs.onek)] }}
+          DB_SUNUCU: ${{ secrets.DB_SUNUCU }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$DB_ADI" ] && [ -n "$DB_KULLANICI" ] && [ -n "$DB_SIFRE" ]; then
+            php scripts/config-uret.php dist/config.php
+          else
+            echo "::notice::${{ steps.hedef.outputs.onek }}_DB_* secret'ları tanımlı değil; config.php üretilmedi (sunucudaki dosyaya dokunulmaz)."
           fi
 
       - name: FTP ile yükle (${{ steps.hedef.outputs.hedef }})
@@ -94,13 +116,14 @@ jobs:
           local-dir: ./dist/
           server-dir: ${{ steps.hedef.outputs.dizin }}
           # Sadece değişen dosyalar gönderilir. Daha önce bu işlemle yüklenmemiş sunucu
-          # dosyalarına (config.php, backups/, uploads/) hiç dokunulmaz.
+          # dosyalarına (backups/, uploads/, gizli/) hiç dokunulmaz.
           exclude: |
             **/.git*
             **/.git*/**
-            config.php
+            config.example.php
             backups/**
             uploads/**
+            gizli/**
 
       - name: Özet
         if: steps.hedef.outputs.atla != '1'
