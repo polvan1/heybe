@@ -25,24 +25,28 @@ Kodda yapılan her değişiklik GitHub üzerinden sunucuya otomatik yüklenir
 | `main` dalına birleştirme | **Canlı** klasör (ör. `panel.myhis.com.tr/dist/`) |
 | Actions → "Sunucuya yükle" → **Run workflow** | Seçtiğiniz hedef |
 
-### Bir kerelik kurulum
-1. **cPanel → FTP Accounts**: Kullanıcı oluşturun (ör. `deploy@myhis.com.tr`), dizini
-   `public_html` olsun. Sunucu adı genelde `ftp.myhis.com.tr`'dir (cPanel'de "Configure FTP Client").
-2. **Test klasörü ve test veritabanı** (önerilir):
-   - cPanel → MySQL Databases: yeni boş veritabanı + kullanıcı (ör. `myhiscom_test`).
-   - İsterseniz phpMyAdmin'den canlı veritabanını Dışa Aktar → test veritabanına İçe Aktar.
-   - File Manager: `public_html/test/` klasörünü açın, içine `config.php` koyun
-     (`config.example.php`'yi doldurarak; **test veritabanı bilgileriyle**).
+### Bir kerelik kurulum (aaPanel)
+1. **aaPanel → FTP**: FTP kullanıcısının "Belge Kök Dizini"ne bakın (ör. `/www/wwwroot/www.myhis.com.tr`).
+   Aşağıdaki klasör yolları bu köke göre yazılır. Güçlü bir şifre verin.
+2. **aaPanel → Güvenlik**: 21 ve 39000-40000 (pasif FTP) portları açık olmalı. Sunucu bir bulut
+   sağlayıcısındaysa (ör. Oracle Cloud) aynı portları sağlayıcının güvenlik listesinde de açın.
+3. **Test klasörü ve test veritabanı** (önerilir):
+   - aaPanel → Veritabanları → **Veritabanı ekle** (ör. `his_test`).
+   - İsterseniz canlı veritabanını yedekleyip test veritabanına geri yükleyin.
+   - aaPanel → Dosyalar: site kökünde `test` klasörü açın, içine `config.php` koyun
+     (`dist/config.php`'yi kopyalayıp **test veritabanı bilgileriyle** düzenleyin).
    - ⚠️ Test sürümünü canlı veritabanına bağlamayın: yeni sürümde giriş yapan kullanıcının
      şifresi yeni biçime yükseltilir ve o kişi **eski canlı sürüme giriş yapamaz**.
-3. **GitHub → depo → Settings → Secrets and variables → Actions → New repository secret**:
-   - `FTP_SUNUCU` = `ftp.myhis.com.tr`
+4. **GitHub → depo → Settings → Secrets and variables → Actions → New repository secret**:
+   - `FTP_SUNUCU` = sunucu IP adresi ya da FTP alan adı
    - `FTP_KULLANICI` = FTP kullanıcı adı
    - `FTP_SIFRE` = FTP şifresi
-   - `FTP_TEST_DIZIN` = `/public_html/test/`  (FTP kullanıcısının kök dizinine göre)
-   - `FTP_CANLI_DIZIN` = `/public_html/dist/`
-   - FTPS bağlantı hatası verirse **Variables** sekmesinde `FTP_PROTOKOL` = `ftp` ekleyin.
-4. Actions sekmesinden "Sunucuya yükle" → **Run workflow** → `test` ile ilk yüklemeyi deneyin.
+   - `FTP_TEST_DIZIN` = `/test/`  (FTP kök dizinine göre)
+   - `FTP_CANLI_DIZIN` = `/dist/`
+   - Bağlantı "TLS/SSL" hatası verirse **Variables** sekmesinde `FTP_PROTOKOL` = `ftp` ekleyin
+     (aaPanel'in Pure-FTPd sunucusunda FTPS çoğu zaman kapalıdır).
+5. İlk yükleme: depoya bir sonraki gönderimde kendiliğinden başlar. Actions sekmesindeki
+   **Run workflow** düğmesi, iş akışı `main` dalına birleştirildikten sonra görünür.
 
 Şifreler GitHub'da şifreli saklanır; kodda, kayıtlarda ve depoda görünmez. Sunucudaki
 `config.php`, `backups/` ve `uploads/` hiçbir yüklemede silinmez veya değiştirilmez.
