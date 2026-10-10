@@ -217,7 +217,7 @@ function veriYaz($pdo, $ben, $govde) {
 
 // Her günün ilk kaydında tüm veritabanının JSON yedeği (son 14 gün)
 function gunlukYedek($pdo) {
-    $dizin = veriDizini() . '/backups';
+    $dizin = ozelDizin() . '/backups';
     if (!is_dir($dizin)) {
         if (!@mkdir($dizin, 0755, true)) return;
         @file_put_contents($dizin . '/.htaccess', "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n");

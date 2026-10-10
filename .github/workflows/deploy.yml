@@ -124,6 +124,24 @@ jobs:
             backups/**
             uploads/**
             gizli/**
+            ozel-*/**
+
+      - name: Site kontrolü
+        if: steps.hedef.outputs.atla != '1'
+        continue-on-error: true
+        env:
+          URL: ${{ steps.hedef.outputs.hedef == 'canli' && (vars.CANLI_URL || 'https://www.myhis.com.tr/dist/') || (vars.TEST_URL || 'https://www.myhis.com.tr/test/') }}
+        run: |
+          # Sadece durum kodları ve kurulum durumu yazılır (veri içermez; kayıtlar herkese açık)
+          kod() { curl -s -o /dev/null -m 20 -w '%{http_code}' "$1"; }
+          echo "Adres: $URL"
+          echo "Sunucu yazılımı: $(curl -sI -m 20 "$URL" | grep -i '^server:' | tr -d '\r')"
+          echo "index.html → $(kod "${URL}index.html")"
+          echo "api.php?auth=durum → $(curl -s -m 20 -w ' [HTTP %{http_code}]' "${URL}api.php?auth=durum" | head -c 400)"
+          echo "api.php (oturumsuz, 401 beklenir) → $(kod "${URL}api.php")"
+          echo "config.php (içerik vermemeli) → $(kod "${URL}config.php") / boyut: $(curl -s -m 20 "${URL}config.php" | wc -c) bayt"
+          echo "inc/db.php → $(kod "${URL}inc/db.php")"
+          echo ".ftp-deploy-sync-state.json → $(kod "${URL}.ftp-deploy-sync-state.json")"
 
       - name: Özet
         if: steps.hedef.outputs.atla != '1'

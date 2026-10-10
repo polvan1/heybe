@@ -9,6 +9,7 @@ require __DIR__ . '/../public/inc/auth.php';
 require __DIR__ . '/../public/inc/sync.php';
 function jsonHata($k, $h, $m) { fwrite(STDERR, "$h: $m\n"); exit(1); }
 function veriDizini() { global $DATA_DIR; return $DATA_DIR; }
+function ozelDizin() { global $DATA_DIR; return $DATA_DIR; }
 
 $yedek = json_decode(file_get_contents($argv[1]), true);
 if (!is_array($yedek)) jsonHata(1, 'json', 'Yedek okunamadı');

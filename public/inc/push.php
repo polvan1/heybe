@@ -37,7 +37,7 @@ function vapidHazirla() {
     }
     if (!empty($VAPID_PUBLIC) && !empty($VAPID_PRIVATE_PEM)) return true;
 
-    $dizin = veriDizini() . '/gizli';
+    $dizin = ozelDizin() . '/gizli';
     $dosya = $dizin . '/vapid.json';
     if (is_file($dosya)) {
         $k = json_decode((string)@file_get_contents($dosya), true);

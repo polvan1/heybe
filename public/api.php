@@ -14,6 +14,10 @@
 //   *    api.php?push=subscribe|unsubscribe|son|test
 //   POST api.php?sefer=durak|konum             (şoför: durak tamamla, konum paylaş)
 
+// PHP uyarıları JSON cevabın önüne basılıp cevabı bozmasın (hatalar sunucu günlüğüne yazılır)
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
@@ -34,10 +38,21 @@ function jsonGovde() {
     return is_array($g) ? $g : [];
 }
 
-// Yedek ve yüklenen fotoğrafların klasörü (varsayılan: api.php'nin yanı)
+// Yüklenen fotoğrafların klasörü (uploads/ web'den açılabilir olmalı; varsayılan: api.php'nin yanı)
 function veriDizini() {
     global $DATA_DIR;
     return !empty($DATA_DIR) ? rtrim($DATA_DIR, '/\\') : __DIR__;
+}
+
+// Yedekler ve bildirim anahtarı gibi GİZLİ dosyaların klasörü.
+// Nginx sunucularda .htaccess çalışmadığı için bu klasörün adı tahmin edilemez yapılır
+// (config.php'deki veritabanı şifresinden türetilir; kurulumdan kuruluma değişir).
+function ozelDizin() {
+    global $OZEL_DIR, $DATA_DIR, $DB_PASS, $DB_NAME, $DB_DSN;
+    if (!empty($OZEL_DIR)) return rtrim($OZEL_DIR, '/\\');
+    if (!empty($DATA_DIR)) return rtrim($DATA_DIR, '/\\');
+    $tohum = ($DB_PASS ?? '') . '|' . ($DB_NAME ?? '') . '|' . ($DB_DSN ?? '') . '|his-erp-ozel';
+    return __DIR__ . '/ozel-' . substr(hash('sha256', $tohum), 0, 32);
 }
 
 // ---- YAPILANDIRMA ----
