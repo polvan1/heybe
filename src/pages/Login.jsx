@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { LogIn, Eye, EyeOff, UserPlus, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
-    const { kurulumGerekli, login, ilkKurulum } = useApp();
+    const { kurulumGerekli, login, ilkKurulum, sunucuHatasi } = useApp();
     const ilkKurulumMu = kurulumGerekli;
 
     const [kimlik, setKimlik] = useState('');
@@ -58,7 +58,15 @@ export default function Login() {
                     </p>
                 </div>
 
-                {import.meta.env.VITE_DEMO === '1' && !ilkKurulumMu && (
+                {sunucuHatasi && (
+                    <div className="sunucu-hatasi" role="alert">
+                        <strong>Sunucuya ulaşılamadı</strong>
+                        <span>{sunucuHatasi}</span>
+                        <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>Tekrar dene</button>
+                    </div>
+                )}
+
+                {!sunucuHatasi && import.meta.env.VITE_DEMO === '1' && !ilkKurulumMu && (
                     <div className="demo-giris">
                         <strong>Demo hesapları</strong> (şifre: demo123)
                         <div className="demo-giris-butonlar">
@@ -70,7 +78,7 @@ export default function Login() {
                     </div>
                 )}
 
-                {ilkKurulumMu ? (
+                {sunucuHatasi ? null : ilkKurulumMu ? (
                     /* ---- İLK KURULUM: Yönetici hesabı oluştur ---- */
                     <form onSubmit={handleKurulum}>
                         <div style={{

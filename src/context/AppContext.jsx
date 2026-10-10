@@ -23,6 +23,7 @@ export function AppProvider({ children }) {
     const [merkez, setMerkezState] = useState(null);
     const [currentUser, setCurrentUserState] = useState(null);
     const [kurulumGerekli, setKurulumGerekli] = useState(false);
+    const [sunucuHatasi, setSunucuHatasi] = useState('');
 
     // Aktif kullanıcıyı hem state'e hem db katmanına (işlem günlüğü için) bildir
     const setCurrentUser = useCallback((user) => {
@@ -68,6 +69,7 @@ export function AppProvider({ children }) {
                 if (durum.kullanici) await oturumuAc(durum.kullanici);
             } catch (e) {
                 console.error('Sunucuya bağlanılamadı:', e);
+                setSunucuHatasi(e.message || 'Sunucuya bağlanılamadı.');
             }
             setLoading(false);
         };
@@ -212,7 +214,7 @@ export function AppProvider({ children }) {
     const value = {
         firmalar, urunler, partiler, cariHareketler, isAkisi, bildirimler, stoklar, irsaliyeler, kullanicilar, islemGunlugu, kumasStoklar, kumasTurleri, tema,
         kumasStokEkle, kumasStokGuncelle, kumasStokSil, kumasTuruEkle, kumasTuruSil,
-        currentUser, login, logout, ilkKurulum, kurulumGerekli,
+        currentUser, login, logout, ilkKurulum, kurulumGerekli, sunucuHatasi,
         fasoncuTeslimBildir: (partiId, cikanAdet, notu) => { db.fasoncuTeslimBildir(partiId, cikanAdet, notu); refresh(); },
         yedekIndir: db.exportBackup,
         yedekYukle: async (jsonText) => { const n = await db.importBackup(jsonText); refresh(); return n; },

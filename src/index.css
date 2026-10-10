@@ -3116,3 +3116,16 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
 .gorev-durak-zaman { display: inline-flex; gap: 6px; align-items: center; font-size: 0.75rem; color: var(--accent-success); }
 .harita-is { display: inline-flex; gap: 6px; align-items: center; }
 .harita-is svg { flex-shrink: 0; }
+
+/* Giriş ekranı: sunucuya ulaşılamadığında */
+.sunucu-hatasi {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--accent-danger) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.sunucu-hatasi strong { color: var(--accent-danger); }

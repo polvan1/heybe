@@ -42,7 +42,12 @@ export async function apiIstek(sorgu = '', govde, secenekler = {}) {
     try { veri = await yanit.json(); } catch (e) { /* boş/bozuk yanıt */ }
     if (!yanit.ok) {
         if (yanit.status === 401 && !sorgu.startsWith('auth=')) oturumDustu();
-        throw new ApiHatasi(veri?.mesaj || `Sunucu hatası (${yanit.status})`, yanit.status, veri?.error, veri);
+        const mesaj = veri?.mesaj || (veri ? `Sunucu hatası (${yanit.status})` : `Sunucudan beklenmeyen cevap geldi (HTTP ${yanit.status}). Sunucu ayarlarını kontrol edin.`);
+        throw new ApiHatasi(mesaj, yanit.status, veri?.error, veri);
+    }
+    if (veri === null) {
+        // Örn. PHP çalışmıyor ve api.php düz metin olarak geliyor
+        throw new ApiHatasi('Sunucudan beklenmeyen cevap geldi (JSON değil). Sunucuda PHP\'nin çalıştığını kontrol edin.', yanit.status, 'gecersiz_cevap', null);
     }
     return veri;
 }
