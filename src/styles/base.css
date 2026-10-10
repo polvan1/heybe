@@ -1,0 +1,206 @@
+/* ==========================================================================
+   Temel: sıfırlama, tipografi, kaydırma çubuğu, animasyonlar, ikonlar
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Gövde ASLA kaydırılmaz; yalnızca .main-content kayar.
+   (iOS'ta gövde kaydığında sabit alt menü sayfayla birlikte sürükleniyordu) */
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.55;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard);
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+h1, h2, h3, h4 {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.011em;
+  line-height: 1.3;
+}
+
+strong, b {
+  font-weight: var(--font-weight-semibold);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  outline: none;
+  color: inherit;
+  background: none;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  color: inherit;
+  outline: none;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-primary);
+}
+
+/* Klavye ile gezinmede belirgin, fareyle tıklamada görünmeyen odak halkası */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+/* --- Lucide ikonları: ince çizgi, yuvarlak uçlar --- */
+svg.lucide {
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Küçük boyutlarda okunabilirlik için biraz daha kalın */
+svg.lucide[width="12"],
+svg.lucide[width="13"],
+svg.lucide[width="14"],
+svg.lucide[width="15"],
+svg.lucide[width="16"] {
+  stroke-width: 2;
+}
+
+/* --- Kaydırma çubuğu --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+  background-clip: padding-box;
+}
+
+/* --- Animasyonlar --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeUp var(--duration-slow) var(--ease-standard);
+}
+
+.animate-spin {
+  animation: spin 0.9s linear infinite;
+}
+
+/* Hareket azaltma tercihine saygı */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mobilde kaydırma çubuğu görünmesin (kaydırma çalışmaya devam eder) */
+@media (max-width: 768px) {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

@@ -249,8 +249,8 @@ export default function IsTalepTakvimi() {
             {/* AI Badge */}
             <div style={{
                 padding: '12px 16px',
-                background: 'linear-gradient(135deg, rgba(37,99,235,0.06), rgba(99,102,241,0.06))',
-                border: '1px solid rgba(37,99,235,0.15)',
+                background: 'var(--color-primary-soft)',
+                border: '1px solid var(--color-primary-border)',
                 borderRadius: 'var(--radius-md)',
                 marginBottom: '20px',
                 display: 'flex',
@@ -418,7 +418,7 @@ export default function IsTalepTakvimi() {
                                                     <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>
                                                         {u.kaynak === 'ogrenilmis' ? (
                                                             <span style={{ color: 'var(--accent-primary)', fontSize: '0.7rem', fontWeight: 600 }}>
-                                                                📊 {u.veriSayisi} iş verisi
+                                                                <BarChart3 size={12} style={{ verticalAlign: '-2px' }} /> {u.veriSayisi} iş verisi
                                                             </span>
                                                         ) : u.kaynak === 'varsayilan' ? (
                                                             <span className="text-xs text-muted">Genel kapasite</span>
@@ -526,7 +526,7 @@ export default function IsTalepTakvimi() {
                                         <span>{w.toplamIs.toLocaleString('tr-TR')} adet iş</span>
                                         <span>{w.aktifPartiSayisi} parti</span>
                                         {w.ogrenilmisVeri > 0 && (
-                                            <span style={{ color: 'var(--accent-primary)' }}>📊 {w.ogrenilmisVeri} veri</span>
+                                            <span style={{ color: 'var(--accent-primary)' }}><BarChart3 size={12} style={{ verticalAlign: '-2px' }} /> {w.ogrenilmisVeri} veri</span>
                                         )}
                                     </div>
 
@@ -572,7 +572,7 @@ export default function IsTalepTakvimi() {
                                                         </span>
                                                     </div>
                                                     <div className="text-xs text-muted">
-                                                        {u.kaynak === 'ogrenilmis' ? `📊 Öğrenilmiş: ${u.gunlukKapasite} adet/gün` : `Varsayılan: ${u.gunlukKapasite} adet/gün`}
+                                                        {u.kaynak === 'ogrenilmis' ? `Öğrenilmiş: ${u.gunlukKapasite} adet/gün` : `Varsayılan: ${u.gunlukKapasite} adet/gün`}
                                                     </div>
                                                 </div>
                                             ))}

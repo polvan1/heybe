@@ -147,7 +147,7 @@ export default function Urunler() {
             });
         });
         setImportData(null);
-        alert(`✅ ${importData.length} ürün başarıyla eklendi!`);
+        alert(`${importData.length} ürün başarıyla eklendi!`);
     };
 
     const downloadTemplate = () => {
@@ -314,7 +314,7 @@ export default function Urunler() {
                                                 <td style={{ fontWeight: 600 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         {urun.foto && (
-                                                            <img src={fotoSrc(urun.foto)} alt="" style={{ width: '34px', height: '34px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)', flexShrink: 0 }} />
+                                                            <img src={fotoSrc(urun.foto)} alt="" style={{ width: '34px', height: '34px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', flexShrink: 0 }} />
                                                         )}
                                                         {urun.urunKodu}
                                                     </div>
@@ -383,9 +383,9 @@ export default function Urunler() {
                                         {/* Stok Alanı */}
                                         <div style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '10px 12px', background: stok > 0 ? 'rgba(5,150,105,0.08)' : 'rgba(0,0,0,0.02)',
+                                            padding: '10px 12px', background: stok > 0 ? 'var(--color-success-soft)' : 'var(--color-surface-muted)',
                                             borderRadius: 'var(--radius-sm)', marginBottom: '8px',
-                                            border: stok > 0 ? '1px solid rgba(5,150,105,0.2)' : '1px solid var(--border-color)'
+                                            border: stok > 0 ? '1px solid var(--color-success-border)' : '1px solid var(--border-color)'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <Warehouse size={16} style={{ color: stok > 0 ? 'var(--accent-success)' : 'var(--text-muted)' }} />
@@ -476,7 +476,7 @@ export default function Urunler() {
                         </div>
                     </div>
 
-                    <div className="form-row" style={{ marginTop: '12px', padding: '12px', background: 'rgba(37,99,235,0.05)', borderRadius: 'var(--radius-sm)' }}>
+                    <div className="form-row" style={{ marginTop: '12px', padding: '12px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)' }}>
                         <div className="form-group">
                             <label className="form-label">Kesim Fiyatı (₺)</label>
                             <input type="number" step="0.01" className="form-input" value={form.kesimFiyat} onChange={e => setForm({ ...form, kesimFiyat: e.target.value })} placeholder="0.00" />
@@ -492,7 +492,7 @@ export default function Urunler() {
                     </div>
 
                     {/* Firma Bazlı Fiyat Anlaşmaları */}
-                    <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,120,212,0.04)', border: '1px solid rgba(0,120,212,0.15)', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-primary-soft)', border: '1px solid var(--color-primary-border)', borderRadius: 'var(--radius-sm)' }}>
                         <div style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '4px' }}>Firma Bazlı Fiyat Anlaşmaları</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
                             Belirli bir firmayla farklı fiyat anlaştıysanız buraya girin. Parti açarken o firma seçilince
@@ -595,7 +595,7 @@ export default function Urunler() {
             {/* Stok Güncelleme Modal */}
             {stokModal && (
                 <Modal
-                    title={stokModal.tip === 'giris' ? '📦 Stok Giriş' : '📤 Stok Çıkış'}
+                    title={stokModal.tip === 'giris' ? 'Stok Giriş' : 'Stok Çıkış'}
                     onClose={() => { setStokModal(null); setStokAdet(''); }}
                     footer={
                         <>
@@ -614,7 +614,7 @@ export default function Urunler() {
                         if (!urun) return null;
                         return (
                             <>
-                                <div style={{ padding: '12px', background: 'rgba(0,0,0,0.03)', borderRadius: 'var(--radius-sm)', marginBottom: '16px' }}>
+                                <div style={{ padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)', marginBottom: '16px' }}>
                                     <div style={{ fontWeight: 600 }}>{urun.urunKodu} — {urun.urunAdi}</div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                                         Mevcut Stok: <strong style={{ color: 'var(--accent-primary)', fontSize: '1.1rem' }}>{(urun.stokAdet || 0).toLocaleString('tr-TR')}</strong> adet
@@ -636,7 +636,7 @@ export default function Urunler() {
                                 {stokAdet && parseInt(stokAdet) > 0 && (
                                     <div style={{
                                         padding: '10px 12px',
-                                        background: stokModal.tip === 'giris' ? 'rgba(5,150,105,0.08)' : 'rgba(220,38,38,0.08)',
+                                        background: stokModal.tip === 'giris' ? 'var(--color-success-soft)' : 'var(--color-danger-soft)',
                                         borderRadius: 'var(--radius-sm)',
                                         fontSize: '0.85rem',
                                         marginTop: '8px'
@@ -658,7 +658,7 @@ export default function Urunler() {
             {/* Excel Import Önizleme Modal */}
             {importData && (
                 <Modal
-                    title={`📊 Excel Aktarma Önizleme (${importData.length} ürün)`}
+                    title={`Excel Aktarma Önizleme (${importData.length} ürün)`}
                     onClose={() => setImportData(null)}
                     footer={
                         <>
@@ -697,8 +697,8 @@ export default function Urunler() {
                             </tbody>
                         </table>
                     </div>
-                    <div style={{ marginTop: '12px', padding: '10px', background: 'rgba(37,99,235,0.06)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        💡 Veriler doğru görünüyorsa "Aktar" butonuna basın. Asorti dağılımları otomatik oluşturulacak.
+                    <div style={{ marginTop: '12px', padding: '10px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Veriler doğru görünüyorsa "Aktar" butonuna basın. Asorti dağılımları otomatik oluşturulacak.
                     </div>
                 </Modal>
             )}

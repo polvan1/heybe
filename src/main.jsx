@@ -45,18 +45,15 @@ class ErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div style={{ padding: '40px', color: '#f87171', fontFamily: 'monospace', background: '#0f172a', minHeight: '100vh' }}>
-                    <h1 style={{ color: '#ef4444', marginBottom: '16px' }}>⚠️ Uygulama Hatası</h1>
-                    <pre style={{ whiteSpace: 'pre-wrap', color: '#fbbf24', fontSize: '14px' }}>
-                        {this.state.error?.message}
-                    </pre>
-                    <pre style={{ whiteSpace: 'pre-wrap', color: '#64748b', fontSize: '12px', marginTop: '12px' }}>
-                        {this.state.error?.stack}
-                    </pre>
-                    <button onClick={() => { localStorage.clear(); window.location.reload(); }}
-                        style={{ marginTop: '20px', padding: '12px 24px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>
-                        Verileri Temizle & Yeniden Başlat
-                    </button>
+                <div className="app-error">
+                    <div className="card app-error-card">
+                        <h1 className="page-title" style={{ marginBottom: '8px' }}>Uygulama hatası</h1>
+                        <p className="text-sm text-muted">{this.state.error?.message}</p>
+                        <pre>{this.state.error?.stack}</pre>
+                        <button className="btn btn-primary" onClick={() => { localStorage.clear(); window.location.reload(); }}>
+                            Verileri Temizle & Yeniden Başlat
+                        </button>
+                    </div>
                 </div>
             );
         }

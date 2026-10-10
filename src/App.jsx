@@ -51,8 +51,8 @@ const PAGE_TITLES = {
 
 function PageLoader() {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
-            <div style={{ width: '32px', height: '32px', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <div className="page-loader" role="status" aria-label="Yükleniyor">
+            <div className="spinner" />
         </div>
     );
 }
@@ -152,11 +152,8 @@ export default function App() {
                     onMenuClick={() => setSidebarOpen(true)}
                 />
                 {syncHata && (
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        padding: '8px 16px', background: '#c4314b', color: '#fff', fontSize: '0.82rem', fontWeight: 600,
-                    }}>
-                        <WifiOff size={15} />
+                    <div className="sync-banner" role="alert">
+                        <WifiOff size={16} />
                         Değişiklikler sunucuya kaydedilemedi! Bağlantınızı kontrol edin — bağlantı gelince otomatik tekrar denenecek.
                     </div>
                 )}

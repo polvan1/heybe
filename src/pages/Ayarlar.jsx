@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Settings, Sun, Moon, Database, Download, Upload, RefreshCw, Shield, Info, Bell, BellOff, Send } from 'lucide-react';
+import Notice from '../components/ui/Notice';
 import { pushDestekliMi, pushDurumu, pushAc, pushKapat, pushTest, iosKuruluDegilMi } from '../data/push';
 
 export default function Ayarlar() {
@@ -81,9 +82,9 @@ export default function Ayarlar() {
 
     return (
         <div className="animate-fade-in">
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                <Settings size={20} /> Ayarlar
-            </h2>
+            <div className="page-header">
+                <h1 className="page-title"><Settings size={22} /> Ayarlar</h1>
+            </div>
 
             <div style={{ display: 'grid', gap: '20px', maxWidth: '700px' }}>
 
@@ -158,14 +159,7 @@ export default function Ayarlar() {
                             <input ref={fileInputRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={handleYedekYukle} />
                         </div>
                         {mesaj && (
-                            <div style={{
-                                padding: '8px 12px', borderRadius: '4px', fontSize: '0.8rem',
-                                background: mesaj.tip === 'ok' ? 'rgba(16,124,16,0.08)' : 'rgba(196,49,75,0.08)',
-                                border: mesaj.tip === 'ok' ? '1px solid rgba(16,124,16,0.2)' : '1px solid rgba(196,49,75,0.25)',
-                                color: mesaj.tip === 'ok' ? '#107c10' : '#c4314b',
-                            }}>
-                                {mesaj.tip === 'ok' ? '✓ ' : '⚠ '}{mesaj.metin}
-                            </div>
+                            <Notice tone={mesaj.tip === 'ok' ? 'success' : 'danger'}>{mesaj.metin}</Notice>
                         )}
                     </div>
                 </div>
@@ -180,17 +174,17 @@ export default function Ayarlar() {
                     </div>
 
                     {bildirimDurum === 'desteklenmiyor' && (
-                        <div style={{ padding: '10px 12px', background: 'rgba(196,49,75,0.08)', border: '1px solid rgba(196,49,75,0.25)', borderRadius: '4px', fontSize: '0.8rem', color: '#c4314b' }}>
+                        <Notice tone="warning">
                             {iosKuruluDegilMi()
                                 ? 'iPhone\'da bildirimler için uygulamayı ana ekrana ekleyin: Safari → Paylaş → "Ana Ekrana Ekle". Sonra uygulamayı ana ekrandaki simgeden açın — bu ayar burada görünecektir. (iOS 16.4 veya üzeri gerekir)'
                                 : 'Bu tarayıcı push bildirimlerini desteklemiyor.'}
-                        </div>
+                        </Notice>
                     )}
 
                     {bildirimDurum === 'engellendi' && (
-                        <div style={{ padding: '10px 12px', background: 'rgba(196,49,75,0.08)', border: '1px solid rgba(196,49,75,0.25)', borderRadius: '4px', fontSize: '0.8rem', color: '#c4314b' }}>
+                        <Notice tone="warning">
                             Bildirim izni daha önce reddedilmiş. Tarayıcı/telefon ayarlarından bu site için bildirimlere izin verip sayfayı yenileyin.
-                        </div>
+                        </Notice>
                     )}
 
                     {(bildirimDurum === 'kapali' || bildirimDurum === 'kontrol') && (
@@ -201,8 +195,8 @@ export default function Ayarlar() {
 
                     {bildirimDurum === 'acik' && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#107c10', fontWeight: 600 }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#107c10' }} /> Bildirimler açık
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--color-success)', fontWeight: 600 }}>
+                                <span className="status-dot status-dot--on" /> Bildirimler açık
                             </span>
                             <button className="btn btn-ghost btn-sm" onClick={handleBildirimTest} disabled={bildirimBusy}>
                                 <Send size={14} /> Test Gönder
@@ -221,7 +215,7 @@ export default function Ayarlar() {
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         <p>Kullanıcı yetkilendirmesi <strong>Kullanıcılar</strong> sayfasından yönetilir. Her kullanıcıya rol atayabilir ve hangi sayfalara erişebileceğini belirleyebilirsiniz.</p>
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                             <div style={{ fontWeight: 600, marginBottom: '6px', fontSize: '0.82rem' }}>Rol Yetkileri:</div>
                             <ul style={{ paddingLeft: '16px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                                 <li><strong>Yönetici:</strong> Tüm sayfalara tam erişim</li>
@@ -244,7 +238,7 @@ export default function Ayarlar() {
                             <span style={{ fontWeight: 600 }}>Uygulama:</span><span>HiS ERP</span>
                             <span style={{ fontWeight: 600 }}>Versiyon:</span><span>2.0.0</span>
                             <span style={{ fontWeight: 600 }}>Platform:</span><span>React + PHP + MySQL</span>
-                            <span style={{ fontWeight: 600 }}>Tema:</span><span>Microsoft Dynamics 365</span>
+                            <span style={{ fontWeight: 600 }}>Tema:</span><span>HİS Minimal (açık / koyu)</span>
                         </div>
                     </div>
                 </div>

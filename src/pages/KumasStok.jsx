@@ -266,11 +266,11 @@ export default function KumasStok() {
                     {okuma.satirlar.map((s, i) => (
                         <div key={i} style={{
                             padding: '10px', marginBottom: '8px', borderRadius: 'var(--radius-sm)',
-                            border: '1px solid var(--border-color)', background: s.dahil ? 'var(--bg-card)' : 'rgba(0,0,0,0.04)',
+                            border: '1px solid var(--border-color)', background: s.dahil ? 'var(--bg-card)' : 'var(--color-surface-muted)',
                             opacity: s.dahil ? 1 : 0.55,
                         }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
-                                <input type="checkbox" checked={s.dahil} onChange={e => okumaSatirGuncelle(i, 'dahil', e.target.checked)} style={{ accentColor: '#0078d4', flexShrink: 0 }} />
+                                <input type="checkbox" checked={s.dahil} onChange={e => okumaSatirGuncelle(i, 'dahil', e.target.checked)} style={{ accentColor: 'var(--color-primary)', flexShrink: 0 }} />
                                 <input className="form-input" list="kumas-turleri-listesi" value={s.kumasTuru}
                                     onChange={e => okumaSatirGuncelle(i, 'kumasTuru', e.target.value)}
                                     placeholder="Kumaş türü" style={{ flex: 2, minWidth: 0 }} />

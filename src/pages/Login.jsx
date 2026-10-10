@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { LogIn, Eye, EyeOff, UserPlus, ShieldCheck } from 'lucide-react';
+import Notice from '../components/ui/Notice';
 
 export default function Login() {
     const { kurulumGerekli, login, ilkKurulum, sunucuHatasi } = useApp();
@@ -44,18 +45,13 @@ export default function Login() {
     };
 
     return (
-        <div style={{
-            minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--bg-primary)', padding: '20px',
-        }}>
-            <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '32px' }}>
+        <div className="login-page">
+            <div className="card login-card">
                 {/* Logo */}
-                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <div className="login-brand">
                     <img src={`${import.meta.env.BASE_URL}his-logo.png`} alt="HİS ERP" className="app-logo login-logo" />
-                    <h1 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>HİS ERP</h1>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        Fason Üretim Takip Sistemi
-                    </p>
+                    <h1>{ilkKurulumMu ? 'Kuruluma hoş geldiniz' : 'Tekrar hoş geldiniz'}</h1>
+                    <p>HİS ERP · Fason Üretim Takip Sistemi</p>
                 </div>
 
                 {sunucuHatasi && (
@@ -81,14 +77,9 @@ export default function Login() {
                 {sunucuHatasi ? null : ilkKurulumMu ? (
                     /* ---- İLK KURULUM: Yönetici hesabı oluştur ---- */
                     <form onSubmit={handleKurulum}>
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px',
-                            background: 'rgba(0,120,212,0.08)', border: '1px solid rgba(0,120,212,0.2)',
-                            borderRadius: '4px', marginBottom: '16px', fontSize: '0.8rem', color: 'var(--text-secondary)',
-                        }}>
-                            <ShieldCheck size={18} style={{ flexShrink: 0, color: '#0078d4' }} />
+                        <Notice tone="info" icon={ShieldCheck}>
                             İlk kurulum: Sistem yöneticisi hesabınızı oluşturun.
-                        </div>
+                        </Notice>
                         <div className="form-group">
                             <label className="form-label">Ad Soyad *</label>
                             <input className="form-input" value={ad} onChange={e => setAd(e.target.value)} placeholder="Adınız Soyadınız" autoFocus />
@@ -98,11 +89,11 @@ export default function Login() {
                             <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ornek@email.com" />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Şifre *</label>
-                            <div style={{ position: 'relative' }}>
-                                <input className="form-input" type={showPassword ? 'text' : 'password'} value={sifre} onChange={e => setSifre(e.target.value)} placeholder="En az 6 karakter" />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            <label className="form-label" htmlFor="giris-sifre">Şifre *</label>
+                            <div className="input-with-action">
+                                <input id="giris-sifre" className="form-input" type={showPassword ? 'text' : 'password'} value={sifre} onChange={e => setSifre(e.target.value)} placeholder="En az 6 karakter" autoComplete="new-password" />
+                                <button type="button" className="input-action" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}>
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
@@ -111,11 +102,9 @@ export default function Login() {
                             <input className="form-input" type={showPassword ? 'text' : 'password'} value={sifre2} onChange={e => setSifre2(e.target.value)} placeholder="Şifreyi tekrar girin" />
                         </div>
                         {hata && (
-                            <div style={{ padding: '8px 12px', marginBottom: '12px', background: 'rgba(196,49,75,0.08)', border: '1px solid rgba(196,49,75,0.25)', borderRadius: '4px', fontSize: '0.8rem', color: '#c4314b' }}>
-                                {hata}
-                            </div>
+                            <Notice tone="danger">{hata}</Notice>
                         )}
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
+                        <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
                             <UserPlus size={16} /> Yönetici Hesabı Oluştur
                         </button>
                     </form>
@@ -123,28 +112,27 @@ export default function Login() {
                     /* ---- GİRİŞ ---- */
                     <form onSubmit={handleLogin}>
                         <div className="form-group">
-                            <label className="form-label">Kullanıcı Adı veya E-posta</label>
-                            <input className="form-input" value={kimlik} onChange={e => setKimlik(e.target.value)} placeholder="Adınız veya e-postanız" autoFocus />
+                            <label className="form-label" htmlFor="giris-kimlik">Kullanıcı Adı veya E-posta</label>
+                            <input id="giris-kimlik" className="form-input" autoComplete="username" value={kimlik} onChange={e => setKimlik(e.target.value)} placeholder="Adınız veya e-postanız" autoFocus />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Şifre</label>
-                            <div style={{ position: 'relative' }}>
-                                <input className="form-input" type={showPassword ? 'text' : 'password'} value={sifre} onChange={e => setSifre(e.target.value)} placeholder="••••••••" />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            <label className="form-label" htmlFor="giris-sifre">Şifre</label>
+                            <div className="input-with-action">
+                                <input id="giris-sifre" className="form-input" type={showPassword ? 'text' : 'password'} value={sifre} onChange={e => setSifre(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
+                                <button type="button" className="input-action" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}>
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
                         {hata && (
-                            <div style={{ padding: '8px 12px', marginBottom: '12px', background: 'rgba(196,49,75,0.08)', border: '1px solid rgba(196,49,75,0.25)', borderRadius: '4px', fontSize: '0.8rem', color: '#c4314b' }}>
-                                {hata}
-                            </div>
+                            <Notice tone="danger">{hata}</Notice>
                         )}
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
+                        <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
                             <LogIn size={16} /> {busy ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                         </button>
                     </form>
                 )}
+                <p className="login-footer">Oturumunuz bu cihazda güvenli şekilde saklanır.</p>
             </div>
         </div>
     );

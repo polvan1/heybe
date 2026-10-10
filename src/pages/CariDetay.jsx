@@ -298,19 +298,19 @@ export default function CariDetay() {
                             <span className={`perf-badge ${badgeCls}`}>Skor: {perf.skor}/100</span>
                         </div>
                         <div className="cari-karne-grid">
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
                                 <div className="text-xs text-muted">Toplam İş</div>
                                 <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{perf.toplamIs}</div>
                             </div>
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
                                 <div className="text-xs text-muted">Fire</div>
                                 <div style={{ fontWeight: 700, fontSize: '1.1rem', color: parseFloat(perf.fireOrani) > 5 ? 'var(--accent-danger)' : 'var(--accent-success)' }}>%{perf.fireOrani}</div>
                             </div>
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
                                 <div className="text-xs text-muted">Ort. Süre</div>
                                 <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{perf.ortTeslimSuresi} gün</div>
                             </div>
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
                                 <div className="text-xs text-muted">Tamamlanan</div>
                                 <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>%{perf.tamamlanmaOrani}</div>
                             </div>
@@ -362,7 +362,7 @@ export default function CariDetay() {
                                         </thead>
                                         <tbody>
                                             {pendingWork.map(h => (
-                                                <tr key={h.id} onClick={() => togglePartiSecim(h.id)} style={{ cursor: 'pointer', background: selectedPartiler.includes(h.id) ? 'rgba(37,99,235,0.04)' : '' }}>
+                                                <tr key={h.id} onClick={() => togglePartiSecim(h.id)} style={{ cursor: 'pointer', background: selectedPartiler.includes(h.id) ? 'var(--color-primary-soft)' : '' }}>
                                                     <td><input type="checkbox" checked={selectedPartiler.includes(h.id)} readOnly /></td>
                                                     <td className="text-xs">{formatMonthDay(h.tarih)}</td>
                                                     <td>

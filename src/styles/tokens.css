@@ -1,0 +1,214 @@
+/* ==========================================================================
+   HİS ERP — Tasarım token'ları (tek kaynak)
+   Tüm renkler, aralıklar, köşe yarıçapları, gölgeler ve hareket süreleri
+   burada tanımlanır. Bileşenler YALNIZCA bu değişkenleri kullanır; tema
+   değişimi <html data-theme="dark"> ile tek noktadan yapılır.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* --- Renk: yüzeyler --- */
+  --color-bg: #F7F9FB;              /* uygulama zemini */
+  --color-surface: #FFFFFF;         /* kart, menü, modal */
+  --color-surface-muted: #F2F5F8;   /* kart içi bilgi kutuları, tablo başlığı */
+  --color-surface-hover: #EEF2F6;   /* satır / öğe üzerine gelince */
+  --color-input: #FFFFFF;
+  --color-nav-active: #E8F3FF;      /* seçili menü / filtre zemini */
+  --color-overlay: rgba(13, 27, 39, 0.36);
+
+  /* --- Renk: metin --- */
+  --color-text: #24394B;
+  --color-text-secondary: #708090;
+  --color-text-tertiary: #9AA6B2;   /* yer tutucu, pasif ikon */
+  --color-icon: #8494A3;            /* menüdeki pasif ikonlar (soluk arduvaz) */
+
+  /* --- Renk: çizgiler --- */
+  --color-border: #E0E5EA;
+  --color-border-strong: #CBD3DB;
+  --color-divider: #EBEFF3;
+
+  /* --- Renk: vurgu --- */
+  --color-primary: #087CFA;
+  --color-primary-hover: #0069DB;
+  --color-primary-pressed: #005BC0;
+  --color-on-primary: #FFFFFF;
+  --color-primary-soft: rgba(8, 124, 250, 0.08);
+  --color-primary-border: rgba(8, 124, 250, 0.22);
+  --color-focus-ring: rgba(8, 124, 250, 0.24);
+
+  /* --- Renk: durum --- */
+  --color-success: #1F9D6B;
+  --color-success-soft: rgba(31, 157, 107, 0.10);
+  --color-success-border: rgba(31, 157, 107, 0.26);
+  --color-warning: #C77A12;
+  --color-warning-soft: rgba(217, 138, 28, 0.12);
+  --color-warning-border: rgba(217, 138, 28, 0.30);
+  --color-danger: #D9434A;
+  --color-danger-soft: rgba(217, 67, 74, 0.09);
+  --color-danger-border: rgba(217, 67, 74, 0.26);
+  --color-info: #087CFA;
+
+  /* --- Üretim aşaması renkleri (rozet, grafik, kanban) — sade, düşük doygunluk --- */
+  --status-beklemede: #8494A3;
+  --status-kesimde: #087CFA;
+  --status-baskida: #7A5AF8;
+  --status-dikimde: #D98A1C;
+  --status-utupakette: #D9558C;
+  --status-tamamlandi: #1F9D6B;
+
+  /* --- Grafikler --- */
+  --chart-bar: #24394B;                         /* koyu lacivert çubuk */
+  --chart-bar-muted: rgba(36, 57, 75, 0.14);
+  --chart-highlight: rgba(31, 157, 107, 0.30);  /* soluk, saydam yeşil vurgu */
+  --chart-highlight-text: #1A7F57;
+  --chart-label: #708090;
+  --chart-track: #EEF2F6;
+
+  /* --- Gölgeler: çok yumuşak, ortam ışığı --- */
+  --shadow-xs: 0 1px 2px rgba(16, 32, 48, 0.04);
+  --shadow-sm: 0 1px 2px rgba(16, 32, 48, 0.04), 0 4px 12px rgba(16, 32, 48, 0.04);
+  --shadow-md: 0 2px 6px rgba(16, 32, 48, 0.04), 0 10px 28px rgba(16, 32, 48, 0.07);
+  --shadow-lg: 0 4px 12px rgba(16, 32, 48, 0.06), 0 24px 56px rgba(16, 32, 48, 0.12);
+  --shadow-button: 0 1px 2px rgba(16, 32, 48, 0.06), 0 2px 6px rgba(16, 32, 48, 0.04);
+  --shadow-primary: 0 2px 8px rgba(8, 124, 250, 0.24);
+
+  /* --- 8px aralık sistemi --- */
+  --space-0: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+
+  /* --- Köşe yarıçapları --- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;   /* kartlar */
+  --radius-xl: 24px;   /* modal, büyük paneller */
+  --radius-full: 9999px;
+  --radius-button: 12px;
+
+  /* --- Tipografi --- */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;    /* 12 */
+  --font-size-sm: 0.8125rem;  /* 13 */
+  --font-size-md: 0.875rem;   /* 14 */
+  --font-size-base: 0.9375rem;/* 15 */
+  --font-size-lg: 1.0625rem;  /* 17 */
+  --font-size-xl: 1.375rem;   /* 22 */
+  --font-size-2xl: 1.75rem;   /* 28 */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* --- Hareket --- */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+
+  /* --- Yerleşim --- */
+  --sidebar-width: 264px;
+  --sidebar-collapsed: 76px;
+  --header-height: 64px;
+  --bottom-nav-height: 64px;
+  --control-height: 40px;
+  --control-height-sm: 34px;
+  --icon-button-size: 40px;
+
+  /* ------------------------------------------------------------------
+     Eski değişken adları (sayfalardaki satır içi stiller bunları kullanır).
+     Yeni token'lara bağlanır; böylece tüm sayfalar yeni temayı otomatik alır.
+     ------------------------------------------------------------------ */
+  --bg-primary: var(--color-bg);
+  --bg-secondary: var(--color-surface);
+  --bg-tertiary: var(--color-surface-hover);
+  --bg-card: var(--color-surface);
+  --bg-card-hover: var(--color-surface-muted);
+  --bg-sidebar: var(--color-surface);
+  --bg-overlay: var(--color-overlay);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-secondary);
+  --accent-primary: var(--color-primary);
+  --accent-primary-hover: var(--color-primary-hover);
+  --accent-primary-glow: var(--color-primary-soft);
+  --accent-success: var(--color-success);
+  --accent-warning: var(--color-warning);
+  --accent-danger: var(--color-danger);
+  --accent-info: var(--color-info);
+  --border-color: var(--color-border);
+  --border-light: var(--color-divider);
+  --transition-fast: var(--duration-fast) var(--ease-standard);
+  --transition-base: var(--duration-base) var(--ease-standard);
+  --transition-slow: var(--duration-slow) var(--ease-standard);
+}
+
+/* Koyu tema: kullanıcı seçimiyle (AppContext → data-theme) */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #0D1B27;
+  --color-surface: #191D23;
+  --color-surface-muted: #20262E;
+  --color-surface-hover: #232A33;
+  --color-input: #141920;
+  --color-nav-active: #243B4C;
+  --color-overlay: rgba(4, 10, 16, 0.6);
+
+  --color-text: #F5F7FA;
+  --color-text-secondary: #A5B0BB;
+  --color-text-tertiary: #75828F;
+  --color-icon: #8592A0;
+
+  --color-border: #35434F;
+  --color-border-strong: #475765;
+  --color-divider: #2A333D;
+
+  --color-primary: #49B2F8;
+  --color-primary-hover: #6BC1FA;
+  --color-primary-pressed: #2FA2F0;
+  --color-on-primary: #06121C;
+  --color-primary-soft: rgba(73, 178, 248, 0.12);
+  --color-primary-border: rgba(73, 178, 248, 0.32);
+  --color-focus-ring: rgba(73, 178, 248, 0.32);
+
+  --color-success: #4CC892;
+  --color-success-soft: rgba(76, 200, 146, 0.12);
+  --color-success-border: rgba(76, 200, 146, 0.30);
+  --color-warning: #F0B455;
+  --color-warning-soft: rgba(240, 180, 85, 0.12);
+  --color-warning-border: rgba(240, 180, 85, 0.30);
+  --color-danger: #FF7A7F;
+  --color-danger-soft: rgba(255, 122, 127, 0.12);
+  --color-danger-border: rgba(255, 122, 127, 0.30);
+  --color-info: #49B2F8;
+
+  --status-beklemede: #A5B0BB;
+  --status-kesimde: #49B2F8;
+  --status-baskida: #A897FF;
+  --status-dikimde: #F0B455;
+  --status-utupakette: #F28DB5;
+  --status-tamamlandi: #4CC892;
+
+  --chart-bar: #E9EDF2;                         /* kırık beyaz çubuk */
+  --chart-bar-muted: rgba(233, 237, 242, 0.16);
+  --chart-highlight: rgba(76, 200, 146, 0.34);
+  --chart-highlight-text: #7FDDB3;
+  --chart-label: #A5B0BB;
+  --chart-track: #232A33;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 12px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.28), 0 10px 28px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.32), 0 24px 56px rgba(0, 0, 0, 0.44);
+  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-primary: 0 2px 10px rgba(73, 178, 248, 0.22);
+}

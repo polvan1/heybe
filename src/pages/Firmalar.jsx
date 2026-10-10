@@ -71,7 +71,7 @@ export default function Firmalar() {
     };
 
     const getPerfBadge = (skor) => {
-        if (skor >= 85) return { label: `⭐ ${skor}`, cls: 'excellent' };
+        if (skor >= 85) return { label: `${skor}`, cls: 'excellent' };
         if (skor >= 70) return { label: `${skor}`, cls: 'good' };
         if (skor >= 50) return { label: `${skor}`, cls: 'average' };
         return { label: `${skor}`, cls: 'poor' };

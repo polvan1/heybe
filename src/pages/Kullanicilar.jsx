@@ -132,38 +132,16 @@ export default function Kullanicilar() {
     };
 
     const getRolBadge = (rol) => {
-        const colors = {
-            admin: { bg: '#deecf9', color: '#0078d4', border: '#c7e0f4' },
-            uretim: { bg: '#fff4ce', color: '#d83b01', border: '#ffeb9c' },
-            muhasebe: { bg: '#dff6dd', color: '#107c10', border: '#c1e1bc' },
-            fasoncu: { bg: '#f4f4fc', color: '#5c2d91', border: '#e2e2f6' },
-            sofor: { bg: '#fde7e9', color: '#a4262c', border: '#f9c8cc' },
-            izleyici: { bg: '#f3f2f1', color: '#605e5c', border: '#edebe9' },
-        };
-        const c = colors[rol] || colors.izleyici;
         const label = ROLLER.find(r => r.value === rol)?.label || rol;
-        return (
-            <span style={{
-                display: 'inline-block',
-                padding: '3px 8px',
-                borderRadius: '2px',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                background: c.bg,
-                color: c.color,
-                border: `1px solid ${c.border}`,
-            }}>
-                {label}
-            </span>
-        );
+        return <span className={`badge rol-${rol}`}>{label}</span>;
     };
 
     return (
         <div className="animate-fade-in">
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Users size={20} /> Kullanıcı Yönetimi
-                </h2>
+            <div className="page-header">
+                <h1 className="page-title">
+                    <Users size={22} /> Kullanıcı Yönetimi
+                </h1>
                 <button className="btn btn-primary btn-sm" onClick={openAdd}>
                     <Plus size={16} /> Kullanıcı Ekle
                 </button>
@@ -204,14 +182,7 @@ export default function Kullanicilar() {
                                         </td>
                                         <td>{getRolBadge(user.rol)}</td>
                                         <td>
-                                            <span style={{
-                                                display: 'inline-block',
-                                                width: '8px',
-                                                height: '8px',
-                                                borderRadius: '50%',
-                                                background: user.aktif !== false ? '#107c10' : '#a19f9d',
-                                                marginRight: '6px',
-                                            }} />
+                                            <span className={`status-dot ${user.aktif !== false ? 'status-dot--on' : ''}`} style={{ marginRight: '6px' }} />
                                             <span style={{ fontSize: '0.78rem' }}>{user.aktif !== false ? 'Aktif' : 'Pasif'}</span>
                                         </td>
                                         <td>
@@ -244,7 +215,7 @@ export default function Kullanicilar() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                     {ROLLER.map(r => (
-                        <div key={r.value} style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
+                        <div key={r.value} style={{ padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                                 {getRolBadge(r.value)}
                             </div>
@@ -341,8 +312,8 @@ export default function Kullanicilar() {
                             gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                             gap: '6px',
                             padding: '12px',
-                            background: 'rgba(0,0,0,0.02)',
-                            borderRadius: '4px',
+                            background: 'var(--color-surface-muted)',
+                            borderRadius: 'var(--radius-sm)',
                             border: '1px solid var(--border-color)',
                         }}>
                             {TUM_YETKILER.map(y => {
@@ -357,9 +328,9 @@ export default function Kullanicilar() {
                                             fontSize: '0.8rem',
                                             cursor: 'pointer',
                                             padding: '6px 8px',
-                                            borderRadius: '3px',
-                                            background: checked ? 'rgba(0,120,212,0.08)' : 'transparent',
-                                            border: checked ? '1px solid rgba(0,120,212,0.2)' : '1px solid transparent',
+                                            borderRadius: 'var(--radius-sm)',
+                                            background: checked ? 'var(--color-primary-soft)' : 'transparent',
+                                            border: checked ? '1px solid var(--color-primary-border)' : '1px solid transparent',
                                             transition: 'all 150ms ease',
                                         }}
                                     >
@@ -367,7 +338,7 @@ export default function Kullanicilar() {
                                             type="checkbox"
                                             checked={checked}
                                             onChange={() => toggleYetki(y.key)}
-                                            style={{ accentColor: '#0078d4' }}
+                                            style={{ accentColor: 'var(--color-primary)' }}
                                         />
                                         {y.label}
                                     </label>
@@ -382,7 +353,7 @@ export default function Kullanicilar() {
                                 type="checkbox"
                                 checked={form.aktif}
                                 onChange={e => setForm({ ...form, aktif: e.target.checked })}
-                                style={{ accentColor: '#0078d4' }}
+                                style={{ accentColor: 'var(--color-primary)' }}
                             />
                             Kullanıcı aktif
                         </label>

@@ -85,7 +85,7 @@ export default function StokTakibi() {
 
     return (
         <div className="animate-fade-in">
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="page-header">
                 <h1 className="page-title">Stok Takibi</h1>
                 {activeTab === 'malzemeler' && (
                     <button className="btn btn-primary" onClick={openAdd}>
@@ -94,15 +94,15 @@ export default function StokTakibi() {
                 )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <button 
-                    className={`btn ${activeTab === 'urunler' ? 'btn-primary' : 'btn-ghost'}`} 
+                    className={`btn ${activeTab === 'urunler' ? 'btn-soft' : 'btn-ghost'}`} 
                     onClick={() => setActiveTab('urunler')}
                 >
                     <Package size={16} /> Ürün Stokları
                 </button>
                 <button 
-                    className={`btn ${activeTab === 'malzemeler' ? 'btn-primary' : 'btn-ghost'}`} 
+                    className={`btn ${activeTab === 'malzemeler' ? 'btn-soft' : 'btn-ghost'}`} 
                     onClick={() => setActiveTab('malzemeler')}
                 >
                     <Scissors size={16} /> Malzeme Stokları
@@ -244,7 +244,7 @@ export default function StokTakibi() {
             {/* Hareket Modal (Hem Ürün Hem Malzeme için) */}
             {(modal === 'hareket' || modal === 'urun_hareket') && (
                 <Modal
-                    title={hareketForm.tip === 'giris' ? '📥 Giriş İşlemi' : '📤 Çıkış İşlemi'}
+                    title={hareketForm.tip === 'giris' ? 'Giriş İşlemi' : 'Çıkış İşlemi'}
                     onClose={() => setModal(null)}
                     footer={
                         <>

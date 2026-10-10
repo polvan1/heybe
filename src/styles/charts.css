@@ -1,0 +1,194 @@
+/* ==========================================================================
+   Grafikler — sade çubuklar, sabit genişlik, yuvarlak üst köşeler,
+   çubuğun üstünde sayısal etiket, ızgara çizgisi yok.
+   ========================================================================== */
+
+.bar-chart {
+  --bar-width: 28px;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: var(--chart-height, 160px);
+  padding-top: var(--space-1);
+}
+
+.bar-chart-col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bar-chart-value {
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.bar-chart-bar {
+  width: 100%;
+  max-width: var(--bar-width);
+  min-height: 4px;
+  border-radius: 8px 8px 3px 3px;
+  background: var(--chart-bar);
+  transition: height var(--duration-slow) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+
+.bar-chart-col.is-empty .bar-chart-bar {
+  background: var(--chart-bar-muted);
+}
+
+.bar-chart-col.is-highlight .bar-chart-bar {
+  background: var(--chart-highlight);
+}
+
+.bar-chart-col.is-highlight .bar-chart-value {
+  color: var(--chart-highlight-text);
+}
+
+.bar-chart-col:hover .bar-chart-bar {
+  opacity: 0.85;
+}
+
+.bar-chart-label {
+  margin-top: var(--space-2);
+  max-width: 100%;
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--chart-label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.bar-chart-sub {
+  font-size: 0.625rem;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+/* Halka grafik */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-2) 0;
+  flex-wrap: wrap;
+}
+
+.donut-track {
+  stroke: var(--chart-track);
+}
+
+.donut-total {
+  fill: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  font-family: var(--font-family);
+}
+
+.donut-caption {
+  fill: var(--color-text-secondary);
+  font-family: var(--font-family);
+  letter-spacing: 0.06em;
+}
+
+.chart-legend {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 140px;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.chart-legend-item strong {
+  margin-left: auto;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-legend-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Yatay oran çubukları (durum dağılımı vb.) */
+.hbar-list {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.hbar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: 6px;
+  font-size: var(--font-size-sm);
+}
+
+.hbar-head span:first-child {
+  font-weight: var(--font-weight-semibold);
+}
+
+.hbar-head span:last-child {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hbar-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--chart-track);
+  overflow: hidden;
+}
+
+.hbar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--hbar-color, var(--chart-bar));
+  transition: width var(--duration-slow) var(--ease-standard);
+}
+
+/* Aşama renkleri (rozet ve grafiklerde ortak) */
+.renk-beklemede { --hbar-color: var(--status-beklemede); }
+.renk-kesimde { --hbar-color: var(--status-kesimde); }
+.renk-baskida { --hbar-color: var(--status-baskida); }
+.renk-dikimde { --hbar-color: var(--status-dikimde); }
+.renk-utupakette { --hbar-color: var(--status-utupakette); }
+.renk-tamamlandi { --hbar-color: var(--status-tamamlandi); }
+
+.dashboard-charts-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 1100px) {
+  .dashboard-charts-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-charts-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+}

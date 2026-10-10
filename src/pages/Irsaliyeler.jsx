@@ -182,7 +182,7 @@ export default function Irsaliyeler() {
                                 {(i.toplamAdet || 0).toLocaleString('tr-TR')} adet &nbsp;•&nbsp; {formatDate(i.tarih)}
                             </div>
                             <div className="mobile-list-item-actions irs-actions">
-                                <button className="btn btn-sm btn-primary irs-goruntule" onClick={(e) => { e.stopPropagation(); setDetay(i); }}>
+                                <button className="btn btn-sm btn-soft irs-goruntule" onClick={(e) => { e.stopPropagation(); setDetay(i); }}>
                                     <Eye size={15} /> Görüntüle
                                 </button>
                                 <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); yazdirIrsaliye(i); }} title="Yazdır (A4)">
@@ -303,7 +303,7 @@ export default function Irsaliyeler() {
                                 <div style={{ fontWeight: 600 }}>{detay.gonderenFirmaAdi}</div>
                                 {detay.gonderenTel && <div className="text-xs text-muted">{detay.gonderenTel}</div>}
                             </div>
-                            <div style={{ padding: '10px', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', background: 'rgba(0,120,212,0.04)' }}>
+                            <div style={{ padding: '10px', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', background: 'var(--color-primary-soft)' }}>
                                 <div className="text-xs" style={{ fontWeight: 700, marginBottom: '4px', color: 'var(--accent-primary)' }}>ALAN</div>
                                 <div style={{ fontWeight: 600 }}>{detay.alanFirmaAdi}</div>
                                 {detay.alanTel && <div className="text-xs text-muted">{detay.alanTel}</div>}

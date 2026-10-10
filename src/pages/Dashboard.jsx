@@ -14,68 +14,9 @@ import {
 import { DURUM_LABELS, DURUM_SIRALAMA, FIRMA_TIP_LABELS } from '../data/db';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
-
-// Mini CSS bar chart component
-function MiniBarChart({ data, maxValue, color }) {
-    const max = maxValue || Math.max(...data.map(d => d.value), 1);
-    return (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '80px' }}>
-            {data.map((d, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <div
-                        style={{
-                            width: '100%',
-                            maxWidth: '32px',
-                            height: `${Math.max((d.value / max) * 70, 2)}px`,
-                            background: d.color || color || '#0078d4',
-                            borderRadius: '2px 2px 0 0',
-                            transition: 'height 300ms ease',
-                        }}
-                        title={`${d.label}: ${d.value}`}
-                    />
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.label}</span>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// Donut chart component
-function DonutChart({ segments, size = 120, strokeWidth = 16 }) {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const total = segments.reduce((s, seg) => s + seg.value, 0);
-    let offset = 0;
-
-    return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#edebe9" strokeWidth={strokeWidth} />
-            {segments.map((seg, i) => {
-                const pct = total > 0 ? seg.value / total : 0;
-                const dashLength = pct * circumference;
-                const currentOffset = offset;
-                offset += dashLength;
-                return (
-                    <circle
-                        key={i}
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        fill="none"
-                        stroke={seg.color}
-                        strokeWidth={strokeWidth}
-                        strokeDasharray={`${dashLength} ${circumference - dashLength}`}
-                        strokeDashoffset={-currentOffset}
-                        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                        style={{ transition: 'stroke-dasharray 500ms ease' }}
-                    />
-                );
-            })}
-            <text x={size / 2} y={size / 2 - 6} textAnchor="middle" fontSize="18" fontWeight="800" fill="var(--text-primary)">{total}</text>
-            <text x={size / 2} y={size / 2 + 12} textAnchor="middle" fontSize="9" fill="var(--text-muted)">TOPLAM</text>
-        </svg>
-    );
-}
+import BarChart from '../components/ui/BarChart';
+import DonutChart from '../components/ui/DonutChart';
+import MetricTile from '../components/ui/MetricTile';
 
 export default function Dashboard() {
     const { partiler, firmalar, urunler, cariHareketler, partiIlerlet, cariHareketEkle, getVadesiGelenFirmalar } = useApp();
@@ -97,18 +38,10 @@ export default function Dashboard() {
 
     // Durum dağılımı
     const durumDagilimi = useMemo(() => {
-        const durumColors = {
-            beklemede: '#a19f9d',
-            kesimde: '#0078d4',
-            baskida: '#5c2d91',
-            dikimde: '#d83b01',
-            utupakette: '#a4262c',
-            tamamlandi: '#107c10',
-        };
         return DURUM_SIRALAMA.map(d => ({
             label: DURUM_LABELS[d],
             value: partiler.filter(p => p.durum === d).length,
-            color: durumColors[d] || '#0078d4',
+            color: `var(--status-${d}, var(--chart-bar))`,
         }));
     }, [partiler]);
 
@@ -141,16 +74,16 @@ export default function Dashboard() {
                 if (!p.updatedAt) return false;
                 return new Date(p.updatedAt).toDateString() === dateStr && p.durum === 'tamamlandi';
             }).length;
-            gunler.push({ label: gunAdlari[d.getDay()], value: adet, color: '#107c10' });
+            gunler.push({ label: gunAdlari[d.getDay()], value: adet });
         }
         return gunler;
     }, [partiler]);
 
     const QUICK_ACTIONS = [
-        { label: 'Parti Oluştur', icon: Plus, color: '#0078d4', onClick: () => navigate('/partiler', { state: { openNewModal: true } }) },
-        { label: 'Parti Giriş', icon: Layers, color: '#5c2d91', onClick: () => navigate('/partiler') },
-        { label: 'Hızlı Ödeme', icon: CreditCard, color: '#107c10', onClick: () => setShowOdemeModal(true) },
-        { label: 'İrsaliyeler', icon: FileText, color: '#d83b01', onClick: () => navigate('/irsaliyeler') },
+        { label: 'Parti Oluştur', icon: Plus, onClick: () => navigate('/partiler', { state: { openNewModal: true } }) },
+        { label: 'Parti Giriş', icon: Layers, onClick: () => navigate('/partiler') },
+        { label: 'Hızlı Ödeme', icon: CreditCard, onClick: () => setShowOdemeModal(true) },
+        { label: 'İrsaliyeler', icon: FileText, onClick: () => navigate('/irsaliyeler') },
     ];
 
     const handleHizliIlerlet = (parti) => {
@@ -187,12 +120,12 @@ export default function Dashboard() {
             {/* Hızlı Erişim — en üstte */}
             <div className="quick-actions-grid">
                 {QUICK_ACTIONS.map((action, idx) => (
-                    <div key={idx} className="quick-action-card" onClick={action.onClick}>
-                        <div className="quick-action-icon" style={{ backgroundColor: action.color }}>
-                            <action.icon size={22} />
-                        </div>
-                        <div className="quick-action-label">{action.label}</div>
-                    </div>
+                    <button key={idx} type="button" className="quick-action-card" onClick={action.onClick}>
+                        <span className="quick-action-icon">
+                            <action.icon size={20} />
+                        </span>
+                        <span className="quick-action-label">{action.label}</span>
+                    </button>
                 ))}
             </div>
 
@@ -227,12 +160,11 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                     <button
-                                        className="btn btn-sm btn-primary"
+                                        className="btn btn-sm btn-soft"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleHizliIlerlet(p);
                                         }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', padding: '6px 10px' }}
                                     >
                                         {nextStepLabel} <ChevronRight size={14} />
                                     </button>
@@ -250,7 +182,7 @@ export default function Dashboard() {
 
             {/* Vade Uyarıları */}
             {vadesiGelenler.length > 0 && (
-                <div className="card mb-4" style={{ borderColor: 'var(--accent-danger)', borderWidth: '1px' }}>
+                <div className="card mb-4" style={{ borderColor: 'var(--color-danger-border)' }}>
                     <div className="card-header">
                         <h3 className="card-title" style={{ color: 'var(--accent-danger)' }}>
                             <AlertTriangle size={18} /> Ödeme Vade Uyarıları
@@ -286,14 +218,14 @@ export default function Dashboard() {
                     <div className="card-header">
                         <h3 className="card-title">Üretim Durumu</h3>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '8px 0' }}>
-                        <DonutChart segments={durumDagilimi.filter(d => d.value > 0)} size={130} strokeWidth={18} />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="donut-wrap">
+                        <DonutChart segments={durumDagilimi.filter(d => d.value > 0)} size={128} strokeWidth={14} />
+                        <div className="chart-legend">
                             {durumDagilimi.filter(d => d.value > 0).map((d, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: d.color, flexShrink: 0 }} />
-                                    <span style={{ color: 'var(--text-secondary)' }}>{d.label}</span>
-                                    <span style={{ fontWeight: 700, marginLeft: 'auto' }}>{d.value}</span>
+                                <div key={i} className="chart-legend-item">
+                                    <span className="chart-legend-swatch" style={{ background: d.color }} />
+                                    <span>{d.label}</span>
+                                    <strong>{d.value}</strong>
                                 </div>
                             ))}
                         </div>
@@ -304,10 +236,9 @@ export default function Dashboard() {
                 <div className="card">
                     <div className="card-header">
                         <h3 className="card-title">Haftalık Tamamlanan</h3>
+                        <span className="text-xs text-muted">Son 7 gün</span>
                     </div>
-                    <div style={{ padding: '8px 0' }}>
-                        <MiniBarChart data={haftalikUretim} color="#107c10" />
-                    </div>
+                    <BarChart data={haftalikUretim} height={150} highlight="last" />
                 </div>
 
                 {/* Firma İş Dağılımı */}
@@ -315,61 +246,45 @@ export default function Dashboard() {
                     <div className="card-header">
                         <h3 className="card-title">Firma İş Dağılımı</h3>
                     </div>
-                    <div style={{ padding: '8px 0' }}>
-                        {firmaDagilimi.length > 0 ? (
-                            <MiniBarChart data={firmaDagilimi} color="#0078d4" />
-                        ) : (
-                            <div className="text-center text-muted text-sm" style={{ padding: '20px' }}>Veri yok</div>
-                        )}
-                    </div>
+                    {firmaDagilimi.length > 0 ? (
+                        <BarChart data={firmaDagilimi} height={150} highlight="max" />
+                    ) : (
+                        <div className="text-center text-muted text-sm" style={{ padding: '20px' }}>Veri yok</div>
+                    )}
                 </div>
             </div>
 
             {/* Özet Bilgiler */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                    <div className="card" onClick={() => navigate('/cari-hesaplar')} style={{ cursor: 'pointer' }}>
-                        <div className="card-header">
-                            <h3 className="card-title"><TrendingUp size={18} /> Cari Durum Özeti</h3>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', padding: '8px 0' }}>
-                            <div style={{ textAlign: 'center' }}>
-                                <div className="text-xs text-muted">Borç</div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-danger)' }}>{toplamBorc.toLocaleString('tr-TR')} ₺</div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <div className="text-xs text-muted">Ödenen</div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-success)' }}>{toplamAlacak.toLocaleString('tr-TR')} ₺</div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <div className="text-xs text-muted">Bakiye</div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{bakiye.toLocaleString('tr-TR')} ₺</div>
-                            </div>
-                        </div>
+            <div className="dashboard-summary-grid">
+                <div
+                    className="card card--interactive"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate('/cari-hesaplar')}
+                    onKeyDown={e => { if (e.key === 'Enter') navigate('/cari-hesaplar'); }}
+                >
+                    <div className="card-header">
+                        <h3 className="card-title"><TrendingUp size={18} /> Cari Durum Özeti</h3>
+                        <ChevronRight size={18} className="text-muted" />
                     </div>
+                    <div className="cari-ozet">
+                        <MetricTile label="Borç" value={`${toplamBorc.toLocaleString('tr-TR')} ₺`} tone="danger" />
+                        <MetricTile label="Ödenen" value={`${toplamAlacak.toLocaleString('tr-TR')} ₺`} tone="success" />
+                        <MetricTile label="Bakiye" value={`${bakiye.toLocaleString('tr-TR')} ₺`} />
+                    </div>
+                </div>
 
-                    <div className="card">
-                        <div className="card-header">
-                            <h3 className="card-title"><Clock size={18} /> Hızlı İstatistikler</h3>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
-                                <div className="text-xs text-muted">Devam Eden</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{aktifPartiler.length}</div>
-                            </div>
-                            <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
-                                <div className="text-xs text-muted">Ürün Çeşidi</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{urunler.length}</div>
-                            </div>
-                            <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
-                                <div className="text-xs text-muted">Vade Uyarısı</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: vadesiGelenler.length > 0 ? 'var(--accent-danger)' : 'inherit' }}>{vadesiGelenler.length}</div>
-                            </div>
-                            <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
-                                <div className="text-xs text-muted">Toplam Parti</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{partiler.length}</div>
-                            </div>
-                        </div>
+                <div className="card">
+                    <div className="card-header">
+                        <h3 className="card-title"><Clock size={18} /> Hızlı İstatistikler</h3>
                     </div>
+                    <div className="metric-grid">
+                        <MetricTile label="Devam Eden" value={aktifPartiler.length} />
+                        <MetricTile label="Ürün Çeşidi" value={urunler.length} />
+                        <MetricTile label="Vade Uyarısı" value={vadesiGelenler.length} tone={vadesiGelenler.length > 0 ? 'danger' : undefined} />
+                        <MetricTile label="Toplam Parti" value={partiler.length} />
+                    </div>
+                </div>
             </div>
 
             {/* Hızlı İlerlet Modalı */}
@@ -393,7 +308,7 @@ export default function Dashboard() {
                             type="number"
                             value={cikanAdet}
                             onChange={e => setCikanAdet(e.target.value)}
-                            style={{ fontSize: '1.2rem', fontWeight: 700, textAlign: 'center' }}
+                            style={{ fontSize: '1.25rem', fontWeight: 700, textAlign: 'center' }}
                             autoFocus
                         />
                         <div className="text-xs text-muted mt-2">

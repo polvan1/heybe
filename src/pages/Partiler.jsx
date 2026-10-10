@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
 import { yazdirIrsaliye } from '../utils/irsaliyePrint';
-import { Plus, Eye, Layers, Printer, Search, Download, Edit2, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Eye, Layers, Printer, Search, Download, Edit2, Archive, ArchiveRestore, MapPin } from 'lucide-react';
 import { DURUM_LABELS, exportToCSV, isPartiArsivde, firmaFiyatBul } from '../data/db';
 
 const DURUM_FILTERS = [
@@ -437,7 +437,7 @@ export default function Partiler() {
                                                     {' '}= {customAsorti.bedenler.reduce((t, b) => t + (customAsorti.dagilim[b] || 0), 0)} adet
                                                 </div>
                                             ) : (
-                                                <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px' }}>
+                                                <div style={{ marginTop: '8px', padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                                                     <div style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-muted)' }}>BU PARTİYE ÖZEL ASORTİYİ DÜZENLE</div>
                                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                                         {customAsorti.bedenler.map(b => (
@@ -558,8 +558,8 @@ export default function Partiler() {
                     }
                 >
                     {/* Hedef Seçimi */}
-                    <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(37,99,235,0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(37,99,235,0.1)' }}>
-                        <label className="form-label" style={{ marginBottom: '6px', fontWeight: 700 }}>📍 Gönderim Hedefi</label>
+                    <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-primary-border)' }}>
+                        <label className="form-label" style={{ marginBottom: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={16} /> Gönderim Hedefi</label>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button
                                 className={`btn btn-sm ${irsaliyeHedef === 'baskici' ? 'btn-primary' : 'btn-ghost'}`}

@@ -35,7 +35,7 @@ export default function IslemGunlugu() {
 
     const islemRengi = (islem) => {
         if (/silindi|iptal/i.test(islem)) return 'var(--accent-danger)';
-        if (/eklendi|oluşturuldu/i.test(islem)) return '#107c10';
+        if (/eklendi|oluşturuldu/i.test(islem)) return 'var(--color-success)';
         return 'var(--accent-primary)';
     };
 

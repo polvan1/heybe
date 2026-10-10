@@ -92,6 +92,9 @@ export function AppProvider({ children }) {
     useEffect(() => {
         if (!loading) {
             document.documentElement.setAttribute('data-theme', tema);
+            // Tarayıcı/telefon üst çubuğu zemin rengini izlesin
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', tema === 'dark' ? '#0D1B27' : '#F7F9FB');
         }
     }, [tema, loading]);
 

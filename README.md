@@ -9,6 +9,15 @@ cari hesaplar, kumaş stok, raporlar, kullanıcı/yetki yönetimi.
 - Sunucu: PHP 8 (`public/api.php` + `public/inc/`), üretimde MySQL (cPanel)
 - Giriş/oturum sunucu tarafında (PHP session, HttpOnly çerez); kodda anahtar yok
 
+## Arayüz ve tasarım sistemi
+- Tüm renk, aralık (8px sistemi), köşe, gölge ve hareket değerleri tek yerde:
+  `src/styles/tokens.css` (açık tema `:root`, koyu tema `[data-theme="dark"]`).
+- Stil katmanları: `base` → `layout` (menü, üst bar, alt menü) → `components`
+  (kart, düğme, form, rozet, tablo, modal) → `charts` → `features` (sayfalara özgü) → `utilities`.
+- Ortak React bileşenleri: `src/components/ui/` (`BarChart`, `DonutChart`, `Notice`, `MetricTile`).
+- İkonlar yalnızca Lucide (çizgi, 1.75–2px); yeni renk eklerken token tanımlayın, sabit hex yazmayın.
+  Düğmeler: `btn-primary` (sayfadaki ana eylem), `btn-soft` (listelerde tekrar eden eylem), `btn-ghost` (ikincil).
+
 ## Geliştirme
 Gereksinimler: Node.js 20+, pnpm, PHP 8+ (`pdo_sqlite` eklentisiyle).
 ```bash

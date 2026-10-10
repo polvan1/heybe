@@ -132,7 +132,7 @@ export default function CariHesaplar() {
                                                 {f.bakiye > 0 ? `${Number(f.bakiye).toLocaleString('tr-TR')} ₺` : f.bakiye < 0 ? `−${Math.abs(Number(f.bakiye)).toLocaleString('tr-TR')} ₺` : '0 ₺'}
                                             </td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/cari/${f.id}`); }}>
+                                                <button className="btn btn-sm btn-soft" onClick={(e) => { e.stopPropagation(); navigate(`/cari/${f.id}`); }}>
                                                     <Eye size={14} /> Hesap Görüntüle
                                                 </button>
                                             </td>
@@ -167,7 +167,7 @@ export default function CariHesaplar() {
                                                 {f.bakiye > 0 ? `${Number(f.bakiye).toLocaleString('tr-TR')} ₺` : f.bakiye < 0 ? `−${Math.abs(Number(f.bakiye)).toLocaleString('tr-TR')} ₺` : '0 ₺'}
                                             </div>
                                         </div>
-                                        <button className="btn btn-sm btn-primary">
+                                        <button className="btn btn-sm btn-soft">
                                             <Eye size={14} /> Hesap Gör
                                         </button>
                                     </div>

@@ -33,19 +33,19 @@ export default function Header({ title, onMenuClick }) {
     return (
         <header className="header">
             <button className="header-burger" onClick={onMenuClick} aria-label="Menü">
-                <Menu size={24} />
+                <Menu size={20} />
             </button>
             <h2 className="header-title">{title}</h2>
 
             <div className="header-actions">
                 {/* Theme Toggle */}
-                <button className="theme-toggle" onClick={toggleTema} title={tema === 'light' ? 'Karanlık Mod' : 'Aydınlık Mod'}>
+                <button className="theme-toggle" onClick={toggleTema} title={tema === 'light' ? 'Karanlık Mod' : 'Aydınlık Mod'} aria-label={tema === 'light' ? 'Karanlık moda geç' : 'Aydınlık moda geç'}>
                     {tema === 'light' ? <Moon size={20} /> : <Sun size={20} />}
                 </button>
 
                 {/* Notifications */}
                 <div className="notification-wrapper" ref={dropdownRef}>
-                    <button className="notification-bell" onClick={() => setShowNotif(!showNotif)}>
+                    <button className="notification-bell" onClick={() => setShowNotif(!showNotif)} aria-expanded={showNotif} aria-label={`Bildirimler${okunmamis > 0 ? ` (${okunmamis} okunmamış)` : ''}`}>
                         <Bell size={20} />
                         {okunmamis > 0 && (
                             <span className="notification-badge">{okunmamis > 9 ? '9+' : okunmamis}</span>
@@ -60,16 +60,13 @@ export default function Header({ title, onMenuClick }) {
                                     <button
                                         className="btn btn-sm btn-ghost"
                                         onClick={() => tumBildirimlerOkundu()}
-                                        style={{ fontSize: '0.75rem', padding: '4px 8px', minHeight: 'auto' }}
                                     >
-                                        <Check size={12} /> Tümünü Okundu İşaretle
+                                        <Check size={14} /> Tümünü okundu say
                                     </button>
                                 )}
                             </div>
                             {bildirimler.length === 0 ? (
-                                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                    Henüz bildirim yok
-                                </div>
+                                <div className="notification-empty">Henüz bildirim yok</div>
                             ) : (
                                 bildirimler.slice(0, 20).map(b => (
                                     <div
@@ -106,8 +103,9 @@ export default function Header({ title, onMenuClick }) {
                             className="theme-toggle"
                             onClick={() => { if (confirm('Oturumu kapatmak istiyor musunuz?')) logout(); }}
                             title="Çıkış Yap"
+                            aria-label="Çıkış yap"
                         >
-                            <LogOut size={18} />
+                            <LogOut size={20} />
                         </button>
                     </div>
                 )}

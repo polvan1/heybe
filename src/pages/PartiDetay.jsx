@@ -110,19 +110,19 @@ export default function PartiDetay() {
                         </h3>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
-                        <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                             <div className="text-xs text-muted">Giren</div>
                             <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{toplamGiren.toLocaleString('tr-TR')}</div>
                         </div>
-                        <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                             <div className="text-xs text-muted">Çıkan</div>
                             <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{toplamCikan.toLocaleString('tr-TR')}</div>
                         </div>
-                        <div style={{ padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                             <div className="text-xs text-muted">Fire</div>
                             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: toplamFire > 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }}>{toplamFire}</div>
                         </div>
-                        <div style={{ padding: '12px', background: parseFloat(fireOrani) > 5 ? 'rgba(220,38,38,0.08)' : 'rgba(5,150,105,0.08)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ padding: '12px', background: parseFloat(fireOrani) > 5 ? 'var(--color-danger-soft)' : 'var(--color-success-soft)', borderRadius: 'var(--radius-sm)' }}>
                             <div className="text-xs text-muted">Oran</div>
                             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: parseFloat(fireOrani) > 5 ? 'var(--accent-danger)' : 'var(--accent-success)' }}>%{fireOrani}</div>
                         </div>
@@ -138,19 +138,19 @@ export default function PartiDetay() {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
                         {kesimMaliyet > 0 && (
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                                 <div className="text-xs text-muted">Kesim</div>
                                 <div style={{ fontWeight: 600 }}>{kesimMaliyet.toLocaleString('tr-TR')} ₺</div>
                             </div>
                         )}
                         {dikimMaliyet > 0 && (
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                                 <div className="text-xs text-muted">Dikim</div>
                                 <div style={{ fontWeight: 600 }}>{dikimMaliyet.toLocaleString('tr-TR')} ₺</div>
                             </div>
                         )}
                         {utuMaliyet > 0 && (
-                            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-sm)' }}>
+                            <div style={{ padding: '10px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-sm)' }}>
                                 <div className="text-xs text-muted">Ütü/Paket</div>
                                 <div style={{ fontWeight: 600 }}>{utuMaliyet.toLocaleString('tr-TR')} ₺</div>
                             </div>
@@ -342,12 +342,12 @@ export default function PartiDetay() {
                     onClick={() => setBuyukFoto(null)}
                     style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', cursor: 'zoom-out' }}
                 >
-                    <img src={fotoSrc(buyukFoto.url)} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '6px' }} />
+                    <img src={fotoSrc(buyukFoto.url)} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 'var(--radius-sm)' }} />
                 </div>
             )}
 
             {/* Tehlikeli işlem: parti silme — yalnızca burada ve güvenlik şifresiyle */}
-            <div className="card mb-4" style={{ borderColor: 'rgba(164,38,44,0.35)' }}>
+            <div className="card mb-4" style={{ borderColor: 'var(--color-danger-border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
                         <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--accent-danger)' }}>Partiyi Sil</div>
@@ -425,7 +425,7 @@ export default function PartiDetay() {
                         </div>
                     </div>
 
-                    <div style={{ marginTop: '12px', padding: '12px 16px', background: 'rgba(37,99,235,0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(37,99,235,0.1)', fontSize: '0.8rem' }}>
+                    <div style={{ marginTop: '12px', padding: '12px 16px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-primary-border)', fontSize: '0.8rem' }}>
                         <div style={{ fontWeight: 600, marginBottom: '6px', color: 'var(--accent-primary)' }}>Bu adet ile borç düşecek firmalar:</div>
                         {parti.kesimhaneId && parti.kesimBirimFiyat > 0 && (
                             <div>Kesim: {parseInt(ilerletCikanAdet || 0)} × {parti.kesimBirimFiyat} ₺ = <strong>{(parseInt(ilerletCikanAdet || 0) * parti.kesimBirimFiyat).toLocaleString('tr-TR')} ₺</strong></div>

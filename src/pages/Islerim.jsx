@@ -89,11 +89,11 @@ export default function Islerim() {
                                     &nbsp;•&nbsp; Giriş: {new Date(p.updatedAt || p.createdAt).toLocaleDateString('tr-TR')}
                                 </div>
                                 {gonderildi[p.id] ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#107c10', fontWeight: 600 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--color-success)', fontWeight: 600 }}>
                                         <CheckCircle size={15} /> Teslim bildirildi — yönetici onayı bekleniyor
                                     </div>
                                 ) : (
-                                    <button className="btn btn-sm btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => openTeslim(p)}>
+                                    <button className="btn btn-sm btn-soft" style={{ width: '100%', justifyContent: 'center' }} onClick={() => openTeslim(p)}>
                                         <Send size={14} /> Teslim Bildir
                                     </button>
                                 )}

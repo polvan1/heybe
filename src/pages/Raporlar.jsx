@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { DURUM_LABELS, FIRMA_TIP_LABELS } from '../data/db';
+import BarChart from '../components/ui/BarChart';
+import MetricTile from '../components/ui/MetricTile';
 import {
     BarChart3, TrendingUp, Package, Layers, Wallet,
     Factory, Award, Calendar, PieChart, ArrowUpRight, ArrowDownRight
@@ -185,27 +187,23 @@ export default function Raporlar() {
             </div>
 
             {/* ======== 2 SÜTUN LAYOUT ======== */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}
-                className="report-grid-2col"
-            >
+            <div className="report-grid-2col">
                 {/* --- PARTİ DURUM DAĞILIMI --- */}
                 <div className="card">
                     <div className="card-header">
                         <h3 className="card-title"><PieChart size={18} /> Parti Durum Dağılımı</h3>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="hbar-list">
                         {Object.entries(reports.durumDagilimi).map(([durum, sayi]) => {
                             const pct = reports.toplamParti > 0 ? Math.round((sayi / reports.toplamParti) * 100) : 0;
                             return (
-                                <div key={durum}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
-                                        <span style={{ fontWeight: 600 }}>{DURUM_LABELS[durum] || durum}</span>
-                                        <span className="text-muted">{sayi} parti ({pct}%)</span>
+                                <div key={durum} className={`renk-${durum}`}>
+                                    <div className="hbar-head">
+                                        <span>{DURUM_LABELS[durum] || durum}</span>
+                                        <span>{sayi} parti · {pct}%</span>
                                     </div>
-                                    <div className="workload-bar">
-                                        <div className={`workload-bar-fill ${durum === 'tamamlandi' ? 'normal' : durum === 'dikimde' ? 'uyari' : 'kritik'}`}
-                                            style={{ width: `${pct}%` }}
-                                        />
+                                    <div className="hbar-track">
+                                        <div className="hbar-fill" style={{ width: `${pct}%` }} />
                                     </div>
                                 </div>
                             );
@@ -221,29 +219,12 @@ export default function Raporlar() {
                     <div className="card-header">
                         <h3 className="card-title"><Calendar size={18} /> Aylık Üretim Trendi</h3>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '180px', padding: '12px 0' }}>
-                        {reports.aylikTrend.map((ay, i) => {
-                            const height = reports.maxAylikAdet > 0 ? (ay.toplamAdet / reports.maxAylikAdet) * 100 : 0;
-                            return (
-                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                                        {ay.toplamAdet > 0 ? ay.toplamAdet.toLocaleString('tr-TR') : ''}
-                                    </span>
-                                    <div style={{
-                                        width: '100%',
-                                        maxWidth: '48px',
-                                        height: `${Math.max(height, 2)}%`,
-                                        background: `linear-gradient(180deg, var(--accent-primary), rgba(37,99,235,0.5))`,
-                                        borderRadius: '6px 6px 2px 2px',
-                                        transition: 'height 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        minHeight: '4px',
-                                    }} />
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{ay.ay}</span>
-                                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{ay.partiSayisi}p</span>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <BarChart
+                        data={reports.aylikTrend.map(ay => ({ label: ay.ay, value: ay.toplamAdet, sub: `${ay.partiSayisi} parti` }))}
+                        height={200}
+                        barWidth={32}
+                        highlight="last"
+                    />
                 </div>
             </div>
 
@@ -317,8 +298,8 @@ export default function Raporlar() {
                                             </div>
                                             <div className="mobile-list-item-meta">
                                                 <span>{u.partiSayisi} parti</span>
-                                                <span style={{ color: 'var(--accent-success)' }}>✓ {u.tamamlanan.toLocaleString('tr-TR')}</span>
-                                                <span style={{ color: 'var(--accent-warning)' }}>⏳ {u.devamEden.toLocaleString('tr-TR')}</span>
+                                                <span style={{ color: 'var(--accent-success)' }}>Tamamlanan {u.tamamlanan.toLocaleString('tr-TR')}</span>
+                                                <span style={{ color: 'var(--accent-warning)' }}>Devam eden {u.devamEden.toLocaleString('tr-TR')}</span>
                                             </div>
                                         </div>
                                     );
@@ -436,25 +417,10 @@ export default function Raporlar() {
                 </div>
 
                 {/* Cari Toplam */}
-                <div className="cari-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.06)', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid rgba(239,68,68,0.12)' }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Toplam Borç</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                            <ArrowUpRight size={18} /> ₺{reports.toplamBorc.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                        </div>
-                    </div>
-                    <div style={{ padding: '16px', background: 'rgba(16,185,129,0.06)', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid rgba(16,185,129,0.12)' }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Toplam Ödenen</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                            <ArrowDownRight size={18} /> ₺{reports.toplamOdenen.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                        </div>
-                    </div>
-                    <div style={{ padding: '16px', background: 'rgba(37,99,235,0.06)', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid rgba(37,99,235,0.12)' }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Net Bakiye</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                            ₺{reports.toplamBakiye.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                        </div>
-                    </div>
+                <div className="cari-summary-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', marginBottom: '20px' }}>
+                    <MetricTile tone="danger" label={<><ArrowUpRight size={14} /> Toplam Borç</>} value={`₺${reports.toplamBorc.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`} />
+                    <MetricTile tone="success" label={<><ArrowDownRight size={14} /> Toplam Ödenen</>} value={`₺${reports.toplamOdenen.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`} />
+                    <MetricTile tone="primary" label="Net Bakiye" value={`₺${reports.toplamBakiye.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`} />
                 </div>
 
                 {reports.cariRapor.length === 0 ? (
@@ -481,13 +447,13 @@ export default function Raporlar() {
                                                 <tr key={c.firmaId}>
                                                     <td style={{ fontWeight: 600 }}>{c.firmaAd}</td>
                                                     <td>
-                                                        <span className={`badge ${c.firmaTip === 'atolye' ? 'dikimde' : c.firmaTip === 'kesimhane' ? 'kesimde' : c.firmaTip === 'baskici' ? 'baskida' : 'utupakette'}`} style={{ fontSize: '0.65rem' }}>
+                                                        <span className={`badge ${c.firmaTip === 'atolye' ? 'dikimde' : c.firmaTip === 'kesimhane' ? 'kesimde' : c.firmaTip === 'baskici' ? 'baskida' : 'utupakette'}`}>
                                                             {FIRMA_TIP_LABELS[c.firmaTip] || c.firmaTip}
                                                         </span>
                                                     </td>
-                                                    <td style={{ textAlign: 'right', color: '#ef4444' }}>₺{c.borc.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
-                                                    <td style={{ textAlign: 'right', color: '#10b981' }}>₺{c.odenen.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 700, color: c.bakiye > 0 ? '#ef4444' : '#10b981' }}>
+                                                    <td style={{ textAlign: 'right', color: 'var(--accent-danger)' }}>₺{c.borc.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+                                                    <td style={{ textAlign: 'right', color: 'var(--accent-success)' }}>₺{c.odenen.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+                                                    <td style={{ textAlign: 'right', fontWeight: 700, color: c.bakiye > 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }}>
                                                         ₺{c.bakiye.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                                                     </td>
                                                     <td>
@@ -515,13 +481,13 @@ export default function Raporlar() {
                                         <div key={c.firmaId} className="mobile-list-item">
                                             <div className="mobile-list-item-header">
                                                 <span className="mobile-list-item-title">{c.firmaAd}</span>
-                                                <span style={{ fontWeight: 700, color: c.bakiye > 0 ? '#ef4444' : '#10b981', fontSize: '0.85rem' }}>
+                                                <span style={{ fontWeight: 700, color: c.bakiye > 0 ? 'var(--accent-danger)' : 'var(--accent-success)', fontSize: '0.85rem' }}>
                                                     ₺{c.bakiye.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                                                 </span>
                                             </div>
                                             <div className="mobile-list-item-meta">
-                                                <span style={{ color: '#ef4444' }}>Borç: ₺{c.borc.toLocaleString('tr-TR')}</span>
-                                                <span style={{ color: '#10b981' }}>Ödenen: ₺{c.odenen.toLocaleString('tr-TR')}</span>
+                                                <span style={{ color: 'var(--accent-danger)' }}>Borç: ₺{c.borc.toLocaleString('tr-TR')}</span>
+                                                <span style={{ color: 'var(--accent-success)' }}>Ödenen: ₺{c.odenen.toLocaleString('tr-TR')}</span>
                                             </div>
                                             <div className="workload-bar-wrapper" style={{ marginTop: '6px' }}>
                                                 <div className="workload-bar">

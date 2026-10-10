@@ -155,7 +155,7 @@ export default function Gorevlerim() {
                     {sefer.olusturanAd && <span>Gönderen: {sefer.olusturanAd}</span>}
                 </div>
                 {kalanLink && (
-                    <a className="btn btn-primary gorev-tum-rota" href={kalanLink} target="_blank" rel="noopener noreferrer">
+                    <a className="btn btn-soft gorev-tum-rota" href={kalanLink} target="_blank" rel="noopener noreferrer">
                         <Navigation size={16} /> Kalan rotayı Google Haritalar'da aç
                     </a>
                 )}
