@@ -4,14 +4,17 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
 import { ArrowLeft, CheckCircle, UserPlus, ChevronRight, Edit2, Printer, AlertTriangle, TrendingDown, DollarSign, History, Camera, X, Trash2 } from 'lucide-react';
-import { DURUM_LABELS, DURUM_SIRALAMA, ADIM_FIRMA_TIP, FIRMA_TIP_LABELS, getPartiById, firmaFiyatBul } from '../data/db';
+import { DURUM_LABELS, DURUM_SIRALAMA, ADIM_FIRMA_TIP, FIRMA_TIP_LABELS, getPartiById, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
+import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
 
 export default function PartiDetay() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { firmalar, urunler, partiGuncelle, partiIlerlet, partiSil, partiler } = useApp();
+    const { firmalar, urunler, partiGuncelle, partiIlerlet, partiSil, partiler, currentUser } = useApp();
+    const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
+    const [hizliIlerlet, setHizliIlerlet] = useState(false);
 
     const parti = partiler.find(p => p.id === id);
 
@@ -86,7 +89,7 @@ export default function PartiDetay() {
             <div className="card mb-4">
                 <div className="card-header">
                     <h3 className="card-title">Parti Bilgisi</h3>
-                    <span className={`badge ${parti.durum}`}>{DURUM_LABELS[parti.durum]}</span>
+                    <span className={`badge ${parti.durum}`}>{partiDurumEtiketi(parti)}</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', fontSize: '0.85rem' }}>
                     <div><span style={{ color: 'var(--text-muted)' }}>Ürün:</span> {parti.urunAdi}</div>
@@ -94,10 +97,30 @@ export default function PartiDetay() {
                     <div><span style={{ color: 'var(--text-muted)' }}>Kesimhane:</span> {kesimhane?.ad || '-'}</div>
                     <div><span style={{ color: 'var(--text-muted)' }}>Dikimhane:</span> {dikimhane?.ad || '-'}</div>
                     <div><span style={{ color: 'var(--text-muted)' }}>Ütü/Paket:</span> {utupaketci?.ad || '-'}</div>
+                    {parti.kesilenAdet ? (
+                        <div><span style={{ color: 'var(--text-muted)' }}>Kesilen:</span> {parti.kesilenAdet.toLocaleString('tr-TR')} adet{parti.kesimTarihi ? ` · ${new Date(parti.kesimTarihi).toLocaleDateString('tr-TR')}` : ''}</div>
+                    ) : null}
+                    {parti.dikimeGonderilenAdet ? (
+                        <div><span style={{ color: 'var(--text-muted)' }}>Dikime giden:</span> {parti.dikimeGonderilenAdet.toLocaleString('tr-TR')} adet</div>
+                    ) : null}
                 </div>
-                <button className="btn btn-sm btn-ghost" onClick={handleEditFirmalar} style={{ marginTop: '12px' }}>
-                    <Edit2 size={14} /> Ütü/Paket Değiştir
-                </button>
+                {(parti.kesilenRenkler?.length > 0 || parti.kesimNotu) && (
+                    <div className="soft-box" style={{ marginTop: '12px', fontSize: '0.82rem', display: 'grid', gap: '4px' }}>
+                        {parti.kesilenRenkler?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+                                {parti.kesilenRenkler.map((r, i) => (
+                                    <span key={i}><strong>{r.renk}:</strong> {r.adet.toLocaleString('tr-TR')} <span className="text-muted">/ {Number(r.planlanan || 0).toLocaleString('tr-TR')}</span></span>
+                                ))}
+                            </div>
+                        )}
+                        {parti.kesimNotu && <div className="text-muted">Kesim notu: {parti.kesimNotu}</div>}
+                    </div>
+                )}
+                {!kesimhaneKullanici && (
+                    <button className="btn btn-sm btn-ghost" onClick={handleEditFirmalar} style={{ marginTop: '12px' }}>
+                        <Edit2 size={14} /> Ütü/Paket Değiştir
+                    </button>
+                )}
             </div>
 
             {/* Fire Kartı */}
@@ -203,12 +226,14 @@ export default function PartiDetay() {
             <div className="card mb-4">
                 <div className="card-header">
                     <h3 className="card-title">Üretim Akışı</h3>
-                    {parti.durum !== 'tamamlandi' && (
+                    {adimYapabilirMi(currentUser, parti) && (
                         <button className="btn btn-sm btn-primary" onClick={() => {
-                            setIlerletCikanAdet(parti.toplamAdet?.toString() || '');
+                            // Kesim adımları (kesildi / dikime gönder) ortak hızlı ilerletme penceresiyle
+                            if (parti.durum === 'kesimde') { setHizliIlerlet(true); return; }
+                            setIlerletCikanAdet((parti.sonCikanAdet || parti.kesilenAdet || parti.toplamAdet)?.toString() || '');
                             setShowIlerletModal(true);
                         }}>
-                            İlerlet <ChevronRight size={14} />
+                            {parti.durum === 'kesimde' ? sonrakiAdim(parti).etiket : 'İlerlet'} <ChevronRight size={14} />
                         </button>
                     )}
                 </div>
@@ -346,7 +371,10 @@ export default function PartiDetay() {
                 </div>
             )}
 
+            {hizliIlerlet && <PartiIlerletModal parti={parti} onClose={() => setHizliIlerlet(false)} />}
+
             {/* Tehlikeli işlem: parti silme — yalnızca burada ve güvenlik şifresiyle */}
+            {!kesimhaneKullanici && (
             <div className="card mb-4" style={{ borderColor: 'var(--color-danger-border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
@@ -365,6 +393,7 @@ export default function PartiDetay() {
                     </button>
                 </div>
             </div>
+            )}
 
             {/* Ütü Düzenle Modal */}
             {showEditModal && (

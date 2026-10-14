@@ -13,6 +13,10 @@ export default function CariDetay() {
     const [selectedPartiler, setSelectedPartiler] = useState([]);
     const [showHesapModal, setShowHesapModal] = useState(false);
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
+    // Hızlı ödeme: bu firma için doğrudan bu sayfada girilir
+    const bosOdeme = () => ({ tutar: '', aciklama: '', tarih: new Date().toISOString().split('T')[0] });
+    const [showOdemeModal, setShowOdemeModal] = useState(false);
+    const [odemeForm, setOdemeForm] = useState(bosOdeme);
 
     const firma = firmalar.find(f => f.id === id);
     if (!firma) {
@@ -276,7 +280,7 @@ export default function CariDetay() {
                 <div className="card" style={{ padding: '20px' }}>
                     <div className="text-xs text-muted" style={{ marginBottom: '8px' }}>AKSİYONLAR</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        <button className="btn btn-primary btn-sm" onClick={() => navigate('/cari-hesaplar')}>
+                        <button className="btn btn-primary btn-sm" onClick={() => { setOdemeForm(bosOdeme()); setShowOdemeModal(true); }}>
                             <Wallet size={14} /> Hızlı Ödeme Girişi
                         </button>
                         <button className="btn btn-outline btn-sm" onClick={handlePrint}>
@@ -443,6 +447,76 @@ export default function CariDetay() {
                     </div>
                 )}
             </div>
+
+            {/* HIZLI ÖDEME MODALI (bu firma için) */}
+            {showOdemeModal && (
+                <Modal
+                    title={`Hızlı Ödeme — ${firma.ad}`}
+                    onClose={() => setShowOdemeModal(false)}
+                    footer={
+                        <>
+                            <button className="btn btn-ghost" onClick={() => setShowOdemeModal(false)}>İptal</button>
+                            <button
+                                className="btn btn-primary"
+                                disabled={!(parseFloat(odemeForm.tutar) > 0)}
+                                onClick={() => {
+                                    const tutar = parseFloat(odemeForm.tutar);
+                                    if (!(tutar > 0)) return;
+                                    cariHareketEkle({
+                                        firmaId: firma.id,
+                                        tip: 'alacak', // ödeme: firmaya yaptığımız ödeme (CariHesaplar ile aynı kural)
+                                        tutar,
+                                        aciklama: odemeForm.aciklama.trim() || 'Hızlı Ödeme',
+                                        tarih: odemeForm.tarih,
+                                    });
+                                    setShowOdemeModal(false);
+                                }}
+                            >
+                                <CreditCard size={16} /> Ödemeyi Kaydet
+                            </button>
+                        </>
+                    }
+                >
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="odeme-tutar">Tutar (₺) *</label>
+                            <input
+                                id="odeme-tutar"
+                                type="number"
+                                inputMode="decimal"
+                                step="0.01"
+                                className="form-input"
+                                placeholder="0.00"
+                                value={odemeForm.tutar}
+                                onChange={e => setOdemeForm({ ...odemeForm, tutar: e.target.value })}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="odeme-tarih">Ödeme Tarihi</label>
+                            <input
+                                id="odeme-tarih"
+                                type="date"
+                                className="form-input"
+                                value={odemeForm.tarih}
+                                onChange={e => setOdemeForm({ ...odemeForm, tarih: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="odeme-aciklama">Açıklama</label>
+                        <input
+                            id="odeme-aciklama"
+                            type="text"
+                            className="form-input"
+                            placeholder="Hızlı Ödeme, Nakit, Banka vb."
+                            value={odemeForm.aciklama}
+                            onChange={e => setOdemeForm({ ...odemeForm, aciklama: e.target.value })}
+                        />
+                    </div>
+                    <div className="text-xs text-muted">Güncel açık bakiye: {bakiyeInfo.bakiye?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</div>
+                </Modal>
+            )}
 
             {/* HESAP ÖZET/GÖR MODALI */}
             {showHesapModal && (

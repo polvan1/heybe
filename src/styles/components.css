@@ -219,6 +219,7 @@
 .badge.rol-muhasebe { --badge-color: var(--color-success); }
 .badge.rol-fasoncu { --badge-color: var(--status-baskida); }
 .badge.rol-sofor { --badge-color: var(--status-utupakette); }
+.badge.rol-kesimhane { --badge-color: var(--status-kesimde); }
 .badge.rol-izleyici { --badge-color: var(--status-beklemede); }
 
 /* Durum noktası */
@@ -715,16 +716,16 @@ input[type="time"].form-input {
   background: var(--color-overlay);
   z-index: 300;
   display: flex;
-  /* Mobilde ÜSTTEN hizalı: iOS klavyesi açılınca alanlar görünür kalır */
-  align-items: flex-start;
+  /* Her ekran boyutunda dikey ve yatay ortalı. Klavye açıldığında odaklanan alan
+     Modal.jsx'te görünür alana kaydırılır; modal yüksekliği görünür alanla sınırlıdır. */
+  align-items: center;
   justify-content: center;
   animation: fadeIn var(--duration-fast) var(--ease-standard);
-  padding: calc(env(safe-area-inset-top, 0px) + 12px) 10px 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-3)) var(--space-3) calc(env(safe-area-inset-bottom, 0px) + var(--space-3));
 }
 
 @media (min-width: 600px) {
   .modal-overlay {
-    align-items: center;
     padding: var(--space-5);
   }
 }
@@ -733,8 +734,8 @@ input[type="time"].form-input {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   width: 100%;
-  max-height: calc(88vh - env(safe-area-inset-top, 0px));
-  max-height: calc(88dvh - env(safe-area-inset-top, 0px));
+  max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-xl);
@@ -783,14 +784,6 @@ input[type="time"].form-input {
   bottom: 0;
   background: var(--color-surface);
   z-index: 1;
-  /* iPhone ana ekran çubuğu butonların üstüne binmesin */
-  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
-}
-
-@media (min-width: 600px) {
-  .modal-footer {
-    padding-bottom: var(--space-4);
-  }
 }
 
 @media (max-width: 600px) {

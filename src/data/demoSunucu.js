@@ -4,7 +4,7 @@
 import { ApiHatasi } from './api';
 import { demoVerisiOlustur } from './demoVeri';
 
-const DEPO_ANAHTARI = 'hiserp_demo_v3'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
+const DEPO_ANAHTARI = 'hiserp_demo_v4'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
 
 // public/inc/auth.php ile aynı kurallar
 const YETKI_YAZMA = {
@@ -12,13 +12,14 @@ const YETKI_YAZMA = {
     partiler: ['myhis_partiler', 'myhis_irsaliyeler', 'myhis_cariHareketler', 'myhis_isAkisi', 'myhis_urunler'],
     urunler: ['myhis_urunler'],
     stok_takibi: ['myhis_stoklar', 'myhis_stokHareketleri', 'myhis_kumasStok', 'myhis_kumasTurleri', 'myhis_urunler'],
+    kumas_stok: ['myhis_kumasStok', 'myhis_kumasTurleri'],
     firmalar: ['myhis_firmalar'],
     cari_hesaplar: ['myhis_cariHareketler', 'myhis_partiler'],
     irsaliyeler: ['myhis_irsaliyeler'],
     harita: ['myhis_araclar', 'myhis_seferler'],
 };
 const HERKES_YAZAR = ['myhis_bildirimler', 'myhis_islemGunlugu'];
-const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi',
+const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'kumas_stok',
     'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar'];
 
 let durum = null;
@@ -69,7 +70,8 @@ export function demoSifirla() {
 const kopya = (x) => JSON.parse(JSON.stringify(x));
 const hata = (kod, hataKodu, mesaj) => { throw new ApiHatasi(mesaj, kod, hataKodu, { error: hataKodu, mesaj }); };
 const guvenli = (k) => { if (!k) return null; const { sifre, ...geri } = k; return kopya(geri); };
-const yetkiVar = (k, y) => k && (k.rol === 'admin' || (k.yetkiler || []).includes(y));
+const yetkiVar = (k, y) => !!k && (k.rol === 'admin' || (k.yetkiler || []).includes(y)
+    || (y === 'kumas_stok' && (k.yetkiler || []).includes('stok_takibi')));
 const yeniId = (onEk = '') => onEk + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 function aktif() {
@@ -87,6 +89,11 @@ function girisGerekli() {
 function yazabilirMi(k, koleksiyon) {
     if (k.rol === 'admin' || HERKES_YAZAR.includes(koleksiyon)) return true;
     if (k.rol === 'izleyici') return false;
+    if (k.rol === 'kesimhane') {
+        if (koleksiyon === 'myhis_partiler' || koleksiyon === 'myhis_irsaliyeler') return yetkiVar(k, 'partiler') || yetkiVar(k, 'irsaliyeler');
+        if (koleksiyon === 'myhis_kumasStok' || koleksiyon === 'myhis_kumasTurleri') return yetkiVar(k, 'kumas_stok');
+        return false;
+    }
     return (k.yetkiler || []).some(y => (YETKI_YAZMA[y] || []).includes(koleksiyon));
 }
 
@@ -247,6 +254,12 @@ export async function demoIstek(sorgu, govde) {
             if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
             return sonuc;
         }
+        if (ben.rol === 'kesimhane') {
+            Object.assign(sonuc, kesimhaneVerisi(d, ben));
+            sonuc.myhis_tema = d.tema;
+            if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
+            return sonuc;
+        }
         Object.keys(d.veri).forEach(k => { if (k.startsWith('myhis_')) sonuc[k] = kopya(d.veri[k]); });
         sonuc.myhis_bildirimler = sonuc.myhis_bildirimler.filter(b => !b.kullaniciId || b.kullaniciId === ben.id);
         const tam = yetkiVar(ben, 'kullanicilar');
@@ -263,6 +276,7 @@ export async function demoIstek(sorgu, govde) {
     const degisiklikler = g.degisiklikler || {};
     const reddedilen = Object.keys(degisiklikler).filter(k => !(k in d.veri) || !k.startsWith('myhis_') || !yazabilirMi(ben, k));
     if (reddedilen.length) hata(403, 'yetki_yok', 'Bu verileri değiştirme yetkiniz yok.');
+    const yenile = ben.rol === 'kesimhane' ? kesimhaneYazimi(d, ben, degisiklikler) : false;
     Object.entries(degisiklikler).forEach(([k, { upsert = [], delete: sil = [] }]) => {
         let liste = d.veri[k];
         upsert.forEach(satir => {
@@ -280,5 +294,112 @@ export async function demoIstek(sorgu, govde) {
         d.merkez = { ad: String(g.myhis_merkez.ad || 'Merkez').slice(0, 120), lat: +g.myhis_merkez.lat, lng: +g.myhis_merkez.lng };
     }
     kaydet();
-    return { success: true };
+    return { success: true, yenile };
+}
+
+// ---- Kesimhane yetkilisi (public/inc/kesimhane.php ile aynı kurallar) ----
+const KESIMHANE_FIRMA_ALANLARI = ['id', 'ad', 'tip', 'telefon', 'adres', 'yetkiliKisi', 'lat', 'lng', 'konumAdres', 'aktif'];
+const KESIMHANE_URUN_GIZLI = ['kesimFiyat', 'dikimFiyat', 'utuFiyat', 'firmaFiyatlari', 'fiyatlar'];
+const KESIMHANE_PARTI_ALANLARI = ['kesimDurumu', 'kesilenAdet', 'kesilenRenkler', 'kesimTarihi', 'kesimNotu',
+    'gonderimTarihi', 'dikimeGonderilenAdet', 'fotolar', 'durum', 'kalanAdet', 'sonCikanAdet', 'teslimatGecmisi', 'dikimBaslamaTarihi', 'updatedAt'];
+const KESIMHANE_IRSALIYE_ALANLARI = ['toplamAdet', 'notlar', 'renkler', 'updatedAt'];
+const sec = (nesne, alanlar) => Object.fromEntries(alanlar.filter(a => a in nesne).map(a => [a, nesne[a]]));
+const irsFirmaya = (i, firmaId) => i.gonderenFirmaId === firmaId || i.alanFirmaId === firmaId;
+
+function kesimhaneVerisi(d, ben) {
+    const f = ben.firmaId || '';
+    const sonuc = {};
+    Object.keys(d.veri).forEach(k => { if (k.startsWith('myhis_')) sonuc[k] = []; });
+    if (f) {
+        sonuc.myhis_partiler = kopya(d.veri.myhis_partiler.filter(p => p.kesimhaneId === f))
+            .map(({ kesimBirimFiyat, dikimBirimFiyat, utuBirimFiyat, ...p }) => p);
+        sonuc.myhis_irsaliyeler = kopya(d.veri.myhis_irsaliyeler.filter(i => irsFirmaya(i, f)));
+        sonuc.myhis_kumasStok = kopya(d.veri.myhis_kumasStok.filter(k => k.kesimhaneId === f));
+    }
+    sonuc.myhis_kumasTurleri = kopya(d.veri.myhis_kumasTurleri);
+    sonuc.myhis_urunler = kopya(d.veri.myhis_urunler).map(u => { KESIMHANE_URUN_GIZLI.forEach(a => delete u[a]); return u; });
+    sonuc.myhis_firmalar = d.veri.myhis_firmalar.map(x => sec(x, KESIMHANE_FIRMA_ALANLARI));
+    sonuc.myhis_bildirimler = kopya(d.veri.myhis_bildirimler.filter(b => b.kullaniciId === ben.id));
+    sonuc.myhis_kullanicilar = [{ id: ben.id, ad: ben.ad, rol: ben.rol, firmaId: ben.firmaId, aktif: true }];
+    return sonuc;
+}
+
+function fiyatBul(urun, firmaId, tip) {
+    if (!urun) return 0;
+    const ozel = firmaId && urun.firmaFiyatlari?.[firmaId]?.[tip];
+    if (ozel !== undefined && ozel !== null && ozel !== '' && parseFloat(ozel) > 0) return parseFloat(ozel);
+    return parseFloat(urun[tip + 'Fiyat']) || 0;
+}
+
+function sonrakiNo(liste, alan, desen, ek) {
+    let max = 0;
+    [...liste.map(x => x[alan]), ...ek].forEach(no => { const m = desen.exec(no || ''); if (m) max = Math.max(max, +m[1]); });
+    return max + 1;
+}
+
+function kesimhaneYazimi(d, ben, degisiklikler) {
+    const f = ben.firmaId || '';
+    if (!f) hata(403, 'yetki_yok', 'Hesabınıza kesimhane firması bağlanmamış. Yöneticinize başvurun.');
+    const firma = d.veri.myhis_firmalar.find(x => x.id === f);
+    let duzeltildi = false;
+    ['myhis_partiler', 'myhis_irsaliyeler', 'myhis_kumasTurleri'].forEach(k => {
+        if (degisiklikler[k]?.delete?.length) hata(403, 'yetki_yok', 'Bu kayıtları silme yetkiniz yok.');
+    });
+    const partiNoDegisen = {}; const yeniPartiNolari = []; const yeniPartiIdleri = new Set();
+    const partiler = degisiklikler.myhis_partiler?.upsert || [];
+    partiler.forEach((p, i) => {
+        const mevcut = d.veri.myhis_partiler.find(x => x.id === p.id);
+        if (mevcut) {
+            if (mevcut.kesimhaneId !== f) hata(403, 'yetki_yok', 'Bu parti kesimhanenize ait değil.');
+            const yeni = { ...kopya(mevcut), ...sec(p, KESIMHANE_PARTI_ALANLARI) };
+            const eski = mevcut.durum || 'kesimde';
+            if (yeni.durum !== eski && !(eski === 'kesimde' && yeni.durum === 'dikimde')) { yeni.durum = eski; duzeltildi = true; }
+            partiler[i] = yeni;
+        } else {
+            const urun = d.veri.myhis_urunler.find(u => u.id === p.urunId);
+            const no = 'P-' + String(sonrakiNo(d.veri.myhis_partiler, 'partiNo', /^P-(\d+)$/, yeniPartiNolari)).padStart(4, '0');
+            yeniPartiNolari.push(no); yeniPartiIdleri.add(p.id);
+            if (p.partiNo !== no) partiNoDegisen[p.id] = no;
+            partiler[i] = { ...p, partiNo: no, kesimhaneId: f, durum: 'kesimde', arsivde: false, firmaAtamalari: [], olusturanFirmaId: f,
+                kesimBirimFiyat: fiyatBul(urun, f, 'kesim'), dikimBirimFiyat: fiyatBul(urun, p.dikimhaneId, 'dikim'), utuBirimFiyat: fiyatBul(urun, p.utupaketciId, 'utu') };
+            duzeltildi = true;
+        }
+    });
+    const yil = new Date().getFullYear(); const yeniIrs = [];
+    const irsaliyeler = degisiklikler.myhis_irsaliyeler?.upsert || [];
+    irsaliyeler.forEach((r, i) => {
+        const mevcut = d.veri.myhis_irsaliyeler.find(x => x.id === r.id);
+        if (mevcut) {
+            if (!irsFirmaya(mevcut, f)) hata(403, 'yetki_yok', 'Bu irsaliye firmanıza ait değil.');
+            const yeni = { ...kopya(mevcut), ...sec(r, KESIMHANE_IRSALIYE_ALANLARI) };
+            const eski = mevcut.durum || 'taslak'; const istenen = r.durum || eski;
+            if (istenen === 'iptal' && eski === 'taslak') { yeni.durum = 'iptal'; if (r.iptalTarihi) yeni.iptalTarihi = r.iptalTarihi; }
+            else if (istenen !== eski) duzeltildi = true;
+            irsaliyeler[i] = yeni;
+        } else {
+            if (!irsFirmaya(r, f)) hata(403, 'yetki_yok', 'Sadece kendi firmanızın irsaliyesini oluşturabilirsiniz.');
+            if (r.partiId && !yeniPartiIdleri.has(r.partiId)) {
+                const parti = d.veri.myhis_partiler.find(x => x.id === r.partiId);
+                if (!parti || parti.kesimhaneId !== f) hata(403, 'yetki_yok', 'Bu parti kesimhanenize ait değil.');
+            }
+            const no = `IRS-${yil}-` + String(sonrakiNo(d.veri.myhis_irsaliyeler, 'irsaliyeNo', new RegExp(`^IRS-${yil}-(\\d+)$`), yeniIrs)).padStart(4, '0');
+            yeniIrs.push(no);
+            const yeni = { ...r, irsaliyeNo: no, durum: 'taslak', olusturanFirmaId: f };
+            delete yeni.onayTarihi;
+            if (r.partiId && partiNoDegisen[r.partiId]) yeni.partiNo = partiNoDegisen[r.partiId];
+            if (r.irsaliyeNo !== no || r.durum !== 'taslak') duzeltildi = true;
+            irsaliyeler[i] = yeni;
+        }
+    });
+    (degisiklikler.myhis_kumasStok?.upsert || []).forEach((k, i, dizi) => {
+        const mevcut = d.veri.myhis_kumasStok.find(x => x.id === k.id);
+        if (mevcut && mevcut.kesimhaneId !== f) hata(403, 'yetki_yok', 'Bu kumaş kaydı kesimhanenize ait değil.');
+        if (k.kesimhaneId !== f) duzeltildi = true;
+        dizi[i] = { ...k, kesimhaneId: f, kesimhaneAdi: firma?.ad || '' };
+    });
+    (degisiklikler.myhis_kumasStok?.delete || []).forEach(id => {
+        const mevcut = d.veri.myhis_kumasStok.find(x => x.id === id);
+        if (mevcut && mevcut.kesimhaneId !== f) hata(403, 'yetki_yok', 'Bu kumaş kaydı kesimhanenize ait değil.');
+    });
+    return duzeltildi;
 }

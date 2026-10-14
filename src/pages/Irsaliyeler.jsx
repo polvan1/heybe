@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
+import Notice from '../components/ui/Notice';
 import SearchableSelect from '../components/SearchableSelect';
 import { Plus, FileText, Trash2, Search, Download, Printer, Check, X, Truck, Eye, ArrowRight, MessageCircle, Share2 } from 'lucide-react';
 import { IRSALIYE_DURUM_LABELS, IRSALIYE_TIP_LABELS, DURUM_LABELS, exportToCSV } from '../data/db';
@@ -20,8 +21,11 @@ const DURUM_FILTERS = [
 export default function Irsaliyeler() {
     const {
         irsaliyeler, partiler, firmalar,
-        irsaliyeEkle, irsaliyeSil, irsaliyeOnayla, irsaliyeTeslimEt, irsaliyeIptal
+        irsaliyeEkle, irsaliyeSil, irsaliyeOnayla, irsaliyeTeslimEt, irsaliyeIptal, currentUser
     } = useApp();
+    // Kesimhane yetkilisi: irsaliyeleri taslak olarak düzenler; onay/teslim yöneticidedir
+    const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
+    const onaylayabilir = !kesimhaneKullanici;
 
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
@@ -66,7 +70,7 @@ export default function Irsaliyeler() {
 
     const resetForm = () => {
         setPartiId(''); setTip('kesimhane_dikimhane');
-        setGonderenFirmaId(''); setAlanFirmaId(''); setNotlar('');
+        setGonderenFirmaId(kesimhaneKullanici ? (currentUser.firmaId || '') : ''); setAlanFirmaId(''); setNotlar('');
     };
 
     const handleSave = () => {
@@ -188,12 +192,12 @@ export default function Irsaliyeler() {
                                 <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); yazdirIrsaliye(i); }} title="Yazdır (A4)">
                                     <Printer size={15} />
                                 </button>
-                                {i.durum === 'taslak' && (
+                                {i.durum === 'taslak' && onaylayabilir && (
                                     <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); irsaliyeOnayla(i.id); }}>
                                         <Check size={14} /> Onayla
                                     </button>
                                 )}
-                                {i.durum === 'onaylandi' && (
+                                {i.durum === 'onaylandi' && onaylayabilir && (
                                     <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); irsaliyeTeslimEt(i.id); }}>
                                         <Truck size={14} /> Teslim
                                     </button>
@@ -209,7 +213,7 @@ export default function Irsaliyeler() {
                 <Modal title="Yeni İrsaliye Oluştur" onClose={() => setShowModal(false)}
                     footer={<>
                         <button className="btn btn-ghost" onClick={() => setShowModal(false)}>İptal</button>
-                        <button className="btn btn-primary" onClick={handleSave} disabled={!selectedParti || !gonderenFirmaId || !alanFirmaId}>İrsaliye Oluştur</button>
+                        <button className="btn btn-primary" onClick={handleSave} disabled={!selectedParti || !gonderenFirmaId || !alanFirmaId}>{kesimhaneKullanici ? 'Taslak Oluştur' : 'İrsaliye Oluştur'}</button>
                     </>}>
                     <div className="form-group">
                         <label className="form-label">Parti Seç *</label>
@@ -237,7 +241,7 @@ export default function Irsaliyeler() {
                         <SearchableSelect
                             value={gonderenFirmaId}
                             onChange={setGonderenFirmaId}
-                            options={firmalar.map(f => ({ value: f.id, label: f.ad }))}
+                            options={(kesimhaneKullanici ? firmalar.filter(f => f.id === currentUser.firmaId) : firmalar).map(f => ({ value: f.id, label: f.ad }))}
                             placeholder="Firma seçin"
                         />
                     </div>
@@ -254,6 +258,11 @@ export default function Irsaliyeler() {
                         <label className="form-label">Notlar</label>
                         <textarea className="form-input" value={notlar} onChange={e => setNotlar(e.target.value)} rows={3} placeholder="Ek açıklama..." />
                     </div>
+                    <Notice tone={kesimhaneKullanici ? 'warning' : 'info'} style={{ marginBottom: '12px' }}>
+                        {kesimhaneKullanici
+                            ? 'İrsaliye TASLAK olarak kaydedilir; yönetici onayladığında "Onaylandı" bölümüne geçer.'
+                            : 'İrsaliye doğrudan "Onaylandı" olarak kaydedilir.'}
+                    </Notice>
                     {selectedParti && (
                         <div style={{ padding: '12px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                             <div style={{ fontWeight: 600, marginBottom: '4px' }}>{selectedParti.partiNo} — {selectedParti.urunAdi}</div>
@@ -316,10 +325,10 @@ export default function Irsaliyeler() {
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {detay.durum === 'taslak' && <button className="btn btn-sm btn-primary" onClick={() => { irsaliyeOnayla(detay.id); setDetay({...detay, durum:'onaylandi'}); }}><Check size={14}/> Onayla</button>}
-                            {detay.durum === 'onaylandi' && <button className="btn btn-sm btn-success" onClick={() => { irsaliyeTeslimEt(detay.id); setDetay({...detay, durum:'teslim_edildi'}); }}><Truck size={14}/> Teslim Edildi</button>}
-                            {(detay.durum === 'taslak' || detay.durum === 'onaylandi') && <button className="btn btn-sm btn-danger" onClick={() => { irsaliyeIptal(detay.id); setDetay({...detay, durum:'iptal'}); }}><X size={14}/> İptal Et</button>}
-                            <button className="btn btn-sm btn-ghost" onClick={() => handleDetaySil(detay)} style={{ color: 'var(--accent-danger)' }}><Trash2 size={14}/> Sil</button>
+                            {detay.durum === 'taslak' && onaylayabilir && <button className="btn btn-sm btn-primary" onClick={() => { irsaliyeOnayla(detay.id); setDetay({...detay, durum:'onaylandi'}); }}><Check size={14}/> Onayla</button>}
+                            {detay.durum === 'onaylandi' && onaylayabilir && <button className="btn btn-sm btn-success" onClick={() => { irsaliyeTeslimEt(detay.id); setDetay({...detay, durum:'teslim_edildi'}); }}><Truck size={14}/> Teslim Edildi</button>}
+                            {(detay.durum === 'taslak' || (detay.durum === 'onaylandi' && onaylayabilir)) && <button className="btn btn-sm btn-danger" onClick={() => { irsaliyeIptal(detay.id); setDetay({...detay, durum:'iptal'}); }}><X size={14}/> İptal Et</button>}
+                            {!kesimhaneKullanici && <button className="btn btn-sm btn-ghost" onClick={() => handleDetaySil(detay)} style={{ color: 'var(--accent-danger)' }}><Trash2 size={14}/> Sil</button>}
                         </div>
                     </div>
                 </Modal>

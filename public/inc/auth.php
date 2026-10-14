@@ -7,9 +7,9 @@ const OTURUM_SURESI = 30 * 24 * 3600;   // 30 gün (telefonda sürekli giriş is
 const MAX_HATALI_GIRIS = 10;            // bu kadar hatalı denemeden sonra...
 const KILIT_SURESI = 15 * 60;           // ...15 dakika bekletilir
 
-const ROLLER = ['admin', 'uretim', 'muhasebe', 'fasoncu', 'sofor', 'izleyici'];
+const ROLLER = ['admin', 'uretim', 'muhasebe', 'kesimhane', 'fasoncu', 'sofor', 'izleyici'];
 
-const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi',
+const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'kumas_stok',
     'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar'];
 
 // Hangi sayfa yetkisi hangi veri gruplarına YAZMA izni verir.
@@ -19,6 +19,7 @@ const YETKI_YAZMA = [
     'partiler'      => ['myhis_partiler', 'myhis_irsaliyeler', 'myhis_cariHareketler', 'myhis_isAkisi', 'myhis_urunler'],
     'urunler'       => ['myhis_urunler'],
     'stok_takibi'   => ['myhis_stoklar', 'myhis_stokHareketleri', 'myhis_kumasStok', 'myhis_kumasTurleri', 'myhis_urunler'],
+    'kumas_stok'    => ['myhis_kumasStok', 'myhis_kumasTurleri'],
     'firmalar'      => ['myhis_firmalar'],
     'cari_hesaplar' => ['myhis_cariHareketler', 'myhis_partiler'],
     'irsaliyeler'   => ['myhis_irsaliyeler'],
@@ -90,7 +91,9 @@ function girisGerekli($pdo) {
 function yetkiVar($k, $yetki) {
     if (!$k) return false;
     if ($k['rol'] === 'admin') return true;
-    return in_array($yetki, $k['yetkiler'], true);
+    if (in_array($yetki, $k['yetkiler'], true)) return true;
+    // Eski kullanıcılar: Stok Takibi yetkisi Kumaş Stok sayfasını da kapsar
+    return $yetki === 'kumas_stok' && in_array('stok_takibi', $k['yetkiler'], true);
 }
 
 function yetkiGerekli($pdo, $yetki) {
@@ -103,6 +106,15 @@ function yazabilirMi($k, $koleksiyon) {
     if ($k['rol'] === 'admin') return true;
     if (in_array($koleksiyon, HERKES_YAZAR, true)) return true;
     if ($k['rol'] === 'izleyici') return false; // izleyici sadece görüntüler
+    if ($k['rol'] === 'kesimhane') {
+        // Kesimhane yetkilisi yalnızca kendi partileri, irsaliyeleri ve kumaş stoğu
+        // üzerinde çalışır; kayıt bazlı kontroller sync.php → kesimhaneYazimi()'nda
+        if (in_array($koleksiyon, ['myhis_partiler', 'myhis_irsaliyeler'], true)) {
+            return yetkiVar($k, 'partiler') || yetkiVar($k, 'irsaliyeler');
+        }
+        if (in_array($koleksiyon, ['myhis_kumasStok', 'myhis_kumasTurleri'], true)) return yetkiVar($k, 'kumas_stok');
+        return false;
+    }
     foreach ($k['yetkiler'] as $y) {
         if (isset(YETKI_YAZMA[$y]) && in_array($koleksiyon, YETKI_YAZMA[$y], true)) return true;
     }

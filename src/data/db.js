@@ -86,10 +86,14 @@ export async function flushPersist() {
   }
 
   try {
-    await apiIstek('', payload, { keepalive: true });
+    const cevap = await apiIstek('', payload, { keepalive: true });
     // Başarılı: gönderilen koleksiyonların sunucu hali artık yerel hal
     Object.keys(payload.degisiklikler).forEach(k => haliKaydet(k, inMemoryDb[k]));
     notifySync(true);
+    // Sunucu bazı alanları kendisi belirlediyse (ör. kesimhanenin partisine parti no) güncel hali çek
+    if (cevap?.yenile) {
+      refetchFromServer(false).then(ok => { if (ok) window.dispatchEvent(new CustomEvent('myhis:veri-yenilendi')); });
+    }
     return true;
   } catch (e) {
     if (e instanceof ApiHatasi && (e.durum === 403 || e.durum === 401)) {
@@ -361,7 +365,7 @@ export function addParti(parti) {
   saveAll(STORAGE_KEYS.partiler, partiler);
 
   // Parti oluşturulunca sevkiyat irsaliyesi OTOMATİK oluşturulur
-  // (kesimhane → dikimhane; İrsaliyeler sayfasında taslak olarak görünür)
+  // (kesimhane → dikimhane; kesimhane oluşturduysa taslak, diğer roller için onaylandı)
   if (newParti.kesimhaneId && newParti.dikimhaneId) {
     const gonderen = getFirmaById(newParti.kesimhaneId);
     const alan = getFirmaById(newParti.dikimhaneId);
@@ -528,6 +532,34 @@ export function tamamlaAtama(partiId, atamaId, cikanAdet) {
   return atama;
 }
 
+// Kesimhane kesimi bitirdi: kesilen adetler girilir (parti hâlâ "kesimde", alt durum "kesildi")
+export function partiKesildi(partiId, { kesilenRenkler = [], kesilenAdet, kesimNotu = '' } = {}) {
+  const parti = getPartiById(partiId);
+  if (!parti || parti.durum !== 'kesimde') return null;
+  const adet = Number.isFinite(kesilenAdet) ? kesilenAdet : kesilenRenkler.reduce((t, r) => t + (Number(r.adet) || 0), 0);
+  const fark = adet - (parti.toplamAdet || 0);
+  addBildirim({
+    tip: 'parti',
+    baslik: `${parti.partiNo} kesildi`,
+    mesaj: `${parti.urunAdi} — ${adet.toLocaleString('tr-TR')} adet kesildi${fark ? ` (plana göre ${fark > 0 ? '+' : ''}${fark})` : ''}`,
+    link: `/parti/${partiId}`,
+  });
+  logIslem('Parti Kesildi', `${parti.partiNo}: ${adet} adet kesildi`);
+  return updateParti(partiId, {
+    kesimDurumu: 'kesildi',
+    kesilenAdet: adet,
+    kesilenRenkler,
+    kesimNotu,
+    kesimTarihi: new Date().toISOString(),
+  });
+}
+
+// Listelerde gösterilecek durum etiketi (kesimdeki partinin alt durumu dahil)
+export function partiDurumEtiketi(parti) {
+  if (parti?.durum === 'kesimde' && parti.kesimDurumu === 'kesildi') return 'Kesildi';
+  return DURUM_LABELS[parti?.durum] || parti?.durum || '';
+}
+
 export function ilerletPartiDurum(partiId, cikanAdet) {
   const parti = getPartiById(partiId);
   if (!parti) return null;
@@ -600,6 +632,24 @@ export function ilerletPartiDurum(partiId, cikanAdet) {
 
     if (yeniDurum === 'dikimde') {
       guncellemeler.dikimBaslamaTarihi = new Date().toISOString();
+      // Kesimden dikime gönderim
+      guncellemeler.kesimDurumu = 'gonderildi';
+      guncellemeler.gonderimTarihi = new Date().toISOString();
+      guncellemeler.dikimeGonderilenAdet = adet;
+      if (!parti.kesilenAdet) {
+        guncellemeler.kesilenAdet = adet;
+        guncellemeler.kesimTarihi = parti.kesimTarihi || new Date().toISOString();
+      }
+      // Otomatik düzenlenen kesim → dikim irsaliyesinin adedi gönderilen adede eşitlenir
+      const irs = getIrsaliyeler().find(i => i.partiId === parti.id && i.tip === 'kesimhane_dikimhane'
+        && (i.durum === 'taslak' || i.durum === 'onaylandi'));
+      if (irs && irs.toplamAdet !== adet) updateIrsaliye(irs.id, { toplamAdet: adet });
+      addBildirim({
+        tip: 'parti',
+        baslik: `${parti.partiNo} dikime gönderildi`,
+        mesaj: `${parti.urunAdi} — ${adet.toLocaleString('tr-TR')} adet`,
+        link: `/parti/${partiId}`,
+      });
     }
     if (parti.durum === 'dikimde' && (yeniDurum === 'utupakette' || yeniDurum === 'tamamlandi')) {
       guncellemeler.dikimBitisTarihi = new Date().toISOString();
@@ -898,13 +948,22 @@ function generateIrsaliyeNo() {
   return `IRS-${yil}-${String(maxSira + 1).padStart(4, '0')}`;
 }
 
+// İrsaliye onay kuralı: TASLAK irsaliyeyi sadece kesimhane yetkilisi oluşturur
+// (yönetici onaylar). Yönetici, üretim ve fasoncuların oluşturduğu irsaliyeler
+// — partiyle otomatik düzenlenenler dahil — doğrudan ONAYLANDI olarak düşer.
+export function yeniIrsaliyeDurumu() {
+  return aktifKullanici?.rol === 'kesimhane' ? 'taslak' : 'onaylandi';
+}
+
 export function addIrsaliye(irsaliye) {
   const irsaliyeler = getIrsaliyeler();
+  const durum = irsaliye.durum || yeniIrsaliyeDurumu();
   const newIrsaliye = {
     id: generateId(),
     irsaliyeNo: generateIrsaliyeNo(),
     ...irsaliye,
-    durum: irsaliye.durum || 'taslak',
+    durum,
+    ...(durum === 'onaylandi' && !irsaliye.onayTarihi ? { onayTarihi: new Date().toISOString() } : {}),
     tarih: irsaliye.tarih || new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

@@ -61,7 +61,7 @@ function fotoIstegi($pdo) {
 // ============================================================
 function irsaliyeOkuIstegi($pdo) {
     global $ANTHROPIC_API_KEY;
-    yetkiGerekli($pdo, 'stok_takibi');
+    yetkiGerekli($pdo, 'kumas_stok');
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonHata(405, 'yontem', 'POST gerekli.');
     if (empty($ANTHROPIC_API_KEY)) {
         echo json_encode(['error' => 'anahtar_yok', 'mesaj' => 'Yapay zekâ okuma için sunucudaki config.php dosyasına Anthropic API anahtarı eklenmelidir.']);

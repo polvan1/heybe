@@ -8,6 +8,7 @@ const ROLLER = [
     { value: 'admin', label: 'Yönetici', desc: 'Tüm yetkilere sahip' },
     { value: 'uretim', label: 'Üretim Sorumlusu', desc: 'Parti ve iş akışı yönetimi' },
     { value: 'muhasebe', label: 'Muhasebe', desc: 'Cari hesaplar ve raporlar' },
+    { value: 'kesimhane', label: 'Kesimhane Yetkilisi', desc: 'Kendi kesimhanesinin partileri, kesim durumu ve kumaş stoğu' },
     { value: 'fasoncu', label: 'Fasoncu', desc: 'Sadece izin verilen sayfalar' },
     { value: 'sofor', label: 'Şoför', desc: 'Kendisine atanan seferler (Görevlerim)' },
     { value: 'izleyici', label: 'İzleyici', desc: 'Sadece görüntüleme' },
@@ -21,6 +22,7 @@ const TUM_YETKILER = [
     { key: 'takvim', label: 'Takvim' },
     { key: 'urunler', label: 'Ürünler' },
     { key: 'stok_takibi', label: 'Stok Takibi' },
+    { key: 'kumas_stok', label: 'Kumaş Stok' },
     { key: 'firmalar', label: 'Firmalar' },
     { key: 'cari_hesaplar', label: 'Cari Hesaplar' },
     { key: 'irsaliyeler', label: 'İrsaliyeler' },
@@ -35,6 +37,7 @@ const DEFAULT_YETKILER = {
     admin: TUM_YETKILER.map(y => y.key),
     uretim: ['anasayfa', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'irsaliyeler', 'harita'],
     muhasebe: ['anasayfa', 'cari_hesaplar', 'raporlar', 'firmalar'],
+    kesimhane: ['partiler', 'irsaliyeler', 'kumas_stok'],
     fasoncu: ['islerim'],
     sofor: ['gorevlerim'],
     izleyici: ['anasayfa', 'partiler', 'raporlar'],
@@ -101,6 +104,7 @@ export default function Kullanicilar() {
         if (!form.ad.trim()) { alert('Ad Soyad girin.'); return; }
         if (!editId && !form.sifre) { alert('Yeni kullanıcı için şifre belirleyin.'); return; }
         if (form.sifre && form.sifre.length < 6) { alert('Şifre en az 6 karakter olmalı.'); return; }
+        if (form.rol === 'kesimhane' && !form.firmaId) { alert('Kesimhane yetkilisi için bağlı kesimhaneyi seçin.'); return; }
         const userData = {
             ad: form.ad.trim(),
             email: form.email.trim(),
@@ -285,17 +289,19 @@ export default function Kullanicilar() {
                         </select>
                     </div>
 
-                    {form.rol === 'fasoncu' && (
+                    {(form.rol === 'fasoncu' || form.rol === 'kesimhane') && (
                         <div className="form-group">
-                            <label className="form-label">Bağlı Firma *</label>
+                            <label className="form-label">{form.rol === 'kesimhane' ? 'Bağlı Kesimhane *' : 'Bağlı Firma *'}</label>
                             <select className="form-input" value={form.firmaId} onChange={e => setForm({ ...form, firmaId: e.target.value })}>
                                 <option value="">— Firma seçin —</option>
-                                {firmalar.map(f => (
+                                {firmalar.filter(f => form.rol !== 'kesimhane' || f.tip === 'kesimhane').map(f => (
                                     <option key={f.id} value={f.id}>{f.ad}</option>
                                 ))}
                             </select>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                Fasoncu, "İşlerim" sayfasında yalnızca bu firmanın üzerindeki işleri görür.
+                                {form.rol === 'kesimhane'
+                                    ? 'Kesimhane yetkilisi yalnızca bu kesimhanenin partilerini, irsaliyelerini ve kumaş stoğunu görür. Oluşturduğu irsaliyeler taslak olur.'
+                                    : 'Fasoncu, "İşlerim" sayfasında yalnızca bu firmanın üzerindeki işleri görür.'}
                             </div>
                         </div>
                     )}

@@ -10,7 +10,7 @@ export const ROUTE_YETKI = {
     '/is-talep-takvimi': 'takvim',
     '/urunler': 'urunler',
     '/stok-takibi': 'stok_takibi',
-    '/kumas-stok': 'stok_takibi',
+    '/kumas-stok': 'kumas_stok',
     '/firmalar': 'firmalar',
     '/cari-hesaplar': 'cari_hesaplar',
     '/cari': 'cari_hesaplar',        // /cari/:id
@@ -32,6 +32,7 @@ const YETKI_ROTA_SIRASI = [
     ['takvim', '/is-talep-takvimi'],
     ['urunler', '/urunler'],
     ['stok_takibi', '/stok-takibi'],
+    ['kumas_stok', '/kumas-stok'],
     ['firmalar', '/firmalar'],
     ['cari_hesaplar', '/cari-hesaplar'],
     ['irsaliyeler', '/irsaliyeler'],
@@ -44,7 +45,10 @@ const YETKI_ROTA_SIRASI = [
 export function hasYetki(user, yetkiKey) {
     if (!user) return false;
     if (user.rol === 'admin') return true; // Yönetici her sayfaya erişir
-    return (user.yetkiler || []).includes(yetkiKey);
+    const yetkiler = user.yetkiler || [];
+    if (yetkiler.includes(yetkiKey)) return true;
+    // Eski kullanıcılar: Stok Takibi yetkisi Kumaş Stok sayfasını da kapsar (sunucuyla aynı kural)
+    return yetkiKey === 'kumas_stok' && yetkiler.includes('stok_takibi');
 }
 
 // Kullanıcının erişebildiği ilk sayfa (yetkisiz rotaya girince yönlendirilir)

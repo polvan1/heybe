@@ -167,7 +167,7 @@ export default function App() {
                             <Route path="/parti/:id" element={<Korumali yetki="partiler"><PartiDetay /></Korumali>} />
                             <Route path="/is-akisi" element={<Korumali yetki="is_akisi"><IsAkisi /></Korumali>} />
                             <Route path="/stok-takibi" element={<Korumali yetki="stok_takibi"><StokTakibi /></Korumali>} />
-                            <Route path="/kumas-stok" element={<Korumali yetki="stok_takibi"><KumasStok /></Korumali>} />
+                            <Route path="/kumas-stok" element={<Korumali yetki="kumas_stok"><KumasStok /></Korumali>} />
                             <Route path="/irsaliyeler" element={<Korumali yetki="irsaliyeler"><Irsaliyeler /></Korumali>} />
                             <Route path="/harita" element={<Korumali yetki="harita"><Harita /></Korumali>} />
                             <Route path="/gorevlerim" element={<Korumali yetki="gorevlerim"><Gorevlerim /></Korumali>} />

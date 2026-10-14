@@ -169,8 +169,10 @@ export function demoVerisiOlustur() {
         { id: id('kt'), ad: 'Viskon Penye', birim: 'kg', createdAt: tarih(50) },
     ];
     const kumasStok = [
-        { id: id('ks'), kumasAdi: 'Süprem 30/1', renk: 'Pembe', miktar: 186.4, topAdedi: 8, birim: 'kg', gelenFirmaId: firmalar[0].id, gelenFirmaAdi: firmalar[0].ad, partiId: partiler[8].id, partiNo: 'P-0009', referansNo: 'KMS-55120', notlar: '', tarih: tarih(3), createdAt: tarih(3) },
-        { id: id('ks'), kumasAdi: 'Ribana 2x1', renk: 'Beyaz', miktar: 92, topAdedi: 4, birim: 'kg', gelenFirmaId: firmalar[1].id, gelenFirmaAdi: firmalar[1].ad, partiId: partiler[9].id, partiNo: 'P-0010', referansNo: 'KMS-55134', notlar: '', tarih: tarih(1), createdAt: tarih(1) },
+        { id: id('ks'), kumasAdi: 'Süprem 30/1', renk: 'Pembe', miktar: 186.4, topAdedi: 8, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Akdeniz Örme', kesimhaneId: partiler[8].kesimhaneId, kesimhaneAdi: firmalar.find(f => f.id === partiler[8].kesimhaneId)?.ad || '', partiId: partiler[8].id, partiNo: 'P-0009', referansNo: 'KMS-55120', notlar: '', tarih: tarih(3), createdAt: tarih(3) },
+        { id: id('ks'), kumasAdi: 'Ribana 2x1', renk: 'Beyaz', miktar: 92, topAdedi: 4, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Akdeniz Örme', kesimhaneId: partiler[9].kesimhaneId, kesimhaneAdi: firmalar.find(f => f.id === partiler[9].kesimhaneId)?.ad || '', partiId: partiler[9].id, partiNo: 'P-0010', referansNo: 'KMS-55134', notlar: '', tarih: tarih(1), createdAt: tarih(1) },
+        { id: id('ks'), kumasAdi: 'İki İplik Şardonlu', renk: 'Antrasit', miktar: 240, topAdedi: 10, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Bursa Tekstil', kesimhaneId: firmalar[0].id, kesimhaneAdi: firmalar[0].ad, referansNo: 'BT-2231', notlar: '', tarih: tarih(2), createdAt: tarih(2) },
+        { id: id('ks'), kumasAdi: 'Viskon Penye', renk: 'Lacivert', miktar: 130, topAdedi: 6, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Akdeniz Örme', kesimhaneId: firmalar[1].id, kesimhaneAdi: firmalar[1].ad, referansNo: 'KMS-55140', notlar: '', tarih: tarih(1), createdAt: tarih(1) },
     ];
 
     return {
@@ -194,7 +196,8 @@ export function demoVerisiOlustur() {
         ],
         myhis_seferler: [],
         kullanicilar: [
-            { id: 'usr_demo_admin', ad: 'Demo Yönetici', email: 'demo@hiserp.app', telefon: '', rol: 'admin', yetkiler: ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(60) },
+            { id: 'usr_demo_admin', ad: 'Demo Yönetici', email: 'demo@hiserp.app', telefon: '', rol: 'admin', yetkiler: ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', 'urunler', 'stok_takibi', 'firmalar', 'cari_hesaplar', 'irsaliyeler', 'harita', 'gorevlerim', 'raporlar', 'kullanicilar', 'ayarlar', 'kumas_stok'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(60) },
+            { id: 'usr_demo_kesim', ad: 'Murat Yıldız (Yıldız Kesim)', email: 'kesimhane@hiserp.app', telefon: '', rol: 'kesimhane', yetkiler: ['partiler', 'irsaliyeler', 'kumas_stok'], aktif: true, firmaId: firmalar[0].id, sifre: 'demo123', createdAt: tarih(45) },
             { id: 'usr_demo_sofor1', ad: 'Şoför Ali', email: 'sofor@hiserp.app', telefon: '', rol: 'sofor', yetkiler: ['gorevlerim'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(30) },
             { id: 'usr_demo_sofor2', ad: 'Şoför Veli', email: 'sofor2@hiserp.app', telefon: '', rol: 'sofor', yetkiler: ['gorevlerim'], aktif: true, firmaId: null, sifre: 'demo123', createdAt: tarih(30) },
             { id: 'usr_demo_fason', ad: 'Akın Konfeksiyon', email: 'fasoncu@hiserp.app', telefon: '', rol: 'fasoncu', yetkiler: ['islerim'], aktif: true, firmaId: firmalar[2].id, sifre: 'demo123', createdAt: tarih(40) },

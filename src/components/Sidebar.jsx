@@ -29,7 +29,7 @@ const NAV_SECTIONS = [
         items: [
             { to: '/urunler', icon: Package, label: 'Ürünler', yetki: 'urunler' },
             { to: '/stok-takibi', icon: Scissors, label: 'Stok Takibi', yetki: 'stok_takibi' },
-            { to: '/kumas-stok', icon: PackagePlus, label: 'Kumaş Stok', yetki: 'stok_takibi' },
+            { to: '/kumas-stok', icon: PackagePlus, label: 'Kumaş Stok', yetki: 'kumas_stok' },
         ]
     },
     {

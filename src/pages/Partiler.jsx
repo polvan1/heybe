@@ -4,8 +4,9 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
 import { yazdirIrsaliye } from '../utils/irsaliyePrint';
-import { Plus, Eye, Layers, Printer, Search, Download, Edit2, Archive, ArchiveRestore, MapPin } from 'lucide-react';
-import { DURUM_LABELS, exportToCSV, isPartiArsivde, firmaFiyatBul } from '../data/db';
+import { Plus, Eye, Layers, Printer, Search, Download, Edit2, Archive, ArchiveRestore, MapPin, Trash2 } from 'lucide-react';
+import { DURUM_LABELS, exportToCSV, isPartiArsivde, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
+import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 
 const DURUM_FILTERS = [
     { value: 'all', label: 'Tümü' },
@@ -17,7 +18,10 @@ const DURUM_FILTERS = [
 ];
 
 export default function Partiler() {
-    const { partiler, urunler, firmalar, cariHareketler, partiEkle, partiArsivle } = useApp();
+    const { partiler, urunler, firmalar, cariHareketler, partiEkle, partiArsivle, currentUser } = useApp();
+    // Kesimhane yetkilisi: parti hep kendi kesimhanesine açılır, fiyatları görmez, arşivleyemez
+    const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
+    const [ilerletParti, setIlerletParti] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const [filter, setFilter] = useState('all');
@@ -45,7 +49,9 @@ export default function Partiler() {
     const [isEditingAsorti, setIsEditingAsorti] = useState(false);
 
     const selectedUrun = urunler.find(u => u.id === selectedUrunId);
-    const kesimhaneler = firmalar.filter(f => f.tip === 'kesimhane');
+    const kesimhaneler = kesimhaneKullanici
+        ? firmalar.filter(f => f.id === currentUser.firmaId)
+        : firmalar.filter(f => f.tip === 'kesimhane');
     const dikimhaneler = firmalar.filter(f => f.tip === 'atolye');
     const utupaketciler = firmalar.filter(f => f.tip === 'utupaketci');
 
@@ -150,7 +156,7 @@ export default function Partiler() {
         setSelectedUrunId('');
         setRenkler([]);
         setYeniRenk('');
-        setKesimhaneId('');
+        setKesimhaneId(kesimhaneKullanici ? (currentUser.firmaId || '') : '');
         setDikimhaneId('');
         setUtupaketciId('');
         setCustomAsorti(null);
@@ -310,18 +316,26 @@ export default function Partiler() {
                                                 <td style={{ fontWeight: 600 }}>{p.partiNo}</td>
                                                 <td>{p.urunKodu}</td>
                                                 <td>{p.urunAdi}</td>
-                                                <td style={{ textAlign: 'right', fontWeight: 600 }}>{p.toplamAdet?.toLocaleString('tr-TR')}</td>
-                                                <td style={{ textAlign: 'right', fontWeight: 600 }}>{p.toplamAdet?.toLocaleString('tr-TR')}</td>
+                                                <td style={{ textAlign: 'right', fontWeight: 600, color: p.kesilenAdet ? undefined : 'var(--text-muted)' }} title={p.kesilenAdet ? 'Kesilen adet' : 'Planlanan adet'}>{(p.kesilenAdet ?? p.toplamAdet)?.toLocaleString('tr-TR')}</td>
+                                                <td style={{ textAlign: 'right', fontWeight: 600, color: p.dikimeGonderilenAdet ? undefined : 'var(--text-muted)' }}>{(p.dikimeGonderilenAdet ?? p.kesilenAdet ?? p.toplamAdet)?.toLocaleString('tr-TR')}</td>
                                                 <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--accent-primary)' }}>{p.sonCikanAdet?.toLocaleString('tr-TR') || '—'}</td>
                                                 <td>{kesimhane?.ad || '-'}</td>
                                                 <td>{dikimhane?.ad || '-'}</td>
                                                 <td>{utupaketci?.ad || '-'}</td>
-                                                <td><span className={`badge ${p.durum}`}>{DURUM_LABELS[p.durum]}</span></td>
+                                                <td><span className={`badge ${p.durum}`}>{partiDurumEtiketi(p)}</span></td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                                        {filter !== 'arsiv' && adimYapabilirMi(currentUser, p) && (() => {
+                                                            const adim = sonrakiAdim(p);
+                                                            return (
+                                                                <button className="btn btn-sm btn-soft" onClick={(e) => { e.stopPropagation(); setIlerletParti(p); }} title={`${adim.etiket} (ilerlet)`}>
+                                                                    <adim.ikon size={14} /> {adim.etiket}
+                                                                </button>
+                                                            );
+                                                        })()}
                                                         <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); navigate(`/parti/${p.id}`); }} title="Detay"><Eye size={14} /></button>
                                                         <button className="btn btn-sm btn-ghost" onClick={(e) => openIrsaliye(e, p)} title="İrsaliye"><Printer size={14} /></button>
-                                                        {filter === 'arsiv' ? (
+                                                        {kesimhaneKullanici ? null : filter === 'arsiv' ? (
                                                             p.arsivde === true && (
                                                                 <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); partiArsivle(p.id, false); }} title="Arşivden Çıkar"><ArchiveRestore size={14} /></button>
                                                             )
@@ -352,7 +366,7 @@ export default function Partiler() {
                                     <div key={p.id} className="mobile-list-item" onClick={() => navigate(`/parti/${p.id}`)} style={{ cursor: 'pointer' }}>
                                         <div className="mobile-list-item-header">
                                             <span className="mobile-list-item-title">{p.partiNo}</span>
-                                            <span className={`badge ${p.durum}`}>{DURUM_LABELS[p.durum]}</span>
+                                            <span className={`badge ${p.durum}`}>{partiDurumEtiketi(p)}</span>
                                         </div>
                                         <div style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '4px' }}>
                                             {p.urunKodu} — {p.urunAdi}
@@ -364,20 +378,28 @@ export default function Partiler() {
                                                 <span>Kesim: {kesimhane?.ad || '-'}</span>
                                                 <span>Dikim: {dikimhane?.ad || '-'}</span>
                                                 <span>Ütü/P: {utupaketci?.ad || '-'}</span>
-                                                <span>Adet: {p.toplamAdet}</span>
+                                                <span>Adet: {p.toplamAdet}{p.kesilenAdet ? ` · Kesilen: ${p.kesilenAdet}` : ''}</span>
                                             </div>
                                         </div>
                                         <div className="progress-bar" style={{ marginTop: '8px' }}>
                                             <div className="progress-bar-fill green" style={{ width: `${ilerleme}%` }} />
                                         </div>
-                                        <div className="mobile-list-item-actions">
+                                        <div className="mobile-list-item-actions" style={{ flexWrap: 'wrap' }}>
+                                            {filter !== 'arsiv' && adimYapabilirMi(currentUser, p) && (() => {
+                                                const adim = sonrakiAdim(p);
+                                                return (
+                                                    <button className="btn btn-sm btn-soft" style={{ flex: '1 1 100%' }} onClick={(e) => { e.stopPropagation(); setIlerletParti(p); }}>
+                                                        <adim.ikon size={14} /> {adim.etiket}
+                                                    </button>
+                                                );
+                                            })()}
                                             <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); navigate(`/parti/${p.id}`); }}>
                                                 <Eye size={14} /> Detay
                                             </button>
                                             <button className="btn btn-sm btn-ghost" onClick={(e) => openIrsaliye(e, p)}>
                                                 <Printer size={14} /> İrsaliye
                                             </button>
-                                            {filter === 'arsiv' ? (
+                                            {kesimhaneKullanici ? null : filter === 'arsiv' ? (
                                                 p.arsivde === true && (
                                                     <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); partiArsivle(p.id, false); }}>
                                                         <ArchiveRestore size={14} /> Çıkar
@@ -397,6 +419,11 @@ export default function Partiler() {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* ===== HIZLI İLERLET (parti detayına girmeden) ===== */}
+            {ilerletParti && (
+                <PartiIlerletModal parti={ilerletParti} onClose={() => setIlerletParti(null)} />
             )}
 
             {/* ===== YENİ PARTİ MODAL ===== */}
@@ -488,7 +515,7 @@ export default function Partiler() {
                                                 placeholder={alan.placeholder}
                                                 clearLabel={alan.clearLabel}
                                             />
-                                            {alan.value && (
+                                            {alan.value && !kesimhaneKullanici && (
                                                 <div style={{ fontSize: '0.72rem', marginTop: '3px', color: anlasmaVar ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: anlasmaVar ? 600 : 400 }}>
                                                     {alan.tipAd} fiyatı: {fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                                                     {anlasmaVar ? ' — firma anlaşması' : ' (varsayılan)'}

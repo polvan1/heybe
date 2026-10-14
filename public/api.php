@@ -67,6 +67,7 @@ require __DIR__ . '/inc/sync.php';
 require __DIR__ . '/inc/push.php';
 require __DIR__ . '/inc/dosya.php';
 require __DIR__ . '/inc/sefer.php';
+require __DIR__ . '/inc/kesimhane.php';
 
 // ---- CSRF KORUMASI ----
 // Değişiklik yapan her istek özel bir başlık taşımalı. Tarayıcılar başka bir
@@ -111,7 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // POST: değişiklikleri kaydet
 $yeniBildirim = veriYaz($pdo, $ben, jsonGovde());
-echo json_encode(['success' => true]);
+// yenile: sunucu bazı alanları düzeltti (ör. parti no) → istemci güncel hali çeksin
+echo json_encode(['success' => true, 'yenile' => !empty($GLOBALS['yaziDuzeltildi'])]);
 
 // Yanıt gönderildikten SONRA push dağıt (istemciyi bekletmemek için)
 if ($yeniBildirim) {

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
-import { Plus, Trash2, Search, Scissors, Camera, PackagePlus, Settings2, Loader2, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Search, Scissors, Camera, PackagePlus, Settings2, Loader2, Sparkles, Factory } from 'lucide-react';
 import { gorselDataUrl } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
 import { apiIstek } from '../data/api';
@@ -10,7 +10,11 @@ import { apiIstek } from '../data/api';
 const BIRIMLER = ['kg', 'metre', 'top'];
 
 export default function KumasStok() {
-    const { kumasStoklar, kumasStokEkle, kumasStokSil, kumasTurleri, kumasTuruEkle, kumasTuruSil, firmalar } = useApp();
+    const { kumasStoklar, kumasStokEkle, kumasStokSil, kumasTurleri, kumasTuruEkle, kumasTuruSil, firmalar, currentUser } = useApp();
+    // Kesimhane yetkilisi yalnızca kendi kesimhanesinin stoğunu görür ve girer (sunucu da bunu zorlar)
+    const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
+    const kesimhaneler = firmalar.filter(f => f.tip === 'kesimhane');
+    const [kesimhaneFiltre, setKesimhaneFiltre] = useState('all'); // 'all' | firmaId | 'yok'
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [showTurler, setShowTurler] = useState(false);
@@ -20,24 +24,51 @@ export default function KumasStok() {
     const [okuma, setOkuma] = useState(null); // AI sonucu: { firma, irsaliyeNo, satirlar }
     const kameraRef = useRef(null);
 
-    const BOS_FORM = { kumasAdi: '', renk: '', topAdedi: '', miktar: '', birim: 'kg', gelenFirmaId: '', referansNo: '', notlar: '' };
+    const varsayilanKesimhane = () => kesimhaneKullanici
+        ? (currentUser.firmaId || '')
+        : (kesimhaneFiltre !== 'all' && kesimhaneFiltre !== 'yok' ? kesimhaneFiltre : '');
+    const BOS_FORM = { kumasAdi: '', renk: '', topAdedi: '', miktar: '', birim: 'kg', gelenFirmaId: '', kesimhaneId: '', referansNo: '', notlar: '' };
     const [form, setForm] = useState(BOS_FORM);
+    const yeniForm = () => ({ ...BOS_FORM, kesimhaneId: varsayilanKesimhane() });
+    const kesimhaneAdi = (id) => firmalar.find(f => f.id === id)?.ad || '';
 
-    const filtered = kumasStoklar
+    // Seçili kesimhaneye göre kayıtlar (özet ve liste bunu kullanır)
+    const kesimhaneKayitlari = kumasStoklar.filter(k => {
+        if (kesimhaneKullanici || kesimhaneFiltre === 'all') return true;
+        if (kesimhaneFiltre === 'yok') return !k.kesimhaneId;
+        return k.kesimhaneId === kesimhaneFiltre;
+    });
+
+    // Kesimhane bazında toplamlar (yönetici görünümü)
+    const kesimhaneOzeti = (() => {
+        const map = {};
+        kumasStoklar.forEach(k => {
+            const anahtar = k.kesimhaneId || 'yok';
+            if (!map[anahtar]) map[anahtar] = { id: anahtar, ad: k.kesimhaneId ? (kesimhaneAdi(k.kesimhaneId) || k.kesimhaneAdi || 'Kesimhane') : 'Kesimhane belirtilmemiş', kalem: 0, birimler: {} };
+            map[anahtar].kalem += 1;
+            map[anahtar].birimler[k.birim] = (map[anahtar].birimler[k.birim] || 0) + (parseFloat(k.miktar) || 0);
+        });
+        // Stoğu olmayan kesimhaneler de görünsün
+        kesimhaneler.forEach(f => { if (!map[f.id]) map[f.id] = { id: f.id, ad: f.ad, kalem: 0, birimler: {} }; });
+        return Object.values(map).sort((a, b) => (a.id === 'yok') - (b.id === 'yok') || a.ad.localeCompare(b.ad, 'tr'));
+    })();
+
+    const filtered = kesimhaneKayitlari
         .filter(k => {
             if (!search.trim()) return true;
             const q = search.toLowerCase();
             return (k.kumasAdi || '').toLowerCase().includes(q) ||
                    (k.renk || '').toLowerCase().includes(q) ||
                    (k.gelenFirmaAdi || '').toLowerCase().includes(q) ||
-                   (k.referansNo || '').toLowerCase().includes(q);
+                   (k.referansNo || '').toLowerCase().includes(q) ||
+                   (k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId)).toLowerCase().includes(q);
         })
         .sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
 
     // Tür + renk bazında stok özeti
     const stokOzeti = (() => {
         const map = {};
-        kumasStoklar.forEach(k => {
+        kesimhaneKayitlari.forEach(k => {
             const anahtar = `${k.kumasAdi}|${k.renk || '-'}|${k.birim}`;
             if (!map[anahtar]) map[anahtar] = { kumas: k.kumasAdi, renk: k.renk || '—', birim: k.birim, miktar: 0, top: 0 };
             map[anahtar].miktar += parseFloat(k.miktar) || 0;
@@ -72,6 +103,7 @@ export default function KumasStok() {
                 ? firmalar.find(f => aiFirma.includes(f.ad.toLowerCase()) || f.ad.toLowerCase().includes(aiFirma.split(' ')[0]))
                 : null;
             setOkuma({
+                kesimhaneId: varsayilanKesimhane(),
                 firma: json.okuma.firma || '',
                 firmaId: eslesenFirma?.id || '',
                 irsaliyeNo: json.okuma.irsaliyeNo || '',
@@ -97,6 +129,7 @@ export default function KumasStok() {
 
     const okumaKaydet = () => {
         const firma = firmalar.find(f => f.id === okuma.firmaId);
+        const kesimhaneId = kesimhaneKullanici ? (currentUser.firmaId || '') : (okuma.kesimhaneId || '');
         const kaydedilecek = okuma.satirlar.filter(s => s.dahil && s.kumasTuru.trim() && parseFloat(s.miktar));
         kaydedilecek.forEach(s => {
             kumasStokEkle({
@@ -108,6 +141,8 @@ export default function KumasStok() {
                 gelenFirmaId: okuma.firmaId || null,
                 gelenFirmaAdi: firma?.ad || okuma.firma || '',
                 referansNo: okuma.irsaliyeNo || '',
+                kesimhaneId: kesimhaneId || null,
+                kesimhaneAdi: kesimhaneAdi(kesimhaneId),
                 notlar: 'Yapay zekâ irsaliye okumasıyla eklendi',
             });
         });
@@ -126,6 +161,8 @@ export default function KumasStok() {
             gelenFirmaId: form.gelenFirmaId || null,
             gelenFirmaAdi: firma?.ad || '',
             referansNo: form.referansNo.trim(),
+            kesimhaneId: (kesimhaneKullanici ? currentUser.firmaId : form.kesimhaneId) || null,
+            kesimhaneAdi: kesimhaneAdi(kesimhaneKullanici ? currentUser.firmaId : form.kesimhaneId),
             notlar: form.notlar.trim(),
         });
         setShowForm(false);
@@ -157,7 +194,7 @@ export default function KumasStok() {
                         {okumaBusy ? <Loader2 size={17} className="animate-spin" /> : <Camera size={17} />}
                         {okumaBusy ? ' Okunuyor...' : ' İrsaliye Okut'}
                     </button>
-                    <button className="btn btn-primary" onClick={() => { setForm(BOS_FORM); setShowForm(true); }}>
+                    <button className="btn btn-primary" onClick={() => { setForm(yeniForm()); setShowForm(true); }}>
                         <Plus size={17} /> Kumaş Ekle
                     </button>
                 </div>
@@ -165,10 +202,48 @@ export default function KumasStok() {
             {/* Native kamera: getUserMedia gerektirmez, iOS'ta doğrudan kamera açılır */}
             <input ref={kameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFotoSecildi} />
 
+            {/* Kesimhane bazında stoklar (kesimhaneler kendi stoklarını girer) */}
+            {!kesimhaneKullanici && kesimhaneOzeti.length > 0 && (
+                <div className="card mb-4">
+                    <div className="card-header">
+                        <h3 className="card-title"><Factory size={18} /> Kesimhane Stokları</h3>
+                        {kesimhaneFiltre !== 'all' && (
+                            <button className="btn btn-sm btn-ghost" onClick={() => setKesimhaneFiltre('all')}>Tümünü göster</button>
+                        )}
+                    </div>
+                    <div className="kesimhane-stok-grid">
+                        {kesimhaneOzeti.map(o => (
+                            <button
+                                key={o.id}
+                                type="button"
+                                className={`kesimhane-stok-kart ${kesimhaneFiltre === o.id ? 'active' : ''}`}
+                                onClick={() => setKesimhaneFiltre(kesimhaneFiltre === o.id ? 'all' : o.id)}
+                                aria-pressed={kesimhaneFiltre === o.id}
+                            >
+                                <span className="kesimhane-stok-ad">{o.ad}</span>
+                                <span className="kesimhane-stok-miktar">
+                                    {Object.keys(o.birimler).length === 0
+                                        ? 'Stok yok'
+                                        : Object.entries(o.birimler).map(([b, m]) => `${m.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ${b}`).join(' · ')}
+                                </span>
+                                <span className="kesimhane-stok-kalem">{o.kalem} giriş</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Tür + renk bazlı stok özeti */}
             {stokOzeti.length > 0 && (
                 <div className="card mb-4">
-                    <div className="card-header"><h3 className="card-title">Stok Özeti</h3></div>
+                    <div className="card-header">
+                        <h3 className="card-title">Stok Özeti</h3>
+                        <span className="text-sm text-muted">
+                            {kesimhaneKullanici ? kesimhaneAdi(currentUser.firmaId)
+                                : kesimhaneFiltre === 'all' ? 'Tüm kesimhaneler'
+                                : kesimhaneFiltre === 'yok' ? 'Kesimhane belirtilmemiş' : kesimhaneAdi(kesimhaneFiltre)}
+                        </span>
+                    </div>
                     <div className="table-container" style={{ border: 'none' }}>
                         <table>
                             <thead>
@@ -203,7 +278,7 @@ export default function KumasStok() {
                     <div className="empty-state-text">İrsaliyenin fotoğrafını çekin — yapay zekâ kumaş türü, renk, top ve kilogramı okuyup stok girişlerini hazırlasın</div>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn btn-success" onClick={() => kameraRef.current?.click()}><Camera size={17} /> İrsaliye Okut</button>
-                        <button className="btn btn-primary" onClick={() => { setForm(BOS_FORM); setShowForm(true); }}><Plus size={17} /> Kumaş Ekle</button>
+                        <button className="btn btn-primary" onClick={() => { setForm(yeniForm()); setShowForm(true); }}><Plus size={17} /> Kumaş Ekle</button>
                     </div>
                 </div>
             ) : (
@@ -219,6 +294,11 @@ export default function KumasStok() {
                                     </span>
                                     {k.topAdedi ? <span className="text-xs text-muted">({Number(k.topAdedi).toLocaleString('tr-TR')} top)</span> : null}
                                 </div>
+                                {!kesimhaneKullanici && (
+                                    <div className="text-xs" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: k.kesimhaneId ? 'var(--text-secondary)' : 'var(--accent-warning)' }}>
+                                        <Factory size={13} /> {k.kesimhaneId ? (k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId)) : 'Kesimhane belirtilmemiş'}
+                                    </div>
+                                )}
                                 <div className="text-xs text-muted" style={{ marginTop: '4px' }}>
                                     {[k.gelenFirmaAdi, k.referansNo].filter(Boolean).join(' • ') || '—'}
                                     &nbsp;•&nbsp; {new Date(k.tarih).toLocaleDateString('tr-TR')}
@@ -261,6 +341,19 @@ export default function KumasStok() {
                             <input className="form-input" value={okuma.irsaliyeNo} onChange={e => setOkuma(o => ({ ...o, irsaliyeNo: e.target.value }))} />
                         </div>
                     </div>
+
+                    {!kesimhaneKullanici && (
+                        <div className="form-group">
+                            <label className="form-label">Bulunduğu Kesimhane</label>
+                            <SearchableSelect
+                                value={okuma.kesimhaneId}
+                                onChange={v => setOkuma(o => ({ ...o, kesimhaneId: v }))}
+                                options={kesimhaneler.map(f => ({ value: f.id, label: f.ad }))}
+                                placeholder="Kumaşın indiği kesimhane"
+                                clearLabel="Belirtilmemiş"
+                            />
+                        </div>
+                    )}
 
                     <label className="form-label">Okunan Satırlar</label>
                     {okuma.satirlar.map((s, i) => (
@@ -334,6 +427,18 @@ export default function KumasStok() {
                             </select>
                         </div>
                     </div>
+                    {!kesimhaneKullanici && (
+                        <div className="form-group">
+                            <label className="form-label">Bulunduğu Kesimhane</label>
+                            <SearchableSelect
+                                value={form.kesimhaneId}
+                                onChange={v => setForm({ ...form, kesimhaneId: v })}
+                                options={kesimhaneler.map(f => ({ value: f.id, label: f.ad }))}
+                                placeholder="Kumaşın indiği kesimhane"
+                                clearLabel="Belirtilmemiş"
+                            />
+                        </div>
+                    )}
                     <div className="form-group">
                         <label className="form-label">Geldiği Firma</label>
                         <SearchableSelect
@@ -386,9 +491,11 @@ export default function KumasStok() {
                                     <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{t.ad}</span>
                                     <span className="text-xs text-muted" style={{ marginLeft: '8px' }}>{t.birim}</span>
                                 </div>
-                                <button className="btn-icon" onClick={() => { if (silmeOnayi(`"${t.ad}" kumaş türü silinecek.`)) kumasTuruSil(t.id); }} style={{ color: 'var(--accent-danger)' }}>
-                                    <Trash2 size={14} />
-                                </button>
+                                {!kesimhaneKullanici && (
+                                    <button className="btn-icon" onClick={() => { if (silmeOnayi(`"${t.ad}" kumaş türü silinecek.`)) kumasTuruSil(t.id); }} style={{ color: 'var(--accent-danger)' }}>
+                                        <Trash2 size={14} />
+                                    </button>
+                                )}
                             </div>
                         ))
                     )}

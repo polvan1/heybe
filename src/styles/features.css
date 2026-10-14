@@ -665,7 +665,7 @@ tbody tr.row-uyari:hover td { background: var(--color-surface-hover); }
 
 .demo-giris strong { color: var(--color-text); }
 .demo-giris-butonlar { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-.demo-giris-butonlar .btn { flex: 1; min-width: 0; }
+.demo-giris-butonlar .btn { flex: 1 1 calc(50% - 4px); min-width: 0; }
 
 .demo-toast {
   position: fixed;
@@ -1127,5 +1127,117 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
     flex: 1;
     text-align: left;
     padding-left: 56px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Parti ilerletme: renk bazında kesim adetleri
+   -------------------------------------------------------------------------- */
+.kesim-renkler {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.kesim-renk-satir {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.kesim-renk-ad {
+  display: grid;
+  min-width: 0;
+  font-size: var(--font-size-md);
+}
+
+.kesim-renk-ad span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.kesim-renk-satir .form-input {
+  text-align: center;
+  font-weight: var(--font-weight-semibold);
+}
+
+.kesim-toplam {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-3);
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+.kesim-toplam strong {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Kumaş stok: kesimhane bazında özet kartları
+   -------------------------------------------------------------------------- */
+.kesimhane-stok-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.kesimhane-stok-kart {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.kesimhane-stok-kart:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.kesimhane-stok-kart.active {
+  background: var(--color-nav-active);
+  border-color: var(--color-primary-border);
+}
+
+.kesimhane-stok-kart:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.kesimhane-stok-ad {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+}
+
+.kesimhane-stok-miktar {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.kesimhane-stok-kalem {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 480px) {
+  .kesimhane-stok-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
   }
 }

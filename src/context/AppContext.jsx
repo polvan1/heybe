@@ -159,6 +159,7 @@ export function AppProvider({ children }) {
     const firmaAta = useCallback((partiId, atama) => { db.ataFirma(partiId, atama); refresh(); }, [refresh]);
     const atamaComplete = useCallback((partiId, atamaId, cikanAdet) => { db.tamamlaAtama(partiId, atamaId, cikanAdet); refresh(); }, [refresh]);
     const partiIlerlet = useCallback((partiId, cikanAdet) => { db.ilerletPartiDurum(partiId, cikanAdet); refresh(); }, [refresh]);
+    const partiKesildi = useCallback((partiId, bilgi) => { db.partiKesildi(partiId, bilgi); refresh(); }, [refresh]);
     const partiArsivle = useCallback((id, arsivde) => { db.setPartiArsiv(id, arsivde); refresh(); }, [refresh]);
 
     // Cari operations
@@ -225,7 +226,7 @@ export function AppProvider({ children }) {
         firmaEkle, firmaGuncelle, firmaSil,
         urunEkle, urunGuncelle, urunSil,
         partiEkle, partiGuncelle, partiSil,
-        firmaAta, atamaComplete, partiIlerlet, partiArsivle,
+        firmaAta, atamaComplete, partiIlerlet, partiKesildi, partiArsivle,
         cariHareketEkle, cariHareketSil,
         setHareketlerHesaplandi: (...args) => { db.setHareketlerHesaplandi(...args); refresh(); },
         getFirmaBakiye: db.getFirmaBakiye,

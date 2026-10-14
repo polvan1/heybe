@@ -93,8 +93,8 @@ function soforVerisi($pdo, $ben) {
 
 // GET: kullanıcının görebileceği tüm veriler
 function veriOku($pdo, $ben) {
-    if ($ben['rol'] === 'sofor') {
-        $sonuc = soforVerisi($pdo, $ben);
+    if ($ben['rol'] === 'sofor' || $ben['rol'] === 'kesimhane') {
+        $sonuc = $ben['rol'] === 'sofor' ? soforVerisi($pdo, $ben) : kesimhaneVerisi($pdo, $ben);
         try {
             foreach ($pdo->query("SELECT s_key, s_value FROM settings")->fetchAll() as $s) {
                 if (in_array($s['s_key'], ['myhis_tema', 'myhis_merkez'], true)) $sonuc[$s['s_key']] = $s['s_value'];
@@ -144,6 +144,9 @@ function veriYaz($pdo, $ben, $govde) {
         echo json_encode(['error' => 'yetki_yok', 'mesaj' => 'Bu verileri değiştirme yetkiniz yok.', 'reddedilen' => $reddedilen], JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    // Kesimhane yetkilisi: kayıt bazlı sahiplik kontrolü ve sunucu tarafı numaralandırma
+    $GLOBALS['yaziDuzeltildi'] = $ben['rol'] === 'kesimhane' ? kesimhaneYazimi($pdo, $ben, $degisiklikler) : false;
 
     gunlukYedek($pdo);
 

@@ -9,6 +9,14 @@ cari hesaplar, kumaş stok, raporlar, kullanıcı/yetki yönetimi.
 - Sunucu: PHP 8 (`public/api.php` + `public/inc/`), üretimde MySQL (cPanel)
 - Giriş/oturum sunucu tarafında (PHP session, HttpOnly çerez); kodda anahtar yok
 
+## Roller
+Yönetici, Üretim Sorumlusu, Muhasebe, **Kesimhane Yetkilisi**, Fasoncu, Şoför, İzleyici.
+Kesimhane yetkilisi bir kesimhane firmasına bağlanır; sadece o kesimhanenin partilerini,
+irsaliyelerini ve kumaş stoğunu görür. Parti oluşturur, kesim adetlerini girip
+"Kesildi" / "Dikime gönderildi" işaretler; oluşturduğu irsaliyeler taslak olur ve
+yönetici onaylar. Diğer rollerin oluşturduğu irsaliyeler doğrudan "Onaylandı" olur.
+Bu kurallar sunucuda da uygulanır (`public/inc/kesimhane.php`).
+
 ## Arayüz ve tasarım sistemi
 - Tüm renk, aralık (8px sistemi), köşe, gölge ve hareket değerleri tek yerde:
   `src/styles/tokens.css` (açık tema `:root`, koyu tema `[data-theme="dark"]`).
