@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
@@ -362,13 +363,14 @@ export default function PartiDetay() {
             </div>
 
             {/* Büyük fotoğraf görüntüleme */}
-            {buyukFoto && (
+            {buyukFoto && createPortal(
                 <div
                     onClick={() => setBuyukFoto(null)}
                     style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', cursor: 'zoom-out' }}
                 >
                     <img src={fotoSrc(buyukFoto.url)} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 'var(--radius-sm)' }} />
-                </div>
+                </div>,
+                document.body
             )}
 
             {hizliIlerlet && <PartiIlerletModal parti={parti} onClose={() => setHizliIlerlet(false)} />}

@@ -22,6 +22,20 @@ html,
 body {
   height: 100%;
   overscroll-behavior: none;
+  overflow: hidden;
+}
+
+/* iOS ana ekran uygulaması (PWA, black-translucent): belge durum çubuğunun altına
+   kaydırıldığı için görünür alan, durum çubuğu kadar KISA kalıp altta boş bant
+   bırakabiliyor. Belgeyi bu pay kadar uzatmak WebKit'in bilinen geçici çözümüdür;
+   kalan fark main.jsx'te ölçülüp --alt-bosluk ile kapatılır. */
+html {
+  min-height: calc(100% + env(safe-area-inset-top, 0px));
+}
+
+/* Modal açıkken arkadaki sayfa kaymasın */
+body.modal-acik .main-content {
+  overflow: hidden;
 }
 
 body {

@@ -21,6 +21,26 @@ if (import.meta.env.VITE_DEMO === '1') {
     window.confirm = () => true;
 }
 
+// iOS ana ekran uygulaması (PWA): bazı iOS sürümlerinde görünür alan (window.innerHeight)
+// ekrandan durum çubuğu kadar kısa kalıyor ve altta boş bant oluşuyor. Farkı ölçüp
+// --alt-bosluk değişkeniyle düzen ve alt menü ekranın en altına uzatılır.
+// Sorun olmayan cihazlarda fark 0'dır; klavye açıkken (büyük fark) dokunulmaz.
+function iosAltBoslukOlc() {
+    let fark = 0;
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const standalone = window.navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches;
+    if (ios && standalone) {
+        const dikey = window.innerHeight >= window.innerWidth;
+        const ekranYuksekligi = dikey ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+        fark = Math.round(ekranYuksekligi - window.innerHeight);
+        if (fark < 0 || fark > 100) fark = 0;
+    }
+    document.documentElement.style.setProperty('--alt-bosluk', `${fark}px`);
+}
+iosAltBoslukOlc();
+window.addEventListener('resize', iosAltBoslukOlc);
+window.addEventListener('orientationchange', () => setTimeout(iosAltBoslukOlc, 300));
+
 // PWA: Service worker kaydı (sadece production build'de; demoda yok)
 if (import.meta.env.PROD && import.meta.env.VITE_DEMO !== '1' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {

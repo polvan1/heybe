@@ -713,6 +713,7 @@ input[type="time"].form-input {
 .modal-overlay {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * var(--alt-bosluk, 0px));
   background: var(--color-overlay);
   z-index: 300;
   display: flex;

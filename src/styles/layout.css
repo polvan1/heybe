@@ -5,7 +5,7 @@
 .app-layout {
   display: flex;
   height: 100vh;
-  height: 100dvh;
+  height: calc(100dvh + var(--alt-bosluk, 0px));
   overflow: hidden;
 }
 
@@ -189,9 +189,9 @@
   .header {
     padding: 0 var(--space-3);
     gap: var(--space-2);
-    /* iPhone: düğmeler çentiğin/durum çubuğunun altına ek payla iner */
-    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
-    height: calc(56px + env(safe-area-inset-top, 0px) + 12px);
+    /* iPhone: düğmeler durum çubuğunun hemen altından başlar (fazladan boşluk yok) */
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(56px + env(safe-area-inset-top, 0px));
   }
 
   .header-title {
@@ -281,7 +281,7 @@
 @media (max-width: 768px) {
   .notification-dropdown {
     position: fixed;
-    top: calc(56px + env(safe-area-inset-top, 0px) + 20px);
+    top: calc(56px + env(safe-area-inset-top, 0px) + 8px);
     left: var(--space-3);
     right: var(--space-3);
     width: auto;
@@ -376,6 +376,7 @@
 .sidebar-overlay {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * var(--alt-bosluk, 0px));
   background: var(--color-overlay);
   z-index: 199;
   opacity: 0;
@@ -392,7 +393,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  bottom: 0;
+  bottom: calc(-1 * var(--alt-bosluk, 0px));
   width: var(--sidebar-width);
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
@@ -641,7 +642,8 @@
    -------------------------------------------------------------------------- */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
+  /* iOS PWA kısa görünür alan hatasında alt menü ekranın en altına iner */
+  bottom: calc(-1 * var(--alt-bosluk, 0px));
   left: 0;
   right: 0;
   /* iPhone home indicator alanı yüksekliğe DAHİL edilir */
