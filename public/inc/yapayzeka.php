@@ -16,7 +16,11 @@ function aiAyar($ad, $varsayilan = '') {
 // Anahtarı tanımlı sağlayıcılar, deneme sırasıyla
 function aiSaglayicilari() {
     $hepsi = [];
-    if (aiAyar('GEMINI_API_KEY') !== '') $hepsi['gemini'] = ['ad' => 'Google Gemini', 'model' => aiAyar('GEMINI_MODEL', 'gemini-flash-latest')];
+    if (aiAyar('GEMINI_API_KEY') !== '') {
+        // Ücretsiz katmanda bir model "yoğun" (503/429) cevabı verebilir: sıradaki Gemini modeli denenir
+        $modeller = array_values(array_unique(array_filter([aiAyar('GEMINI_MODEL'), 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-flash'])));
+        $hepsi['gemini'] = ['ad' => 'Google Gemini', 'model' => $modeller[0], 'yedekModeller' => array_slice($modeller, 1)];
+    }
     if (aiAyar('GROQ_API_KEY') !== '') $hepsi['groq'] = ['ad' => 'Groq', 'model' => aiAyar('GROQ_MODEL', 'meta-llama/llama-4-scout-17b-16e-instruct')];
     if (aiAyar('OPENROUTER_API_KEY') !== '') $hepsi['openrouter'] = ['ad' => 'OpenRouter', 'model' => aiAyar('OPENROUTER_MODEL', 'openrouter/free')];
     if (aiAyar('ANTHROPIC_API_KEY') !== '') $hepsi['anthropic'] = ['ad' => 'Anthropic Claude', 'model' => aiAyar('ANTHROPIC_MODEL', 'claude-sonnet-5-5')];
@@ -25,7 +29,7 @@ function aiSaglayicilari() {
     return $hepsi;
 }
 
-function aiHttpPost($url, $govde, $basliklar, $zamanAsimi = 90) {
+function aiHttpPost($url, $govde, $basliklar, $zamanAsimi = 60) {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
@@ -126,11 +130,18 @@ function aiGorselJsonOku($prompt, $mediaType, $base64) {
     }
     $hatalar = [];
     foreach ($saglayicilar as $kimlik => $s) {
-        [$metin, $hata] = aiSaglayiciCagir($kimlik, $s['model'], $prompt, $mediaType, $base64);
-        if ($hata !== null) { $hatalar[] = $s['ad'] . ': ' . $hata; continue; }
-        $veri = aiJsonAyikla($metin);
-        if ($veri === null) { $hatalar[] = $s['ad'] . ': cevap JSON değil'; continue; }
-        return ['veri' => $veri, 'saglayici' => $s['ad'] . ' (' . $s['model'] . ')'];
+        foreach (array_merge([$s['model']], $s['yedekModeller'] ?? []) as $model) {
+            [$metin, $hata] = aiSaglayiciCagir($kimlik, $model, $prompt, $mediaType, $base64);
+            if ($hata !== null) {
+                $hatalar[] = $s['ad'] . " ($model): " . $hata;
+                // Anahtar geçersizse aynı sağlayıcının diğer modellerini denemenin anlamı yok
+                if (stripos($hata, 'API key') !== false || stripos($hata, 'unauthorized') !== false) break;
+                continue;
+            }
+            $veri = aiJsonAyikla($metin);
+            if ($veri === null) { $hatalar[] = $s['ad'] . " ($model): cevap JSON değil"; continue; }
+            return ['veri' => $veri, 'saglayici' => $s['ad'] . ' (' . $model . ')'];
+        }
     }
     error_log('HİS ERP yapay zekâ okuma hatası: ' . implode(' | ', $hatalar));
     return ['hata' => 'ai_hatasi', 'mesaj' => 'Görsel okunamadı. ' . implode(' | ', $hatalar)];
