@@ -10,7 +10,8 @@
 //   POST api.php?auth=giris|cikis|kurulum
 //   POST api.php?kullanici=ekle|guncelle|sil
 //   POST api.php?foto=upload|sil
-//   POST api.php?irsaliye_oku=1
+//   POST api.php?irsaliye_oku=1             (yapay zekâ ile irsaliye fotoğrafı okuma: tur=kumas|sevk)
+//   GET  api.php?ai=durum                   (tanımlı yapay zekâ sağlayıcıları)
 //   *    api.php?push=subscribe|unsubscribe|son|test
 //   POST api.php?sefer=durak|konum             (şoför: durak tamamla, konum paylaş)
 
@@ -68,6 +69,7 @@ require __DIR__ . '/inc/push.php';
 require __DIR__ . '/inc/dosya.php';
 require __DIR__ . '/inc/sefer.php';
 require __DIR__ . '/inc/kesimhane.php';
+require __DIR__ . '/inc/yapayzeka.php';
 
 // ---- CSRF KORUMASI ----
 // Değişiklik yapan her istek özel bir başlık taşımalı. Tarayıcılar başka bir
@@ -101,6 +103,7 @@ if (isset($_GET['auth']))         authIstegi($pdo, (string)$_GET['auth']);
 if (isset($_GET['kullanici']))    kullaniciIstegi($pdo, (string)$_GET['kullanici']);
 if (isset($_GET['foto']))         fotoIstegi($pdo);
 if (isset($_GET['irsaliye_oku'])) irsaliyeOkuIstegi($pdo);
+if (isset($_GET['ai']))           aiDurumIstegi($pdo);
 if (isset($_GET['push']))         pushIstegi($pdo, (string)$_GET['push']);
 if (isset($_GET['sefer']))        seferIstegi($pdo, (string)$_GET['sefer']);
 

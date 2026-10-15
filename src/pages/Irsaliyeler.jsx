@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import Notice from '../components/ui/Notice';
 import SearchableSelect from '../components/SearchableSelect';
-import { Plus, FileText, Trash2, Search, Download, Printer, Check, X, Truck, Eye, ArrowRight, MessageCircle, Share2 } from 'lucide-react';
+import { Plus, FileText, Trash2, Search, Download, Printer, Check, X, Truck, Eye, ArrowRight, MessageCircle, Share2, ScanLine, FileDown, Loader2, Image as ImageIcon } from 'lucide-react';
 import { IRSALIYE_DURUM_LABELS, IRSALIYE_TIP_LABELS, DURUM_LABELS, exportToCSV } from '../data/db';
 import { yazdirIrsaliye } from '../utils/irsaliyePrint';
 import { whatsappAc, irsaliyeMetni } from '../utils/whatsapp';
 import { irsaliyePdfPaylas } from '../utils/irsaliyePdf';
 import { silmeOnayi } from '../utils/guvenlik';
+import { yazdirBosSevkSablonu } from '../utils/irsaliyeSablonu';
+import { fotoSrc } from '../utils/foto';
+import SevkIrsaliyeOkuma, { sevkIrsaliyesiOkut, okumaBaglami } from '../components/SevkIrsaliyeOkuma';
 
 const DURUM_FILTERS = [
     { value: 'all', label: 'Tümü' },
@@ -20,12 +23,47 @@ const DURUM_FILTERS = [
 
 export default function Irsaliyeler() {
     const {
-        irsaliyeler, partiler, firmalar,
+        irsaliyeler, partiler, firmalar, urunler,
         irsaliyeEkle, irsaliyeSil, irsaliyeOnayla, irsaliyeTeslimEt, irsaliyeIptal, currentUser
     } = useApp();
     // Kesimhane yetkilisi: irsaliyeleri taslak olarak düzenler; onay/teslim yöneticidedir
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
     const onaylayabilir = !kesimhaneKullanici;
+
+    // ---- Boş A5 şablon + okutma ----
+    const kameraRef = useRef(null);
+    const [sablonModal, setSablonModal] = useState(false);
+    const [sablon, setSablon] = useState({ kesimhaneId: '', atolyeId: '', kopya: 1 });
+    const [okumaBusy, setOkumaBusy] = useState(false);
+    const [okumaSonucu, setOkumaSonucu] = useState(null);
+    const [bilgi, setBilgi] = useState('');
+
+    const sablonAc = () => {
+        setSablon({ kesimhaneId: kesimhaneKullanici ? (currentUser.firmaId || '') : '', atolyeId: '', kopya: 1 });
+        setSablonModal(true);
+    };
+    const sablonYazdir = () => {
+        yazdirBosSevkSablonu({
+            kesimhaneAdi: firmalar.find(f => f.id === sablon.kesimhaneId)?.ad || '',
+            atolyeAdi: firmalar.find(f => f.id === sablon.atolyeId)?.ad || '',
+            kopya: sablon.kopya,
+        });
+        setSablonModal(false);
+    };
+    const handleOkutDosya = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        setOkumaBusy(true);
+        setBilgi('');
+        try {
+            setOkumaSonucu(await sevkIrsaliyesiOkut(file, okumaBaglami({ urunler, firmalar, partiler })));
+        } catch (err) {
+            alert(err.anahtarYok ? err.message : 'Okuma başarısız: ' + err.message);
+        } finally {
+            setOkumaBusy(false);
+        }
+    };
 
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
@@ -135,10 +173,21 @@ export default function Irsaliyeler() {
         <div className="animate-fade-in">
             <div className="page-header">
                 <h1 className="page-title">İrsaliyeler</h1>
-                <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
-                    <Plus size={18} /> Yeni İrsaliye
-                </button>
+                <div className="page-header-actions">
+                    <button className="btn btn-ghost" onClick={sablonAc} title="Elle doldurulacak boş A5 kesim sevk irsaliyesi">
+                        <FileDown size={18} /> Boş Şablon
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => kameraRef.current?.click()} disabled={okumaBusy} title="Doldurulmuş şablonun fotoğrafını çekin">
+                        {okumaBusy ? <Loader2 size={18} className="animate-spin" /> : <ScanLine size={18} />} {okumaBusy ? 'Okunuyor…' : 'Şablonu Okut'}
+                    </button>
+                    <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
+                        <Plus size={18} /> Yeni İrsaliye
+                    </button>
+                </div>
             </div>
+            {/* Native kamera: telefonda doğrudan arka kamera açılır */}
+            <input ref={kameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleOkutDosya} />
+            {bilgi && <Notice tone="success" style={{ marginBottom: '12px' }}>{bilgi}</Notice>}
 
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
                 <div className="search-bar" style={{ flex: 1, marginBottom: 0 }}>
@@ -318,6 +367,11 @@ export default function Irsaliyeler() {
                                 {detay.alanTel && <div className="text-xs text-muted">{detay.alanTel}</div>}
                             </div>
                         </div>
+                        {detay.formFotoUrl && (
+                            <a className="btn btn-sm btn-ghost" href={fotoSrc(detay.formFotoUrl)} target="_blank" rel="noopener noreferrer" style={{ justifySelf: 'start' }}>
+                                <ImageIcon size={14} /> Okutulan formu gör
+                            </a>
+                        )}
                         {detay.notlar && (
                             <div style={{ padding: '10px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)' }}>
                                 <div className="text-xs text-muted" style={{ marginBottom: '4px' }}>Notlar</div>
@@ -332,6 +386,52 @@ export default function Irsaliyeler() {
                         </div>
                     </div>
                 </Modal>
+            )}
+            {/* Boş A5 şablon yazdırma */}
+            {sablonModal && (
+                <Modal
+                    title="Boş kesim sevk irsaliyesi (A5)"
+                    onClose={() => setSablonModal(false)}
+                    footer={<>
+                        <button className="btn btn-ghost" onClick={() => setSablonModal(false)}>İptal</button>
+                        <button className="btn btn-primary" onClick={sablonYazdir}><Printer size={16} /> Yazdır</button>
+                    </>}
+                >
+                    <p className="text-sm text-muted" style={{ marginBottom: '16px' }}>
+                        Kesimhane formu elle doldurur (model no, renk, adet). Sonra "Şablonu Okut" ile fotoğrafı çekilir ve irsaliye otomatik oluşur.
+                        İsterseniz firma adları formda basılı gelsin.
+                    </p>
+                    <div className="form-group">
+                        <label className="form-label">Gönderen kesimhane (basılı)</label>
+                        {kesimhaneKullanici ? (
+                            <input className="form-input" value={firmalar.find(f => f.id === sablon.kesimhaneId)?.ad || ''} readOnly />
+                        ) : (
+                            <SearchableSelect value={sablon.kesimhaneId} onChange={v => setSablon({ ...sablon, kesimhaneId: v })}
+                                options={firmalar.filter(f => f.tip === 'kesimhane').map(f => ({ value: f.id, label: f.ad }))}
+                                placeholder="Boş bırak (elle yazılsın)" clearLabel="Boş bırak" />
+                        )}
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Alan atölye (basılı)</label>
+                        <SearchableSelect value={sablon.atolyeId} onChange={v => setSablon({ ...sablon, atolyeId: v })}
+                            options={firmalar.filter(f => f.tip === 'atolye').map(f => ({ value: f.id, label: f.ad }))}
+                            placeholder="Boş bırak (elle yazılsın)" clearLabel="Boş bırak" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="sablon-kopya">Kaç sayfa?</label>
+                        <input id="sablon-kopya" type="number" min="1" max="20" className="form-input" value={sablon.kopya}
+                            onChange={e => setSablon({ ...sablon, kopya: e.target.value })} />
+                    </div>
+                </Modal>
+            )}
+
+            {/* Okunan şablonu kontrol et → irsaliye oluştur */}
+            {okumaSonucu && (
+                <SevkIrsaliyeOkuma
+                    sonuc={okumaSonucu}
+                    onClose={() => setOkumaSonucu(null)}
+                    onKaydedildi={(n) => setBilgi(`${n} irsaliye okutulan formdan oluşturuldu.`)}
+                />
             )}
         </div>
     );

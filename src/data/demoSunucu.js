@@ -176,8 +176,32 @@ export async function demoIstek(sorgu, govde) {
     }
 
     if (p.has('irsaliye_oku')) {
-        girisGerekli();
-        return { error: 'anahtar_yok', mesaj: 'Demo modunda yapay zekâ ile irsaliye okuma kapalıdır. Gerçek sunucuda config.php içine Anthropic API anahtarı eklendiğinde çalışır.' };
+        const ben = girisGerekli();
+        if (g.tur === 'sevk') {
+            // Demo: gerçek yapay zekâ yerine örnek bir "okunmuş form" döner (akışı denemek için)
+            await new Promise(r => setTimeout(r, 900));
+            const v = yukle().veri;
+            const kesimhane = v.myhis_firmalar.find(f => f.id === ben.firmaId) || v.myhis_firmalar.find(f => f.tip === 'kesimhane');
+            const parti = v.myhis_partiler.find(x => x.kesimhaneId === kesimhane?.id && x.durum === 'kesimde') || v.myhis_partiler.find(x => x.durum === 'kesimde');
+            const atolye = v.myhis_firmalar.find(f => f.id === parti?.dikimhaneId) || v.myhis_firmalar.find(f => f.tip === 'atolye');
+            const urun = v.myhis_urunler.find(u => u.id === parti?.urunId) || v.myhis_urunler[0];
+            const diger = v.myhis_urunler.find(u => u.id !== urun.id);
+            return {
+                success: true,
+                saglayici: 'Demo (örnek okuma — gerçek sunucuda Gemini okur)',
+                okuma: {
+                    formKodu: 'HIS-KS1', tarih: new Date().toISOString().slice(0, 10), irsaliyeNo: '0147',
+                    gonderen: kesimhane?.ad || '', alan: (atolye?.ad || '').toUpperCase(), partiNo: parti?.partiNo || '',
+                    satirlar: [
+                        { model: urun.urunKodu.replace('-', ' '), renk: 'Siyah', bedenler: { S: 40, M: 60, L: 40 }, adet: 140 },
+                        { model: urun.urunKodu, renk: 'Beyaz', bedenler: {}, adet: 120 },
+                        { model: diger ? diger.urunKodu.toLowerCase() : '', renk: 'lacivert', bedenler: {}, adet: 75 },
+                    ],
+                    toplamAdet: 335, notlar: '',
+                },
+            };
+        }
+        return { error: 'anahtar_yok', mesaj: 'Demo modunda kumaş irsaliyesi okuma kapalıdır. Gerçek sunucuda yapay zekâ anahtarı (ör. ücretsiz GEMINI_API_KEY) eklendiğinde çalışır.' };
     }
 
     if (p.has('push')) {

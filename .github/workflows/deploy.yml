@@ -13,7 +13,10 @@
 # Veritabanı (config.php bunlardan OTOMATİK üretilir; yoksa sunucudaki config.php'ye dokunulmaz):
 #   TEST_DB_ADI, TEST_DB_KULLANICI, TEST_DB_SIFRE      → test ortamı
 #   CANLI_DB_ADI, CANLI_DB_KULLANICI, CANLI_DB_SIFRE   → canlı ortam
-#   DB_SUNUCU (isteğe bağlı, varsayılan localhost), ANTHROPIC_API_KEY (isteğe bağlı)
+#   DB_SUNUCU (isteğe bağlı, varsayılan localhost)
+# Yapay zekâ ile irsaliye okuma (isteğe bağlı; en az biri):
+#   GEMINI_API_KEY (ücretsiz, Google AI Studio), GROQ_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY
+#   Variables (isteğe bağlı): GEMINI_MODEL, GROQ_MODEL, OPENROUTER_MODEL, AI_SAGLAYICI
 #   ⚠️ config.php bir kez buradan yüklendiyse bu secret'ları SİLMEYİN: sonraki yüklemede
 #      sunucudaki config.php de kaldırılır (yükleme aracı kendi yüklediği dosyaları eşitler).
 # İsteğe bağlı "Variables": FTP_PROTOKOL = ftps (varsayılan) | ftp
@@ -69,6 +72,22 @@ jobs:
       - name: Derle
         run: pnpm run build
 
+      # Yapay zekâ irsaliye okuma bağlantı testi: örnek (elle doldurulmuş) kesim sevk
+      # irsaliyesi görselini tanımlı sağlayıcıya okutur. Anahtar yoksa atlanır;
+      # başarısız olsa bile yükleme devam eder (sonuç bu adımın günlüğünde görünür).
+      - name: Yapay zekâ okuma testi
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          AI_SAGLAYICI: ${{ vars.AI_SAGLAYICI }}
+        run: php scripts/ai-test.php scripts/ornek/kesim-sevk-irsaliyesi.jpg scripts/ornek/kesim-sevk-irsaliyesi.beklenen.json
+
       - name: Hedefi belirle
         id: hedef
         env:
@@ -98,6 +117,14 @@ jobs:
           DB_SIFRE: ${{ secrets[format('{0}_DB_SIFRE', steps.hedef.outputs.onek)] }}
           DB_SUNUCU: ${{ secrets.DB_SUNUCU }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Yapay zekâ irsaliye okuma (ücretsiz: GEMINI_API_KEY). Model adları gizli değil → Variables
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          AI_SAGLAYICI: ${{ vars.AI_SAGLAYICI }}
         run: |
           if [ -n "$DB_ADI" ] && [ -n "$DB_KULLANICI" ] && [ -n "$DB_SIFRE" ]; then
             php scripts/config-uret.php dist/config.php

@@ -11,6 +11,13 @@ $ayarlar = [
     'DB_USER' => $deger('DB_KULLANICI'),
     'DB_PASS' => $deger('DB_SIFRE'),
     'ANTHROPIC_API_KEY' => $deger('ANTHROPIC_API_KEY'),
+    'GEMINI_API_KEY' => $deger('GEMINI_API_KEY'),
+    'GEMINI_MODEL' => $deger('GEMINI_MODEL'),
+    'GROQ_API_KEY' => $deger('GROQ_API_KEY'),
+    'GROQ_MODEL' => $deger('GROQ_MODEL'),
+    'OPENROUTER_API_KEY' => $deger('OPENROUTER_API_KEY'),
+    'OPENROUTER_MODEL' => $deger('OPENROUTER_MODEL'),
+    'AI_SAGLAYICI' => $deger('AI_SAGLAYICI'),
 ];
 foreach (['DB_NAME', 'DB_USER', 'DB_PASS'] as $zorunlu) {
     if ($ayarlar[$zorunlu] === '') { fwrite(STDERR, "$zorunlu boş\n"); exit(1); }

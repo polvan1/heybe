@@ -1,0 +1,15 @@
+{
+  "aciklama": "scripts/ornek/kesim-sevk-irsaliyesi.jpg görselinde elle yazılmış (yapay) değerler; okuma testinde karşılaştırılır.",
+  "tarih": "2026-10-14",
+  "irsaliyeNo": "0147",
+  "partiNo": "P-0009",
+  "gonderen": "Yıldız Kesim",
+  "alan": "Ece Dikim Evi",
+  "toplamAdet": 400,
+  "satirlar": [
+    { "model": "HS-1021", "renk": "Siyah", "adet": 140 },
+    { "model": "HS-1021", "renk": "Beyaz", "adet": 120 },
+    { "model": "HS-2015", "renk": "Lacivert", "adet": 75 },
+    { "model": "HS-3002", "renk": "Gri Melanj", "adet": 65 }
+  ]
+}

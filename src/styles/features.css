@@ -1241,3 +1241,57 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
     gap: var(--space-2);
   }
 }
+
+/* --------------------------------------------------------------------------
+   Okutulan sevk irsaliyesi: satır kontrolü
+   -------------------------------------------------------------------------- */
+.okuma-satirlar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.okuma-satir {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.okuma-satir--pasif {
+  opacity: 0.55;
+}
+
+.okuma-satir--uyari {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-soft);
+}
+
+.okuma-satir-ust {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.okuma-satir-ust input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.okuma-satir-alt {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.okuma-yukleniyor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

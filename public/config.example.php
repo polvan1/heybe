@@ -13,8 +13,15 @@ $DB_PASS = '';
 // Boş bırakılırsa api.php'nin bulunduğu klasör kullanılır.
 $DATA_DIR = '';
 
-// Yapay zekâ irsaliye okuma (Kumaş Stok) için Anthropic API anahtarı. Boşsa özellik kapalı.
-$ANTHROPIC_API_KEY = '';
+// ---- Yapay zekâ ile irsaliye fotoğrafı okuma (Kumaş Stok, Kesim Sevk İrsaliyesi) ----
+// Anahtarı girilen sağlayıcılar sırayla denenir; hiçbiri yoksa özellik kapalıdır.
+// Ücretsiz seçenek: Google AI Studio'dan alınan Gemini anahtarı (https://aistudio.google.com/apikey)
+$GEMINI_API_KEY = '';
+$GEMINI_MODEL = '';          // boşsa 'gemini-flash-latest' (Google'ın güncel Flash modeli)
+$GROQ_API_KEY = '';          // ücretsiz katmanı olan alternatif (https://console.groq.com/keys)
+$OPENROUTER_API_KEY = '';    // ":free" modeller (https://openrouter.ai/keys)
+$ANTHROPIC_API_KEY = '';     // ücretli (Claude)
+$AI_SAGLAYICI = '';          // ilk denenecek: 'gemini' | 'groq' | 'openrouter' | 'anthropic' (boşsa bu sırayla)
 
 // ---- WEB PUSH (VAPID) — telefon bildirimleri ----
 // Public key uygulamaya sunucudan verilir; ayrıca bir yere yazmanız gerekmez.

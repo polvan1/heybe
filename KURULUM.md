@@ -265,6 +265,29 @@ tablosunda tutulur; ölü abonelikler otomatik temizlenir.
 - **Klavye düzeltmesi (iPhone):** klavye kapandıktan sonra alt menünün yukarıda
   asılı kalması giderildi.
 
+## Yapay Zekâ ile İrsaliye Okuma (v3.3)
+
+**Kesim sevk irsaliyesi şablonu:** İrsaliyeler → **Boş Şablon** ile A5 form (HIS-KS1) yazdırılır.
+Kesimhane formu elle doldurur (model no, renk, beden dağılımı, adet). **Şablonu Okut** ile
+formun fotoğrafı çekilir; yapay zekâ okur, sistem modeli / partiyi / atölyeyi eşleştirir,
+kontrol ekranından sonra her model için ayrı irsaliye oluşur (kesimhane → taslak,
+yönetici → onaylandı). Okutulan formun fotoğrafı irsaliyeye eklenir.
+
+**Ücretsiz yapay zekâ anahtarı (Google Gemini) bağlama:**
+1. https://aistudio.google.com/apikey adresine Google hesabınızla girin → **Create API key**.
+2. GitHub → depo → Settings → Secrets and variables → Actions → **New repository secret**
+   - Name: `GEMINI_API_KEY` — Secret: oluşturduğunuz anahtar. (Anahtarı kimseyle paylaşmayın, sohbete yazmayın.)
+3. Bir sonraki yüklemede `config.php` anahtarla birlikte üretilir. Yükleme sırasında
+   **"Yapay zekâ okuma testi"** adımı örnek formu (`scripts/ornek/`) okur ve sonucu günlüğe yazar.
+
+Alternatifler (anahtarı olan sırayla denenir; biri kota/bağlantı hatası verirse sıradakine geçilir):
+`GROQ_API_KEY` (ücretsiz katman, Llama 4 Scout), `OPENROUTER_API_KEY` (":free" modeller),
+`ANTHROPIC_API_KEY` (ücretli). Model adları isteğe bağlı olarak **Variables** ile değiştirilebilir:
+`GEMINI_MODEL` (varsayılan `gemini-flash-latest`), `GROQ_MODEL`, `OPENROUTER_MODEL`, `AI_SAGLAYICI`.
+
+⚠️ Ücretsiz katmanlarda sağlayıcılar gönderilen içeriği ürünlerini geliştirmek için
+kullanabilir. Hassas belgeler için ücretli katman tercih edin.
+
 ## Bilinen Sınırlamalar (bilgi amaçlı)
 - Kimlik doğrulama istemci taraflıdır; API anahtarı derlenmiş JS içinde yer alır.
   Botlara/rastgele erişime karşı korur, ancak hedefli bir saldırgana karşı tam koruma

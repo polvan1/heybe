@@ -90,7 +90,7 @@ export default function KumasStok() {
             const json = await apiIstek('irsaliye_oku=1', { data: dataUrl, kumas_turleri: kumasTurleri.map(t => t.ad) })
                 .catch(err => err.veri || { error: 'baglanti', mesaj: err.message });
             if (json.error === 'anahtar_yok') {
-                alert(json.mesaj || 'Yapay zekâ okuma için sunucuya Anthropic API anahtarı eklenmelidir (config.php).');
+                alert(json.mesaj || 'Yapay zekâ okuma için sunucuya bir yapay zekâ anahtarı (ör. ücretsiz GEMINI_API_KEY) eklenmelidir.');
                 return;
             }
             if (!json.success || !json.okuma?.satirlar?.length) {
