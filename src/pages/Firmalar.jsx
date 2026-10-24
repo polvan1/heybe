@@ -2,19 +2,18 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { Plus, Edit2, Trash2, Phone, MapPin, User, Search, Star, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, MapPin, User, Search, Calendar, Power } from 'lucide-react';
 import { FIRMA_TIP_LABELS } from '../data/db';
+import { FIRMA_TIPLERI, firmaRozetSinifi, firmaAktifMi } from '../utils/firma';
+import Notice from '../components/ui/Notice';
 import { silmeOnayi } from '../utils/guvenlik';
 
 const TIPLER = [
     { value: 'all', label: 'Tümü' },
-    { value: 'kesimhane', label: 'Kesimhane' },
-    { value: 'baskici', label: 'Baskıcı' },
-    { value: 'atolye', label: 'Atölye' },
-    { value: 'utupaketci', label: 'Ütü/Paketçi' },
+    ...FIRMA_TIPLERI.map(t => ({ value: t.value, label: t.kisa })),
 ];
 
-const EMPTY_FORM = { ad: '', tip: 'atolye', telefon: '', adres: '', yetkiliKisi: '', notlar: '', gunlukKapasite: '', odemeVadesi: '' };
+const EMPTY_FORM = { ad: '', tip: 'atolye', telefon: '', adres: '', yetkiliKisi: '', notlar: '', gunlukKapasite: '', odemeVadesi: '', aktif: true };
 
 export default function Firmalar() {
     const { firmalar, firmaEkle, firmaGuncelle, firmaSil, partiler, getFirmaPerformans } = useApp();
@@ -24,9 +23,12 @@ export default function Firmalar() {
     const [modal, setModal] = useState(null);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
+    const [pasifleriGoster, setPasifleriGoster] = useState(false);
 
+    const pasifSayisi = firmalar.filter(f => !firmaAktifMi(f)).length;
     const filtered = firmalar.filter(f => {
         if (filter !== 'all' && f.tip !== filter) return false;
+        if (!pasifleriGoster && !firmaAktifMi(f)) return false;
         if (search.trim()) {
             const q = search.toLowerCase();
             return f.ad.toLowerCase().includes(q) ||
@@ -37,11 +39,12 @@ export default function Firmalar() {
     });
 
     const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setModal('add'); };
-    const openEdit = (firma) => { setForm({ ...EMPTY_FORM, ...firma }); setEditId(firma.id); setModal('edit'); };
+    const openEdit = (firma) => { setForm({ ...EMPTY_FORM, ...firma, aktif: firmaAktifMi(firma) }); setEditId(firma.id); setModal('edit'); };
 
     const handleSave = () => {
         if (!form.ad.trim()) return;
         const data = { ...form, odemeVadesi: form.odemeVadesi ? parseInt(form.odemeVadesi, 10) : null };
+        if (data.tip === 'kumasci') data.gunlukKapasite = '';
         if (editId) {
             firmaGuncelle(editId, data);
         } else {
@@ -65,10 +68,12 @@ export default function Firmalar() {
 
     const getAktifPartiSayisi = (firmaId) => {
         return partiler.filter(p =>
-            p.durum !== 'tamamlandi' &&
-            p.firmaAtamalari?.some(a => a.firmaId === firmaId)
+            p.durum !== 'tamamlandi' && !p.arsivde && (
+                p.kesimhaneId === firmaId || p.dikimhaneId === firmaId || p.utupaketciId === firmaId ||
+                p.firmaAtamalari?.some(a => a.firmaId === firmaId))
         ).length;
     };
+    const duzenlenenAktifParti = editId ? getAktifPartiSayisi(editId) : 0;
 
     const getPerfBadge = (skor) => {
         if (skor >= 85) return { label: `${skor}`, cls: 'excellent' };
@@ -110,6 +115,15 @@ export default function Firmalar() {
                         {t.label}
                     </button>
                 ))}
+                {pasifSayisi > 0 && (
+                    <button
+                        className={`filter-btn ${pasifleriGoster ? 'active' : ''}`}
+                        onClick={() => setPasifleriGoster(v => !v)}
+                        style={{ marginLeft: 'auto' }}
+                    >
+                        <Power size={14} /> Pasifleri göster ({pasifSayisi})
+                    </button>
+                )}
             </div>
 
             {/* Firma List */}
@@ -117,7 +131,7 @@ export default function Firmalar() {
                 <div className="empty-state">
                     <div className="empty-state-icon"><FirmaSvg size={48} /></div>
                     <div className="empty-state-title">Firma bulunamadı</div>
-                    <div className="empty-state-text">Yeni bir firma ekleyerek başlayın</div>
+                    <div className="empty-state-text">{!pasifleriGoster && pasifSayisi > 0 ? 'Pasif firmalar gizli — "Pasifleri göster" ile listeleyebilirsiniz' : 'Yeni bir firma ekleyerek başlayın'}</div>
                     <button className="btn btn-primary" onClick={openAdd}><Plus size={18} /> Firma Ekle</button>
                 </div>
             ) : (
@@ -126,14 +140,15 @@ export default function Firmalar() {
                         const perf = getFirmaPerformans(firma.id);
                         const badge = getPerfBadge(perf.skor);
                         return (
-                            <div key={firma.id} className="mobile-list-item" style={{ cursor: 'pointer' }} onClick={() => navigate(`/cari/${firma.id}`)}>
+                            <div key={firma.id} className={`mobile-list-item ${firmaAktifMi(firma) ? '' : 'firma-pasif'}`} style={{ cursor: 'pointer' }} onClick={() => navigate(`/cari/${firma.id}`)}>
                                 <div className="mobile-list-item-header">
                                     <span className="mobile-list-item-title">{firma.ad}</span>
                                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                         {perf.toplamIs > 0 && (
                                             <span className={`perf-badge ${badge.cls}`}>{badge.label}</span>
                                         )}
-                                        <span className={`badge ${firma.tip === 'atolye' ? 'dikimde' : firma.tip === 'kesimhane' ? 'kesimde' : firma.tip === 'baskici' ? 'baskida' : 'utupakette'}`}>
+                                        {!firmaAktifMi(firma) && <span className="badge pasif">Pasif</span>}
+                                        <span className={`badge ${firmaRozetSinifi(firma.tip)}`}>
                                             {FIRMA_TIP_LABELS[firma.tip]}
                                         </span>
                                     </div>
@@ -214,10 +229,12 @@ export default function Firmalar() {
                             <label className="form-label">Adres</label>
                             <input className="form-input" value={form.adres} onChange={e => updateField('adres', e.target.value)} placeholder="Adres" />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Günlük Kapasite (adet)</label>
-                            <input className="form-input" type="number" min="0" value={form.gunlukKapasite} onChange={e => updateField('gunlukKapasite', parseInt(e.target.value, 10) || '')} placeholder="Örn: 200" />
-                        </div>
+                        {form.tip !== 'kumasci' && (
+                            <div className="form-group">
+                                <label className="form-label">Günlük Kapasite (adet)</label>
+                                <input className="form-input" type="number" min="0" value={form.gunlukKapasite} onChange={e => updateField('gunlukKapasite', parseInt(e.target.value, 10) || '')} placeholder="Örn: 200" />
+                            </div>
+                        )}
                     </div>
                     <div className="form-group">
                         <label className="form-label">Ödeme Vadesi (Ayın Kaçı)</label>
@@ -228,6 +245,23 @@ export default function Firmalar() {
                         <label className="form-label">Notlar</label>
                         <textarea className="form-input" rows={3} value={form.notlar} onChange={e => updateField('notlar', e.target.value)} placeholder="Ek notlar..." />
                     </div>
+                    {form.tip === 'kumasci' && (
+                        <Notice tone="info">Kumaş tedarikçileri Kumaş Stok ekranında "Geldiği Firma" olarak seçilir; fiyat girilen kumaş girişleri bu firmanın carisine borç olarak yazılır.</Notice>
+                    )}
+                    {editId && (
+                        <div className="form-group" style={{ marginTop: '12px' }}>
+                            <label className="firma-aktif-anahtar">
+                                <input type="checkbox" checked={form.aktif !== false} onChange={e => updateField('aktif', e.target.checked)} />
+                                <span>
+                                    <strong>Firma aktif</strong>
+                                    <small>Pasif firmalar yeni parti, irsaliye ve kumaş girişlerinde seçilemez; geçmiş kayıtları ve carisi korunur.</small>
+                                </span>
+                            </label>
+                            {form.aktif === false && duzenlenenAktifParti > 0 && (
+                                <Notice tone="warning">Bu firmada {duzenlenenAktifParti} devam eden parti var. Pasife alınca bu partiler etkilenmez, ancak firma yeni işlerde seçilemez.</Notice>
+                            )}
+                        </div>
+                    )}
                 </Modal>
             )}
         </div>

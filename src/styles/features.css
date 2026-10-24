@@ -1295,3 +1295,24 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
   align-items: center;
   gap: var(--space-3);
 }
+
+/* --- Firma aktif/pasif --- */
+.firma-pasif { opacity: 0.62; }
+.firma-pasif:hover { opacity: 0.9; }
+.firma-aktif-anahtar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+}
+.firma-aktif-anahtar input { accent-color: var(--color-primary); margin-top: 3px; flex-shrink: 0; }
+.firma-aktif-anahtar span { display: flex; flex-direction: column; gap: 2px; }
+.firma-aktif-anahtar strong { font-size: 0.875rem; }
+.firma-aktif-anahtar small { font-size: 0.75rem; color: var(--color-text-secondary, var(--text-muted)); line-height: 1.4; }
+
+/* --- Kumaş alımı fiyat/tutar --- */
+.kumas-tutar strong { color: var(--color-text); }
+.kumas-tutar-kutu { display: flex; align-items: center; font-weight: 700; background: var(--color-surface-muted); }

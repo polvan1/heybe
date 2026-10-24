@@ -12,6 +12,7 @@ import {
     FileText,
 } from 'lucide-react';
 import { DURUM_LABELS, DURUM_SIRALAMA, FIRMA_TIP_LABELS } from '../data/db';
+import { firmaAktifMi, firmaSecenekAdi } from '../utils/firma';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
 import BarChart from '../components/ui/BarChart';
@@ -337,7 +338,7 @@ export default function Dashboard() {
                         <SearchableSelect
                             value={odemeFirmaId}
                             onChange={setOdemeFirmaId}
-                            options={firmalar.map(f => ({ value: f.id, label: f.ad, sub: FIRMA_TIP_LABELS[f.tip] }))}
+                            options={[...firmalar].sort((a, b) => firmaAktifMi(b) - firmaAktifMi(a)).map(f => ({ value: f.id, label: firmaSecenekAdi(f), sub: FIRMA_TIP_LABELS[f.tip] }))}
                             placeholder="Firma seçin"
                         />
                     </div>

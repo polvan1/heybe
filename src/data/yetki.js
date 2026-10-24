@@ -58,3 +58,12 @@ export function firstAllowedRoute(user) {
     }
     return null; // hiçbir yetkisi yok
 }
+
+// Cari hareket yazabilir mi? (public/inc/auth.php YETKI_YAZMA ile aynı kural:
+// anasayfa / partiler / cari_hesaplar yetkisi myhis_cariHareketler yazmayı kapsar)
+export function cariYazabilir(user) {
+    if (!user) return false;
+    if (user.rol === 'admin') return true;
+    if (user.rol === 'izleyici' || user.rol === 'kesimhane') return false;
+    return ['anasayfa', 'partiler', 'cari_hesaplar'].some(y => (user.yetkiler || []).includes(y));
+}

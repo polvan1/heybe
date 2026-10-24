@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { DURUM_LABELS } from '../data/db';
+import { firmaAktifMi } from '../utils/firma';
 import { AlertTriangle, Clock, Calendar, CheckCircle, BarChart3, TrendingUp } from 'lucide-react';
 
 /**
@@ -216,8 +217,9 @@ function formatDate(date) {
 export default function IsTalepTakvimi() {
     const { firmalar, partiler } = useApp();
 
-    // Sadece dikimhaneler (atölyeler)
-    const dikimhaneler = firmalar.filter(f => f.tip === 'atolye');
+    // Sadece dikimhaneler (atölyeler); pasif atölye ancak üzerinde devam eden iş varsa görünür
+    const dikimhaneler = firmalar.filter(f => f.tip === 'atolye' &&
+        (firmaAktifMi(f) || partiler.some(p => p.dikimhaneId === f.id && p.durum !== 'tamamlandi')));
 
     // Geçmiş veriden kapasite öğren
     const history = calculateLearnedCapacities(firmalar, partiler);

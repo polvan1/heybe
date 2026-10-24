@@ -7,6 +7,7 @@ import { yazdirIrsaliye } from '../utils/irsaliyePrint';
 import { Plus, Eye, Layers, Printer, Search, Download, Edit2, Archive, ArchiveRestore, MapPin, Trash2 } from 'lucide-react';
 import { DURUM_LABELS, exportToCSV, isPartiArsivde, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
 import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
+import { secilebilirFirmalar } from '../utils/firma';
 
 const DURUM_FILTERS = [
     { value: 'all', label: 'Tümü' },
@@ -51,9 +52,10 @@ export default function Partiler() {
     const selectedUrun = urunler.find(u => u.id === selectedUrunId);
     const kesimhaneler = kesimhaneKullanici
         ? firmalar.filter(f => f.id === currentUser.firmaId)
-        : firmalar.filter(f => f.tip === 'kesimhane');
-    const dikimhaneler = firmalar.filter(f => f.tip === 'atolye');
-    const utupaketciler = firmalar.filter(f => f.tip === 'utupaketci');
+        : secilebilirFirmalar(firmalar, { tip: 'kesimhane', seciliId: kesimhaneId });
+    // Pasif firmalar yeni partide seçilemez (seçili olan listede kalır)
+    const dikimhaneler = secilebilirFirmalar(firmalar, { tip: 'atolye', seciliId: dikimhaneId });
+    const utupaketciler = secilebilirFirmalar(firmalar, { tip: 'utupaketci', seciliId: utupaketciId });
 
     useEffect(() => {
         if (selectedUrunId && urunler.length > 0) {
@@ -201,7 +203,7 @@ export default function Partiler() {
         const kesimhane = firmalar.find(f => f.id === parti.kesimhaneId);
         const dikimhane = firmalar.find(f => f.id === parti.dikimhaneId);
         const utupaketci = firmalar.find(f => f.id === parti.utupaketciId);
-        const baskicilar = firmalar.filter(f => f.tip === 'baskici');
+        const baskicilar = secilebilirFirmalar(firmalar, { tip: 'baskici' });
 
         // Gönderen / Alan bilgisi hedef tipine göre
         let gonderen, alan, hedefLabel;
@@ -613,7 +615,7 @@ function IrsaliyeContent({ parti, firmalar, hedef }) {
     const kesimhane = firmalar.find(f => f.id === parti.kesimhaneId);
     const dikimhane = firmalar.find(f => f.id === parti.dikimhaneId);
     const utupaketci = firmalar.find(f => f.id === parti.utupaketciId);
-    const baskicilar = firmalar.filter(f => f.tip === 'baskici');
+    const baskicilar = secilebilirFirmalar(firmalar, { tip: 'baskici' });
 
     let gonderen, alan, hedefLabel;
     if (hedef === 'baskici') {

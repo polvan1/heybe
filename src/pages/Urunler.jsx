@@ -4,6 +4,7 @@ import Modal from '../components/Modal';
 import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X } from 'lucide-react';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
+import { firmaAktifMi } from '../utils/firma';
 
 const DEFAULT_BEDENLER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 
@@ -549,7 +550,7 @@ export default function Urunler() {
                         >
                             <option value="">+ Firma anlaşması ekle...</option>
                             {firmalar
-                                .filter(f => !form.firmaFiyatlari?.[f.id])
+                                .filter(f => !form.firmaFiyatlari?.[f.id] && firmaAktifMi(f) && f.tip !== 'kumasci')
                                 .map(f => <option key={f.id} value={f.id}>{f.ad}</option>)}
                         </select>
                     </div>

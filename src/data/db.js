@@ -1,5 +1,6 @@
 // HİS ERP - Veri Katmanı (sunucu API senkronizasyonlu)
 import { apiIstek, ApiHatasi } from './api';
+import { cariYazabilir } from './yetki';
 
 const STORAGE_KEYS = {
   firmalar: 'myhis_firmalar',
@@ -327,6 +328,7 @@ export const FIRMA_TIP_LABELS = {
   baskici: 'Baskıcı',
   atolye: 'Atölye (Dikimhane)',
   utupaketci: 'Ütü/Paketçi',
+  kumasci: 'Kumaş Tedarikçisi',
 };
 
 export const ADIM_FIRMA_TIP = {
@@ -710,6 +712,15 @@ export function addCariHareket(hareket) {
   return newHareket;
 }
 
+export function updateCariHareket(id, updates) {
+  const hareketler = getCariHareketler();
+  const index = hareketler.findIndex(h => h.id === id);
+  if (index === -1) return null;
+  hareketler[index] = { ...hareketler[index], ...updates };
+  saveAll(STORAGE_KEYS.cariHareketler, hareketler);
+  return hareketler[index];
+}
+
 export function deleteCariHareket(id) {
   const silinen = getCariHareketler().find(h => h.id === id);
   const hareketler = getCariHareketler().filter(h => h.id !== id);
@@ -874,6 +885,52 @@ export function getKumasStoklar() {
   return getAll(STORAGE_KEYS.kumasStok);
 }
 
+// ---- Kumaş alımı ↔ tedarikçi carisi ----
+// Birim fiyatı girilmiş ve geldiği firması seçilmiş kumaş girişi, o firmanın carisine
+// borç olarak yazılır (kumasStokId ile bağlı). Kayıt değişince borç da güncellenir;
+// "Hesabı Kapat" ile kapanmış borca dokunulmaz. Kesimhane yetkilisi fiyat görmez/girmez
+// (sunucu, kesimhanenin miktar düzeltmesinde bağlı borcu kendisi günceller).
+export const kumasTutari = (k) => Math.round((parseFloat(k?.birimFiyat) || 0) * (parseFloat(k?.miktar) || 0) * 100) / 100;
+
+const kumasCariAciklamasi = (k) =>
+  `Kumaş alımı: ${k.kumasAdi}${k.renk ? ` (${k.renk})` : ''}${k.referansNo ? ` • İrs. ${k.referansNo}` : ''}`;
+
+const kumasCariAlanlari = (k) => ({
+  firmaId: k.gelenFirmaId,
+  partiId: null,
+  kumasStokId: k.id,
+  tip: 'borc',
+  tutar: kumasTutari(k),
+  miktar: parseFloat(k.miktar) || 0,
+  birim: k.birim || '',
+  birimFiyat: parseFloat(k.birimFiyat) || 0,
+  aciklama: kumasCariAciklamasi(k),
+  tarih: k.tarih,
+});
+
+// Kaydın bağlı cari borcunu kayda göre oluşturur/günceller/siler; kaydın güncel cariHareketId ve tutarını döndürür
+function kumasCarisiniEsitle(k) {
+  if (!cariYazabilir(aktifKullanici)) return {};
+  const bagli = k.cariHareketId ? getCariHareketler().find(h => h.id === k.cariHareketId) : null;
+  if (bagli?.hesaplandi) return { cariHareketId: bagli.id, tutar: bagli.tutar }; // kapanmış hesap değişmez
+  const borcGerekli = !!k.gelenFirmaId && kumasTutari(k) > 0;
+  if (borcGerekli && bagli) {
+    updateCariHareket(bagli.id, kumasCariAlanlari(k));
+    return { cariHareketId: bagli.id, tutar: kumasTutari(k) };
+  }
+  if (borcGerekli) {
+    const h = addCariHareket(kumasCariAlanlari(k));
+    return { cariHareketId: h.id, tutar: kumasTutari(k) };
+  }
+  if (bagli) deleteCariHareket(bagli.id);
+  return { cariHareketId: null, tutar: null };
+}
+
+export function kumasCariKapali(k) {
+  const bagli = k?.cariHareketId ? getCariHareketler().find(h => h.id === k.cariHareketId) : null;
+  return !!bagli?.hesaplandi;
+}
+
 export function addKumasStok(kayit) {
   const kayitlar = getKumasStoklar();
   const yeni = {
@@ -882,6 +939,7 @@ export function addKumasStok(kayit) {
     tarih: kayit.tarih || new Date().toISOString(),
     createdAt: new Date().toISOString(),
   };
+  Object.assign(yeni, kumasCarisiniEsitle(yeni));
   kayitlar.push(yeni);
   saveAll(STORAGE_KEYS.kumasStok, kayitlar);
   logIslem('Kumaş Girişi', `${yeni.kumasAdi}${yeni.renk ? ` (${yeni.renk})` : ''} — ${yeni.miktar} ${yeni.birim || ''}${yeni.gelenFirmaAdi ? ` • ${yeni.gelenFirmaAdi}` : ''}`);
@@ -892,15 +950,23 @@ export function updateKumasStok(id, updates) {
   const kayitlar = getKumasStoklar();
   const index = kayitlar.findIndex(k => k.id === id);
   if (index !== -1) {
-    kayitlar[index] = { ...kayitlar[index], ...updates };
+    const guncel = { ...kayitlar[index], ...updates };
+    Object.assign(guncel, kumasCarisiniEsitle(guncel));
+    kayitlar[index] = guncel;
     saveAll(STORAGE_KEYS.kumasStok, kayitlar);
-    return kayitlar[index];
+    logIslem('Kumaş Girişi Güncellendi', `${guncel.kumasAdi}${guncel.renk ? ` (${guncel.renk})` : ''} — ${guncel.miktar} ${guncel.birim || ''}`);
+    return guncel;
   }
   return null;
 }
 
 export function deleteKumasStok(id) {
   const silinen = getKumasStoklar().find(k => k.id === id);
+  // Bağlı ve henüz kapanmamış cari borcu da silinir (kapanmış hesap geçmişi korunur)
+  if (silinen?.cariHareketId && cariYazabilir(aktifKullanici)) {
+    const bagli = getCariHareketler().find(h => h.id === silinen.cariHareketId);
+    if (bagli && !bagli.hesaplandi) deleteCariHareket(bagli.id);
+  }
   saveAll(STORAGE_KEYS.kumasStok, getKumasStoklar().filter(k => k.id !== id));
   if (silinen) logIslem('Kumaş Girişi Silindi', `${silinen.kumasAdi} — ${silinen.miktar} ${silinen.birim || ''}`);
 }

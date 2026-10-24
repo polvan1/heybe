@@ -3,15 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
-import { Wallet, Eye, Scissors, Factory, Palette, Package, CreditCard, Plus, Search, Download } from 'lucide-react';
+import { Wallet, Eye, CreditCard, Search, Power } from 'lucide-react';
 import { FIRMA_TIP_LABELS } from '../data/db';
+import { FIRMA_TIPLERI, firmaRozetSinifi, firmaAktifMi, firmaSecenekAdi } from '../utils/firma';
 
 const TIP_FILTERS = [
     { value: 'all', label: 'Tümü', icon: Wallet },
-    { value: 'kesimhane', label: 'Kesimhane', icon: Scissors },
-    { value: 'atolye', label: 'Dikimhane', icon: Factory },
-    { value: 'baskici', label: 'Baskıcı', icon: Palette },
-    { value: 'utupaketci', label: 'Ütü/Paket', icon: Package },
+    ...FIRMA_TIPLERI.map(t => ({ value: t.value, label: t.kisa, icon: t.ikon })),
 ];
 
 export default function CariHesaplar() {
@@ -21,9 +19,12 @@ export default function CariHesaplar() {
     const [search, setSearch] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentForm, setPaymentForm] = useState({ firmaId: '', tutar: '', aciklama: '', tarih: new Date().toISOString().split('T')[0] });
+    const [pasifleriGoster, setPasifleriGoster] = useState(false);
 
+    const pasifFirmalar = firmalar.filter(f => !firmaAktifMi(f));
     const filtered = firmalar.filter(f => {
         if (tipFilter !== 'all' && f.tip !== tipFilter) return false;
+        if (!pasifleriGoster && !firmaAktifMi(f)) return false;
         if (search.trim()) {
             return f.ad.toLowerCase().includes(search.toLowerCase());
         }
@@ -94,6 +95,15 @@ export default function CariHesaplar() {
                         </button>
                     );
                 })}
+                {pasifFirmalar.length > 0 && (
+                    <button
+                        className={`filter-btn ${pasifleriGoster ? 'active' : ''}`}
+                        onClick={() => setPasifleriGoster(v => !v)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}
+                    >
+                        <Power size={14} /> Pasifleri göster ({pasifFirmalar.length})
+                    </button>
+                )}
             </div>
 
             {/* Firma Listesi */}
@@ -120,10 +130,10 @@ export default function CariHesaplar() {
                                 </thead>
                                 <tbody>
                                     {sorted.map(f => (
-                                        <tr key={f.id} onClick={() => navigate(`/cari/${f.id}`)} style={{ cursor: 'pointer' }}>
-                                            <td style={{ fontWeight: 600 }}>{f.ad}</td>
+                                        <tr key={f.id} className={firmaAktifMi(f) ? '' : 'firma-pasif'} onClick={() => navigate(`/cari/${f.id}`)} style={{ cursor: 'pointer' }}>
+                                            <td style={{ fontWeight: 600 }}>{f.ad}{!firmaAktifMi(f) && <span className="badge pasif" style={{ marginLeft: '8px' }}>Pasif</span>}</td>
                                             <td>
-                                                <span className={`badge ${f.tip === 'atolye' ? 'dikimde' : f.tip === 'kesimhane' ? 'kesimde' : f.tip === 'baskici' ? 'baskida' : 'utupakette'}`}>
+                                                <span className={`badge ${firmaRozetSinifi(f.tip)}`}>
                                                     {FIRMA_TIP_LABELS[f.tip]}
                                                 </span>
                                             </td>
@@ -147,13 +157,14 @@ export default function CariHesaplar() {
                     <div className="mobile-only">
                         <div className="mobile-list">
                             {sorted.map(f => (
-                                <div key={f.id} className="mobile-list-item" onClick={() => navigate(`/cari/${f.id}`)} style={{ cursor: 'pointer' }}>
+                                <div key={f.id} className={`mobile-list-item ${firmaAktifMi(f) ? '' : 'firma-pasif'}`} onClick={() => navigate(`/cari/${f.id}`)} style={{ cursor: 'pointer' }}>
                                     <div className="mobile-list-item-header">
                                         <div>
                                             <span className="mobile-list-item-title">{f.ad}</span>
+                                            {!firmaAktifMi(f) && <span className="badge pasif" style={{ marginLeft: '8px' }}>Pasif</span>}
                                             {f.yetkiliKisi && <div className="text-xs text-muted">{f.yetkiliKisi}</div>}
                                         </div>
-                                        <span className={`badge ${f.tip === 'atolye' ? 'dikimde' : f.tip === 'kesimhane' ? 'kesimde' : f.tip === 'baskici' ? 'baskida' : 'utupakette'}`}>
+                                        <span className={`badge ${firmaRozetSinifi(f.tip)}`}>
                                             {FIRMA_TIP_LABELS[f.tip]}
                                         </span>
                                     </div>
@@ -196,8 +207,8 @@ export default function CariHesaplar() {
                             value={paymentForm.firmaId}
                             onChange={val => setPaymentForm({ ...paymentForm, firmaId: val })}
                             options={[...firmalar]
-                                .sort((a, b) => a.ad.localeCompare(b.ad, 'tr'))
-                                .map(f => ({ value: f.id, label: f.ad, sub: FIRMA_TIP_LABELS[f.tip] }))}
+                                .sort((a, b) => (firmaAktifMi(b) - firmaAktifMi(a)) || a.ad.localeCompare(b.ad, 'tr'))
+                                .map(f => ({ value: f.id, label: firmaSecenekAdi(f), sub: FIRMA_TIP_LABELS[f.tip] }))}
                             placeholder="Firma seçiniz..."
                         />
                     </div>

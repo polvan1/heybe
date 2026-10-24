@@ -7,6 +7,7 @@ import { useApp } from '../context/AppContext';
 import { apiIstek } from '../data/api';
 import { gorselDataUrl } from '../utils/foto';
 import { SABLON_KODU } from '../utils/irsaliyeSablonu';
+import { secilebilirFirmalar } from '../utils/firma';
 
 // ---- Eşleştirme yardımcıları (el yazısı → sistemdeki kayıt) ----
 const norm = (s) => String(s ?? '').toLocaleUpperCase('tr-TR').replace(/[^0-9A-ZÇĞİÖŞÜ]/g, '');
@@ -25,7 +26,7 @@ export function urunBul(urunler, model) {
 export function firmaBul(firmalar, ad, tip) {
     const n = norm(ad);
     if (!n) return null;
-    const aday = tip ? firmalar.filter(f => f.tip === tip) : firmalar;
+    const aday = secilebilirFirmalar(firmalar, { tip }); // pasif firmalarla eşleşmez
     return aday.find(f => norm(f.ad) === n)
         || aday.find(f => norm(f.ad).includes(n) || n.includes(norm(f.ad)))
         || aday.find(f => norm(f.ad).split(/\s+/)[0] && n.startsWith(norm(f.ad).slice(0, 5)))
@@ -52,8 +53,8 @@ const tarihNorm = (t) => (/^\d{4}-\d{2}-\d{2}$/.test(t || '') ? t : new Date().t
 export function okumaBaglami({ urunler, firmalar, partiler }) {
     return {
         modeller: urunler.slice(0, 150).map(u => `${u.urunKodu} — ${u.urunAdi}`),
-        atolyeler: firmalar.filter(f => f.tip === 'atolye').map(f => f.ad),
-        kesimhaneler: firmalar.filter(f => f.tip === 'kesimhane').map(f => f.ad),
+        atolyeler: secilebilirFirmalar(firmalar, { tip: 'atolye' }).map(f => f.ad),
+        kesimhaneler: secilebilirFirmalar(firmalar, { tip: 'kesimhane' }).map(f => f.ad),
         partiler: partiler.filter(p => p.durum !== 'tamamlandi').slice(0, 100).map(p => p.partiNo),
     };
 }
@@ -75,8 +76,8 @@ export async function sevkIrsaliyesiOkut(file, baglam) {
 export default function SevkIrsaliyeOkuma({ sonuc, onClose, onKaydedildi }) {
     const { urunler, firmalar, partiler, irsaliyeEkle, currentUser } = useApp();
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
-    const kesimhaneler = firmalar.filter(f => f.tip === 'kesimhane');
-    const atolyeler = firmalar.filter(f => f.tip === 'atolye');
+    const kesimhaneler = secilebilirFirmalar(firmalar, { tip: 'kesimhane' });
+    const atolyeler = secilebilirFirmalar(firmalar, { tip: 'atolye' });
     const o = sonuc.okuma || {};
 
     // İlk eşleştirme

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Users, Plus, Edit2, Trash2, Shield, Eye, EyeOff } from 'lucide-react';
 import Modal from '../components/Modal';
 import { silmeOnayi } from '../utils/guvenlik';
+import { secilebilirFirmalar, firmaSecenekAdi } from '../utils/firma';
 
 const ROLLER = [
     { value: 'admin', label: 'Yönetici', desc: 'Tüm yetkilere sahip' },
@@ -294,8 +295,8 @@ export default function Kullanicilar() {
                             <label className="form-label">{form.rol === 'kesimhane' ? 'Bağlı Kesimhane *' : 'Bağlı Firma *'}</label>
                             <select className="form-input" value={form.firmaId} onChange={e => setForm({ ...form, firmaId: e.target.value })}>
                                 <option value="">— Firma seçin —</option>
-                                {firmalar.filter(f => form.rol !== 'kesimhane' || f.tip === 'kesimhane').map(f => (
-                                    <option key={f.id} value={f.id}>{f.ad}</option>
+                                {secilebilirFirmalar(firmalar, { tip: form.rol === 'kesimhane' ? 'kesimhane' : null, seciliId: form.firmaId }).map(f => (
+                                    <option key={f.id} value={f.id}>{firmaSecenekAdi(f)}</option>
                                 ))}
                             </select>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>

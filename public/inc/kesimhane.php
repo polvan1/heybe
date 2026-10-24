@@ -16,6 +16,8 @@ const KESIMHANE_URUN_GIZLI = ['kesimFiyat', 'dikimFiyat', 'utuFiyat', 'firmaFiya
 const KESIMHANE_PARTI_ALANLARI = ['kesimDurumu', 'kesilenAdet', 'kesilenRenkler', 'kesimTarihi', 'kesimNotu',
     'gonderimTarihi', 'dikimeGonderilenAdet', 'fotolar', 'durum', 'kalanAdet', 'sonCikanAdet', 'teslimatGecmisi', 'dikimBaslamaTarihi', 'updatedAt'];
 const KESIMHANE_IRSALIYE_ALANLARI = ['toplamAdet', 'notlar', 'renkler', 'updatedAt'];
+// Kumaş alım fiyatı ve tedarikçi carisine bağlantı kesimhaneye gösterilmez, kesimhane değiştiremez
+const KESIMHANE_KUMAS_GIZLI = ['birimFiyat', 'tutar', 'cariHareketId'];
 
 function kesimhaneFirmaId($ben) {
     return !empty($ben['firmaId']) ? (string)$ben['firmaId'] : '';
@@ -34,6 +36,14 @@ function kumasKesimhanesi($k) {
     return '';
 }
 
+// Kumaş girişine bağlı, henüz "Hesabı Kapat" yapılmamış cari borç (yoksa null)
+function kumasBagliBorc($pdo, $kumas) {
+    if (!$kumas || empty($kumas['cariHareketId'])) return null;
+    $borc = kayitGetir($pdo, 'cari_hareketler', (string)$kumas['cariHareketId']);
+    if (!$borc || !empty($borc['hesaplandi']) || ($borc['kumasStokId'] ?? null) !== $kumas['id']) return null;
+    return $borc;
+}
+
 function irsaliyeFirmayaAit($i, $firmaId) {
     return ($i['gonderenFirmaId'] ?? null) === $firmaId || ($i['alanFirmaId'] ?? null) === $firmaId;
 }
@@ -50,7 +60,9 @@ function kesimhaneVerisi($pdo, $ben) {
             return $p;
         }, $partiler);
         $sonuc['myhis_irsaliyeler'] = array_values(array_filter(tabloOku($pdo, 'irsaliyeler'), fn($i) => irsaliyeFirmayaAit($i, $firmaId)));
-        $sonuc['myhis_kumasStok'] = array_values(array_filter(tabloOku($pdo, 'kumas_stok'), fn($k) => kumasKesimhanesi($k) === $firmaId));
+        $sonuc['myhis_kumasStok'] = array_values(array_map(
+            fn($k) => array_diff_key($k, array_flip(KESIMHANE_KUMAS_GIZLI)),
+            array_filter(tabloOku($pdo, 'kumas_stok'), fn($k) => kumasKesimhanesi($k) === $firmaId)));
     }
     $sonuc['myhis_kumasTurleri'] = tabloOku($pdo, 'kumas_turleri');
     $sonuc['myhis_urunler'] = array_map(fn($u) => array_diff_key($u, array_flip(KESIMHANE_URUN_GIZLI)), tabloOku($pdo, 'urunler'));
@@ -189,12 +201,31 @@ function kesimhaneYazimi($pdo, $ben, &$degisiklikler) {
         if (($k['kesimhaneId'] ?? null) !== $firmaId) $duzeltildi = true;
         $k['kesimhaneId'] = $firmaId;
         $k['kesimhaneAdi'] = $firma['ad'] ?? '';
+        // Fiyat alanları istemciden alınmaz; mevcut kayıttakiler korunur
+        foreach (KESIMHANE_KUMAS_GIZLI as $alan) {
+            if ($mevcut && array_key_exists($alan, $mevcut)) $k[$alan] = $mevcut[$alan];
+            else unset($k[$alan]);
+        }
+        // Miktar değiştiyse tedarikçi carisindeki bağlı (kapanmamış) borç da güncellenir
+        $borc = kumasBagliBorc($pdo, $mevcut);
+        if ($borc) {
+            $tutar = round((float)($k['miktar'] ?? 0) * (float)($mevcut['birimFiyat'] ?? 0), 2);
+            if (abs($tutar - (float)($borc['tutar'] ?? 0)) > 0.001) {
+                $borc['tutar'] = $tutar;
+                $borc['miktar'] = (float)($k['miktar'] ?? 0);
+                $degisiklikler['myhis_cariHareketler']['upsert'][] = $borc;
+                $k['tutar'] = $tutar;
+            }
+        }
         $kumaslar[$i] = $k;
     }
     if ($kumaslar) $degisiklikler['myhis_kumasStok']['upsert'] = $kumaslar;
     foreach (($degisiklikler['myhis_kumasStok']['delete'] ?? []) as $id) {
         $mevcut = is_string($id) ? kayitGetir($pdo, 'kumas_stok', $id) : null;
         if ($mevcut && kumasKesimhanesi($mevcut) !== $firmaId) kesimhaneRed('Bu kumaş kaydı kesimhanenize ait değil.');
+        // Silinen girişin kapanmamış cari borcu da silinir
+        $borc = kumasBagliBorc($pdo, $mevcut);
+        if ($borc) $degisiklikler['myhis_cariHareketler']['delete'][] = $borc['id'];
     }
 
     return $duzeltildi;

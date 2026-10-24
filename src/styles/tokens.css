@@ -56,6 +56,7 @@
   --status-dikimde: #D98A1C;
   --status-utupakette: #D9558C;
   --status-tamamlandi: #1F9D6B;
+  --firma-kumasci: #0E8F8A;                     /* kumaş tedarikçisi rozeti */
 
   /* --- Grafikler --- */
   --chart-bar: #24394B;                         /* koyu lacivert çubuk */
@@ -197,6 +198,7 @@
   --status-dikimde: #F0B455;
   --status-utupakette: #F28DB5;
   --status-tamamlandi: #4CC892;
+  --firma-kumasci: #4FD1C5;
 
   --chart-bar: #E9EDF2;                         /* kırık beyaz çubuk */
   --chart-bar-muted: rgba(233, 237, 242, 0.16);

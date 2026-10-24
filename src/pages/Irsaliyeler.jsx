@@ -11,6 +11,7 @@ import { irsaliyePdfPaylas } from '../utils/irsaliyePdf';
 import { silmeOnayi } from '../utils/guvenlik';
 import { yazdirBosSevkSablonu } from '../utils/irsaliyeSablonu';
 import { fotoSrc } from '../utils/foto';
+import { secilebilirFirmalar, firmaSecenekAdi } from '../utils/firma';
 import SevkIrsaliyeOkuma, { sevkIrsaliyesiOkut, okumaBaglami } from '../components/SevkIrsaliyeOkuma';
 
 const DURUM_FILTERS = [
@@ -290,7 +291,7 @@ export default function Irsaliyeler() {
                         <SearchableSelect
                             value={gonderenFirmaId}
                             onChange={setGonderenFirmaId}
-                            options={(kesimhaneKullanici ? firmalar.filter(f => f.id === currentUser.firmaId) : firmalar).map(f => ({ value: f.id, label: f.ad }))}
+                            options={(kesimhaneKullanici ? firmalar.filter(f => f.id === currentUser.firmaId) : secilebilirFirmalar(firmalar, { seciliId: gonderenFirmaId })).map(f => ({ value: f.id, label: firmaSecenekAdi(f) }))}
                             placeholder="Firma seçin"
                         />
                     </div>
@@ -299,7 +300,7 @@ export default function Irsaliyeler() {
                         <SearchableSelect
                             value={alanFirmaId}
                             onChange={setAlanFirmaId}
-                            options={firmalar.map(f => ({ value: f.id, label: f.ad }))}
+                            options={secilebilirFirmalar(firmalar, { seciliId: alanFirmaId }).map(f => ({ value: f.id, label: firmaSecenekAdi(f) }))}
                             placeholder="Firma seçin"
                         />
                     </div>
@@ -407,14 +408,14 @@ export default function Irsaliyeler() {
                             <input className="form-input" value={firmalar.find(f => f.id === sablon.kesimhaneId)?.ad || ''} readOnly />
                         ) : (
                             <SearchableSelect value={sablon.kesimhaneId} onChange={v => setSablon({ ...sablon, kesimhaneId: v })}
-                                options={firmalar.filter(f => f.tip === 'kesimhane').map(f => ({ value: f.id, label: f.ad }))}
+                                options={secilebilirFirmalar(firmalar, { tip: 'kesimhane' }).map(f => ({ value: f.id, label: f.ad }))}
                                 placeholder="Boş bırak (elle yazılsın)" clearLabel="Boş bırak" />
                         )}
                     </div>
                     <div className="form-group">
                         <label className="form-label">Alan atölye (basılı)</label>
                         <SearchableSelect value={sablon.atolyeId} onChange={v => setSablon({ ...sablon, atolyeId: v })}
-                            options={firmalar.filter(f => f.tip === 'atolye').map(f => ({ value: f.id, label: f.ad }))}
+                            options={secilebilirFirmalar(firmalar, { tip: 'atolye' }).map(f => ({ value: f.id, label: f.ad }))}
                             placeholder="Boş bırak (elle yazılsın)" clearLabel="Boş bırak" />
                     </div>
                     <div className="form-group">

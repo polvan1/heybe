@@ -21,6 +21,9 @@ const FIRMALAR = [
     { ad: 'Bulut Ütü-Paket', lat: 41.0461, lng: 28.9006, tip: 'utupaketci', yetkiliKisi: 'Kemal Bulut', adres: 'Bayrampaşa, İstanbul', gunlukKapasite: 1500, odemeVadesi: 10 },
     { ad: 'Nur Paketleme', lat: 41.0181, lng: 28.88, tip: 'utupaketci', yetkiliKisi: 'Nurten Şahin', adres: 'Güngören, İstanbul', gunlukKapasite: 1200, odemeVadesi: 20 },
     { ad: 'Renk Baskı', lat: 41.012, lng: 28.887, tip: 'baskici', yetkiliKisi: 'Okan Renk', adres: 'Merter, İstanbul', gunlukKapasite: 2000, odemeVadesi: 15 },
+    { ad: 'Akdeniz Örme', tip: 'kumasci', yetkiliKisi: 'Deniz Aydın', adres: 'Çorlu, Tekirdağ', odemeVadesi: 30 },
+    { ad: 'Bursa Tekstil', tip: 'kumasci', yetkiliKisi: 'Cem Öztürk', adres: 'Nilüfer, Bursa', odemeVadesi: 15 },
+    { ad: 'Eski Çınar Dikim', tip: 'atolye', yetkiliKisi: 'Fikret Çınar', adres: 'Esenler, İstanbul', gunlukKapasite: 300, aktif: false, notlar: 'Çalışma durduruldu (pasif)' },
 ];
 
 const URUNLER = [
@@ -53,8 +56,8 @@ const DURUM_ETIKET = { kesimde: 'Kesimde', dikimde: 'Dikimde', utupakette: 'Üt�
 export function demoVerisiOlustur() {
     sayac = 0;
     const firmalar = FIRMALAR.map((f, i) => ({
-        id: id('frm'), ...f, telefon: `0532 000 00 ${String(i + 10)}`, email: '', notlar: '',
-        aktif: true, createdAt: tarih(60),
+        id: id('frm'), telefon: `0532 000 00 ${String(i + 10)}`, email: '', notlar: '',
+        aktif: true, createdAt: tarih(60), ...f,
     }));
 
     const urunler = URUNLER.map(u => {
@@ -168,12 +171,32 @@ export function demoVerisiOlustur() {
         { id: id('kt'), ad: 'İki İplik Şardonlu', birim: 'kg', createdAt: tarih(50) },
         { id: id('kt'), ad: 'Viskon Penye', birim: 'kg', createdAt: tarih(50) },
     ];
+    // Kumaş alımları: tedarikçiden gelen, fiyatı girilmiş kumaş tedarikçinin carisine borç yazar
+    const akdeniz = firmalar.find(f => f.ad === 'Akdeniz Örme');
+    const bursa = firmalar.find(f => f.ad === 'Bursa Tekstil');
+    const kumas = (k) => {
+        const kayit = { id: id('ks'), notlar: '', createdAt: k.tarih, ...k, gelenFirmaId: k.firma.id, gelenFirmaAdi: k.firma.ad };
+        delete kayit.firma;
+        if (kayit.birimFiyat) {
+            kayit.tutar = Math.round(kayit.birimFiyat * kayit.miktar * 100) / 100;
+            const borc = {
+                id: id('car'), firmaId: kayit.gelenFirmaId, partiId: null, kumasStokId: kayit.id, tip: 'borc', tutar: kayit.tutar,
+                miktar: kayit.miktar, birim: kayit.birim, birimFiyat: kayit.birimFiyat,
+                aciklama: `Kumaş alımı: ${kayit.kumasAdi} (${kayit.renk}) • İrs. ${kayit.referansNo}`,
+                tarih: kayit.tarih, hesaplandi: false, createdAt: kayit.tarih,
+            };
+            cari.push(borc);
+            kayit.cariHareketId = borc.id;
+        }
+        return kayit;
+    };
     const kumasStok = [
-        { id: id('ks'), kumasAdi: 'Süprem 30/1', renk: 'Pembe', miktar: 186.4, topAdedi: 8, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Akdeniz Örme', kesimhaneId: partiler[8].kesimhaneId, kesimhaneAdi: firmalar.find(f => f.id === partiler[8].kesimhaneId)?.ad || '', partiId: partiler[8].id, partiNo: 'P-0009', referansNo: 'KMS-55120', notlar: '', tarih: tarih(3), createdAt: tarih(3) },
-        { id: id('ks'), kumasAdi: 'Ribana 2x1', renk: 'Beyaz', miktar: 92, topAdedi: 4, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Akdeniz Örme', kesimhaneId: partiler[9].kesimhaneId, kesimhaneAdi: firmalar.find(f => f.id === partiler[9].kesimhaneId)?.ad || '', partiId: partiler[9].id, partiNo: 'P-0010', referansNo: 'KMS-55134', notlar: '', tarih: tarih(1), createdAt: tarih(1) },
-        { id: id('ks'), kumasAdi: 'İki İplik Şardonlu', renk: 'Antrasit', miktar: 240, topAdedi: 10, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Bursa Tekstil', kesimhaneId: firmalar[0].id, kesimhaneAdi: firmalar[0].ad, referansNo: 'BT-2231', notlar: '', tarih: tarih(2), createdAt: tarih(2) },
-        { id: id('ks'), kumasAdi: 'Viskon Penye', renk: 'Lacivert', miktar: 130, topAdedi: 6, birim: 'kg', gelenFirmaId: null, gelenFirmaAdi: 'Akdeniz Örme', kesimhaneId: firmalar[1].id, kesimhaneAdi: firmalar[1].ad, referansNo: 'KMS-55140', notlar: '', tarih: tarih(1), createdAt: tarih(1) },
+        kumas({ kumasAdi: 'Süprem 30/1', renk: 'Pembe', miktar: 186.4, topAdedi: 8, birim: 'kg', birimFiyat: 185, firma: akdeniz, kesimhaneId: partiler[8].kesimhaneId, kesimhaneAdi: firmalar.find(f => f.id === partiler[8].kesimhaneId)?.ad || '', partiId: partiler[8].id, partiNo: 'P-0009', referansNo: 'KMS-55120', tarih: tarih(3) }),
+        kumas({ kumasAdi: 'Ribana 2x1', renk: 'Beyaz', miktar: 92, topAdedi: 4, birim: 'kg', birimFiyat: 160, firma: akdeniz, kesimhaneId: partiler[9].kesimhaneId, kesimhaneAdi: firmalar.find(f => f.id === partiler[9].kesimhaneId)?.ad || '', partiId: partiler[9].id, partiNo: 'P-0010', referansNo: 'KMS-55134', tarih: tarih(1) }),
+        kumas({ kumasAdi: 'İki İplik Şardonlu', renk: 'Antrasit', miktar: 240, topAdedi: 10, birim: 'kg', birimFiyat: 210, firma: bursa, kesimhaneId: firmalar[0].id, kesimhaneAdi: firmalar[0].ad, referansNo: 'BT-2231', tarih: tarih(2) }),
+        kumas({ kumasAdi: 'Viskon Penye', renk: 'Lacivert', miktar: 130, topAdedi: 6, birim: 'kg', firma: akdeniz, kesimhaneId: firmalar[1].id, kesimhaneAdi: firmalar[1].ad, referansNo: 'KMS-55140', tarih: tarih(1) }),
     ];
+    odeme(akdeniz, 25000, 2, 'Havale ödemesi (kumaş)');
 
     return {
         // Sevkiyat aracının çıkış noktası (demo)

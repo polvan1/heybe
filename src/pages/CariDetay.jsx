@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
-import { ArrowLeft, CheckCircle, Wallet, CreditCard, Eye, Printer, History, ClipboardCheck, AlertCircle, Star, Download } from 'lucide-react';
-import { FIRMA_TIP_LABELS, DURUM_LABELS, exportToCSV } from '../data/db';
+import Notice from '../components/ui/Notice';
+import { ArrowLeft, CheckCircle, Wallet, CreditCard, Eye, Printer, History, ClipboardCheck, AlertCircle, Star, Power, FilePlus } from 'lucide-react';
+import { FIRMA_TIP_LABELS } from '../data/db';
+import { firmaRozetSinifi, firmaAktifMi } from '../utils/firma';
 
 export default function CariDetay() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { firmalar, cariHareketler, cariHareketEkle, partiler, getFirmaBakiye, setHareketlerHesaplandi, getFirmaPerformans } = useApp();
+    const { firmalar, firmaGuncelle, cariHareketler, cariHareketEkle, partiler, getFirmaBakiye, setHareketlerHesaplandi, getFirmaPerformans } = useApp();
 
     const [selectedPartiler, setSelectedPartiler] = useState([]);
     const [showHesapModal, setShowHesapModal] = useState(false);
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
-    // Hızlı ödeme: bu firma için doğrudan bu sayfada girilir
+    // Hızlı ödeme / borç (fatura) girişi: bu firma için doğrudan bu sayfada girilir.
+    // showOdemeModal: false | 'alacak' (bizim ödememiz) | 'borc' (firmaya borcumuz, ör. kumaş faturası)
     const bosOdeme = () => ({ tutar: '', aciklama: '', tarih: new Date().toISOString().split('T')[0] });
     const [showOdemeModal, setShowOdemeModal] = useState(false);
     const [odemeForm, setOdemeForm] = useState(bosOdeme);
@@ -46,26 +49,57 @@ export default function CariDetay() {
     const gecmisHareketler = tumHareketler.filter(h => h.hesaplandi);
 
     // Bekleyen işleri parti bazlı grupla (UI uyumluluğu için)
+    // Partiye bağlı olmayan borçlar (kumaş alımı, manuel fatura) da açık iş olarak listelenir
     const pendingWork = bekleyenBorclar.map(h => {
         const p = partiler.find(parti => parti.id === h.partiId);
-        if (!p) return null;
+        if (!p) {
+            return {
+                id: h.id,
+                partiId: null,
+                baslik: h.kumasStokId ? 'Kumaş alımı' : (h.partiNo || 'Borç kaydı'),
+                alt: h.aciklama || '',
+                rol: h.kumasStokId ? 'Kumaş' : 'Fatura',
+                birimFiyat: h.birimFiyat || 0,
+                borc: h.tutar,
+                tarih: h.tarih || h.createdAt,
+            };
+        }
 
         let rol = '';
         let birimFiyat = 0;
         if (p.kesimhaneId === id) { rol = 'Kesim'; birimFiyat = p.kesimBirimFiyat || 0; }
         if (p.dikimhaneId === id) { rol = 'Dikim'; birimFiyat = p.dikimBirimFiyat || 0; }
         if (p.utupaketciId === id) { rol = 'Ütü/Paket'; birimFiyat = p.utuBirimFiyat || 0; }
+        if (!rol) rol = 'İşlem';
 
         return {
             id: h.id, // Hareket ID'si
             partiId: p.id,
-            parti: p,
+            baslik: p.partiNo,
+            alt: p.urunAdi,
             rol,
             birimFiyat,
             borc: h.tutar,
             tarih: h.tarih || h.createdAt
         };
-    }).filter(Boolean);
+    });
+
+    const aktif = firmaAktifMi(firma);
+    const aktifPartiSayisi = partiler.filter(p => p.durum !== 'tamamlandi' && !p.arsivde && (
+        p.kesimhaneId === id || p.dikimhaneId === id || p.utupaketciId === id ||
+        (p.firmaAtamalari || []).some(a => a.firmaId === id))).length;
+    const aktiflikDegistir = () => {
+        if (aktif) {
+            const uyari = [
+                `${firma.ad} pasife alınacak.`,
+                'Pasif firma yeni parti, irsaliye ve kumaş girişlerinde seçilemez; geçmiş kayıtları ve carisi korunur.',
+                aktifPartiSayisi > 0 ? `\nDikkat: bu firmada ${aktifPartiSayisi} devam eden parti var (etkilenmez).` : '',
+                bakiyeInfo.bakiye !== 0 ? `Açık bakiye: ${bakiyeInfo.bakiye.toLocaleString('tr-TR')} ₺` : '',
+            ].filter(Boolean).join('\n');
+            if (!window.confirm(uyari)) return;
+        }
+        firmaGuncelle(id, { aktif: !aktif });
+    };
 
     const seciliHesaplar = pendingWork.filter(h => selectedPartiler.includes(h.id));
     const seciliToplamServisBedeli = seciliHesaplar.reduce((t, h) => t + (Number(h.borc) || 0), 0);
@@ -200,8 +234,8 @@ export default function CariDetay() {
                             ${seciliHesaplar.map(h => `
                                 <tr>
                                     <td>${new Date(h.tarih).toLocaleDateString('tr-TR')}</td>
-                                    <td style="font-weight: 600;">${h.parti.partiNo}</td>
-                                    <td>${h.parti.urunAdi} [${h.rol}]</td>
+                                    <td style="font-weight: 600;">${h.baslik}</td>
+                                    <td>${h.alt} [${h.rol}]</td>
                                     <td style="text-align: right;">${Number(h.birimFiyat).toLocaleString('tr-TR')} ₺</td>
                                     <td style="text-align: right; font-weight: 600;">${Number(h.borc).toLocaleString('tr-TR')} ₺</td>
                                 </tr>
@@ -255,12 +289,19 @@ export default function CariDetay() {
                 <div style={{ flex: 1 }}>
                     <h1 className="page-title" style={{ fontSize: '1.3rem', marginBottom: '2px' }}>{firma.ad}</h1>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className={`badge ${firma.tip === 'atolye' ? 'dikimde' : firma.tip === 'kesimhane' ? 'kesimde' : firma.tip === 'baskici' ? 'baskida' : 'utupakette'}`}>
+                        <span className={`badge ${firmaRozetSinifi(firma.tip)}`}>
                             {FIRMA_TIP_LABELS[firma.tip]}
                         </span>
+                        {!aktif && <span className="badge pasif">Pasif</span>}
                     </div>
                 </div>
             </div>
+
+            {!aktif && (
+                <Notice tone="neutral" icon={Power} style={{ marginBottom: '16px' }}>
+                    Bu firma pasif. Yeni parti, irsaliye ve kumaş girişlerinde seçilemez; cari hareketleri ve ödemeleri girilmeye devam edebilir.
+                </Notice>
+            )}
 
             {/* Bakiye Özeti */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -280,11 +321,17 @@ export default function CariDetay() {
                 <div className="card" style={{ padding: '20px' }}>
                     <div className="text-xs text-muted" style={{ marginBottom: '8px' }}>AKSİYONLAR</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        <button className="btn btn-primary btn-sm" onClick={() => { setOdemeForm(bosOdeme()); setShowOdemeModal(true); }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => { setOdemeForm(bosOdeme()); setShowOdemeModal('alacak'); }}>
                             <Wallet size={14} /> Hızlı Ödeme Girişi
+                        </button>
+                        <button className="btn btn-soft btn-sm" onClick={() => { setOdemeForm(bosOdeme()); setShowOdemeModal('borc'); }}>
+                            <FilePlus size={14} /> Borç / Fatura Girişi
                         </button>
                         <button className="btn btn-outline btn-sm" onClick={handlePrint}>
                             <Printer size={14} /> Son Durum Çıktısı
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={aktiflikDegistir} title={aktif ? 'Firmayı pasife al' : 'Firmayı yeniden aktifleştir'}>
+                            <Power size={14} /> {aktif ? 'Pasife Al' : 'Aktifleştir'}
                         </button>
                     </div>
                 </div>
@@ -370,8 +417,8 @@ export default function CariDetay() {
                                                     <td><input type="checkbox" checked={selectedPartiler.includes(h.id)} readOnly /></td>
                                                     <td className="text-xs">{formatMonthDay(h.tarih)}</td>
                                                     <td>
-                                                        <div className="font-semibold text-sm">{h.parti.partiNo}</div>
-                                                        <div className="text-xs text-muted">{h.parti.urunAdi}</div>
+                                                        <div className="font-semibold text-sm">{h.baslik}</div>
+                                                        <div className="text-xs text-muted">{h.alt}</div>
                                                     </td>
                                                     <td><span className="badge devam" style={{ fontSize: '0.65rem' }}>{h.rol}</span></td>
                                                     <td style={{ textAlign: 'right', fontWeight: 700 }} className="text-sm">
@@ -451,7 +498,7 @@ export default function CariDetay() {
             {/* HIZLI ÖDEME MODALI (bu firma için) */}
             {showOdemeModal && (
                 <Modal
-                    title={`Hızlı Ödeme — ${firma.ad}`}
+                    title={`${showOdemeModal === 'borc' ? 'Borç / Fatura Girişi' : 'Hızlı Ödeme'} — ${firma.ad}`}
                     onClose={() => setShowOdemeModal(false)}
                     footer={
                         <>
@@ -462,17 +509,19 @@ export default function CariDetay() {
                                 onClick={() => {
                                     const tutar = parseFloat(odemeForm.tutar);
                                     if (!(tutar > 0)) return;
+                                    const borc = showOdemeModal === 'borc';
                                     cariHareketEkle({
                                         firmaId: firma.id,
-                                        tip: 'alacak', // ödeme: firmaya yaptığımız ödeme (CariHesaplar ile aynı kural)
+                                        // alacak: firmaya yaptığımız ödeme; borc: firmaya borçlandığımız tutar (ör. kumaş faturası)
+                                        tip: borc ? 'borc' : 'alacak',
                                         tutar,
-                                        aciklama: odemeForm.aciklama.trim() || 'Hızlı Ödeme',
+                                        aciklama: odemeForm.aciklama.trim() || (borc ? 'Fatura' : 'Hızlı Ödeme'),
                                         tarih: odemeForm.tarih,
                                     });
                                     setShowOdemeModal(false);
                                 }}
                             >
-                                <CreditCard size={16} /> Ödemeyi Kaydet
+                                {showOdemeModal === 'borc' ? <><FilePlus size={16} /> Borcu Kaydet</> : <><CreditCard size={16} /> Ödemeyi Kaydet</>}
                             </button>
                         </>
                     }
@@ -493,7 +542,7 @@ export default function CariDetay() {
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label" htmlFor="odeme-tarih">Ödeme Tarihi</label>
+                            <label className="form-label" htmlFor="odeme-tarih">{showOdemeModal === 'borc' ? 'Fatura Tarihi' : 'Ödeme Tarihi'}</label>
                             <input
                                 id="odeme-tarih"
                                 type="date"
@@ -509,7 +558,7 @@ export default function CariDetay() {
                             id="odeme-aciklama"
                             type="text"
                             className="form-input"
-                            placeholder="Hızlı Ödeme, Nakit, Banka vb."
+                            placeholder={showOdemeModal === 'borc' ? 'Fatura no, kumaş cinsi vb.' : 'Hızlı Ödeme, Nakit, Banka vb.'}
                             value={odemeForm.aciklama}
                             onChange={e => setOdemeForm({ ...odemeForm, aciklama: e.target.value })}
                         />
@@ -554,7 +603,7 @@ export default function CariDetay() {
 
                         <div className="text-xs text-muted p-3 border rounded-sm">
                             <ul style={{ paddingLeft: '16px', margin: 0 }}>
-                                <li>Seçilen {selectedPartiler.length} adet parti borcu arşivlenecek.</li>
+                                <li>Seçilen {selectedPartiler.length} adet borç kaydı arşivlenecek.</li>
                                 <li>Mevcut {odemeHavuzu.length} adet ödeme bu hesapla ilişkilendirilip kapatılacak.</li>
                                 <li>{netBakiye > 0 ? 'Kalan bakiye kadar yeni bir borç kapama ödemesi girilecek.' : 'Aradaki fark yeni ay için devir ödemesi olarak kaydedilecek.'}</li>
                             </ul>

@@ -209,6 +209,8 @@
 .badge.baskida { --badge-color: var(--status-baskida); }
 .badge.dikimde { --badge-color: var(--status-dikimde); }
 .badge.utupakette { --badge-color: var(--status-utupakette); }
+.badge.firma-kumasci { --badge-color: var(--firma-kumasci); }
+.badge.pasif { --badge-color: var(--color-text-tertiary, var(--status-beklemede)); }
 .badge.tamamlandi,
 .badge.alacak { --badge-color: var(--color-success); }
 .badge.borc { --badge-color: var(--color-danger); }

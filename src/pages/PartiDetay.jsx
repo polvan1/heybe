@@ -9,6 +9,7 @@ import { DURUM_LABELS, DURUM_SIRALAMA, ADIM_FIRMA_TIP, FIRMA_TIP_LABELS, getPart
 import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
+import { secilebilirFirmalar, firmaSecenekAdi } from '../utils/firma';
 
 export default function PartiDetay() {
     const { id } = useParams();
@@ -75,7 +76,7 @@ export default function PartiDetay() {
         setShowEditModal(false);
     };
 
-    const utupaketciler = firmalar.filter(f => f.tip === 'utupaketci');
+    const utupaketciler = secilebilirFirmalar(firmalar, { tip: 'utupaketci', seciliId: editUtupaketciId || parti?.utupaketciId });
 
     return (
         <div className="animate-fade-in">
@@ -414,7 +415,7 @@ export default function PartiDetay() {
                         <SearchableSelect
                             value={editUtupaketciId}
                             onChange={setEditUtupaketciId}
-                            options={utupaketciler.map(f => ({ value: f.id, label: f.ad }))}
+                            options={utupaketciler.map(f => ({ value: f.id, label: firmaSecenekAdi(f) }))}
                             placeholder="Yok"
                             clearLabel="Yok"
                         />

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { DURUM_LABELS, FIRMA_TIP_LABELS } from '../data/db';
+import { firmaRozetSinifi } from '../utils/firma';
 import BarChart from '../components/ui/BarChart';
 import MetricTile from '../components/ui/MetricTile';
 import {
@@ -447,7 +448,7 @@ export default function Raporlar() {
                                                 <tr key={c.firmaId}>
                                                     <td style={{ fontWeight: 600 }}>{c.firmaAd}</td>
                                                     <td>
-                                                        <span className={`badge ${c.firmaTip === 'atolye' ? 'dikimde' : c.firmaTip === 'kesimhane' ? 'kesimde' : c.firmaTip === 'baskici' ? 'baskida' : 'utupakette'}`}>
+                                                        <span className={`badge ${firmaRozetSinifi(c.firmaTip)}`}>
                                                             {FIRMA_TIP_LABELS[c.firmaTip] || c.firmaTip}
                                                         </span>
                                                     </td>
