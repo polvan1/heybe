@@ -22,6 +22,7 @@ export function AppProvider({ children }) {
     const [seferler, setSeferler] = useState([]);
     const [tema, setTemaState] = useState('light');
     const [merkez, setMerkezState] = useState(null);
+    const [maliyetAyar, setMaliyetAyarState] = useState(db.VARSAYILAN_MALIYET_AYAR);
     const [currentUser, setCurrentUserState] = useState(null);
     const [kurulumGerekli, setKurulumGerekli] = useState(false);
     const [sunucuHatasi, setSunucuHatasi] = useState('');
@@ -52,6 +53,7 @@ export function AppProvider({ children }) {
         setSeferler(yeni(db.getSeferler()));
         setTemaState(db.getTema());
         setMerkezState(db.getMerkez());
+        setMaliyetAyarState(db.getMaliyetAyar());
     }, []);
 
     // Giriş yapılınca (veya kayıtlı oturum varsa) verileri sunucudan yükle
@@ -260,6 +262,8 @@ export function AppProvider({ children }) {
         // Sunucudan hemen tazele (şoför ekranı ve canlı takip için)
         sunucudanYenile: async () => { if (await db.refetchFromServer()) refresh(); },
         merkezKaydet: (m) => { db.setMerkez(m); refresh(); },
+        maliyetAyar,
+        maliyetAyarKaydet: (m) => { db.setMaliyetAyar(m); refresh(); },
         exportToCSV: db.exportToCSV,
     };
     if (loading) {

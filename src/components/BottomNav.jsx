@@ -5,7 +5,7 @@ import { hasYetki } from '../data/yetki';
 
 const ITEMS = [
     { to: '/', icon: LayoutDashboard, label: 'Anasayfa', yetki: 'anasayfa' },
-    { to: '/is-akisi', icon: GitBranch, label: 'İş Akışı', yetki: 'is_akisi' },
+    { to: '/is-akisi', icon: GitBranch, label: 'Kanban', yetki: 'is_akisi' },
     { to: '/partiler', icon: Layers, label: 'Partiler', yetki: 'partiler' },
     { to: '/irsaliyeler', icon: FileText, label: 'İrsaliye', yetki: 'irsaliyeler' },
     { to: '/cari-hesaplar', icon: Wallet, label: 'Cari', yetki: 'cari_hesaplar' },

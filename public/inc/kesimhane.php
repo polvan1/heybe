@@ -10,14 +10,14 @@
 // (kesimhane diğer firmaların kayıtlarını ve fiyat anlaşmalarını göremez).
 
 const KESIMHANE_FIRMA_ALANLARI = ['id', 'ad', 'tip', 'telefon', 'adres', 'yetkiliKisi', 'lat', 'lng', 'konumAdres', 'aktif'];
-const KESIMHANE_URUN_GIZLI = ['kesimFiyat', 'dikimFiyat', 'utuFiyat', 'firmaFiyatlari', 'fiyatlar'];
+const KESIMHANE_URUN_GIZLI = ['kesimFiyat', 'dikimFiyat', 'utuFiyat', 'firmaFiyatlari', 'fiyatlar', 'maliyet'];
 
 // Kesimhanenin partide değiştirebileceği alanlar (gerisi sunucudaki halinden korunur)
 const KESIMHANE_PARTI_ALANLARI = ['kesimDurumu', 'kesilenAdet', 'kesilenRenkler', 'kesimTarihi', 'kesimNotu',
     'gonderimTarihi', 'dikimeGonderilenAdet', 'fotolar', 'durum', 'kalanAdet', 'sonCikanAdet', 'teslimatGecmisi', 'dikimBaslamaTarihi', 'updatedAt'];
 const KESIMHANE_IRSALIYE_ALANLARI = ['toplamAdet', 'notlar', 'renkler', 'updatedAt'];
 // Kumaş alım fiyatı ve tedarikçi carisine bağlantı kesimhaneye gösterilmez, kesimhane değiştiremez
-const KESIMHANE_KUMAS_GIZLI = ['birimFiyat', 'tutar', 'cariHareketId'];
+const KESIMHANE_KUMAS_GIZLI = ['birimFiyat', 'tutar', 'cariHareketId', 'paraBirimi', 'kur'];
 
 function kesimhaneFirmaId($ben) {
     return !empty($ben['firmaId']) ? (string)$ben['firmaId'] : '';
@@ -209,7 +209,8 @@ function kesimhaneYazimi($pdo, $ben, &$degisiklikler) {
         // Miktar değiştiyse tedarikçi carisindeki bağlı (kapanmamış) borç da güncellenir
         $borc = kumasBagliBorc($pdo, $mevcut);
         if ($borc) {
-            $tutar = round((float)($k['miktar'] ?? 0) * (float)($mevcut['birimFiyat'] ?? 0), 2);
+            $kur = !empty($mevcut['paraBirimi']) && $mevcut['paraBirimi'] !== 'TRY' ? ((float)($mevcut['kur'] ?? 1) ?: 1) : 1;
+            $tutar = round((float)($k['miktar'] ?? 0) * (float)($mevcut['birimFiyat'] ?? 0) * $kur, 2);
             if (abs($tutar - (float)($borc['tutar'] ?? 0)) > 0.001) {
                 $borc['tutar'] = $tutar;
                 $borc['miktar'] = (float)($k['miktar'] ?? 0);

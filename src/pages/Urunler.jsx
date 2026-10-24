@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
-import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X, Calculator } from 'lucide-react';
+import MaliyetKarti from '../components/MaliyetKarti';
+import { useKurlar, paraBicim } from '../data/kur';
+import { modelMaliyeti, maliyetGorur, maliyetTanimliMi } from '../utils/maliyet';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
 import { firmaAktifMi } from '../utils/firma';
@@ -20,8 +23,24 @@ const EMPTY_FORM = {
     firmaFiyatlari: {}, // { [firmaId]: { kesim, dikim, utu } } — firma bazlı anlaşma fiyatları
 };
 
+// Ürün satırında birim maliyet ve kâr marjı özeti
+function MaliyetRozet({ urun, kurlar, ayar }) {
+    if (!maliyetTanimliMi(urun)) return <span className="maliyet-rozet">Maliyet kartı yok</span>;
+    const h = modelMaliyeti(urun, { kurlar, ayar });
+    const sinif = h.karMarji === null ? '' : h.karMarji < 0 ? 'marj-zarar' : h.karMarji < h.hedefKarMarji ? 'marj-dusuk' : 'marj-iyi';
+    return (
+        <span className="maliyet-rozet">
+            <span>Maliyet <strong>{paraBicim(h.birimMaliyet)}</strong></span>
+            {h.karMarji !== null && <span className={sinif}>Marj %{h.karMarji.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}</span>}
+        </span>
+    );
+}
+
 export default function Urunler() {
-    const { urunler, urunEkle, urunGuncelle, urunSil, partiler, firmalar = [] } = useApp();
+    const { urunler, urunEkle, urunGuncelle, urunSil, partiler, firmalar = [], currentUser, maliyetAyar } = useApp();
+    const maliyetGoster = maliyetGorur(currentUser);
+    const { kurlar } = useKurlar();
+    const [maliyetUrun, setMaliyetUrun] = useState(null);
     const [modal, setModal] = useState(null);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
@@ -304,6 +323,7 @@ export default function Urunler() {
                                         <th>Ürün Kodu</th>
                                         <th>Ürün Adı</th>
                                         <th style={{ textAlign: 'center' }}>Stok</th>
+                                        {maliyetGoster && <th>Maliyet / Marj</th>}
                                         <th style={{ textAlign: 'center' }}>İşlem</th>
                                     </tr>
                                 </thead>
@@ -351,8 +371,10 @@ export default function Urunler() {
                                                         </div>
                                                     </div>
                                                 </td>
+                                                {maliyetGoster && <td><MaliyetRozet urun={urun} kurlar={kurlar} ayar={maliyetAyar} /></td>}
                                                 <td style={{ textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                                        {maliyetGoster && <button className="btn-icon" onClick={() => setMaliyetUrun(urun)} title="Maliyet kartı" aria-label={`${urun.urunKodu} maliyet kartı`}><Calculator size={16} /></button>}
                                                         <button className="btn-icon" onClick={(e) => openEdit(e, urun)}><Edit2 size={16} /></button>
                                                     </div>
                                                 </td>
@@ -374,12 +396,14 @@ export default function Urunler() {
                                         <div className="mobile-list-item-header">
                                             <span className="mobile-list-item-title">{urun.urunKodu}</span>
                                             <div style={{ display: 'flex', gap: '4px' }}>
+                                                {maliyetGoster && <button className="btn-icon" onClick={() => setMaliyetUrun(urun)} title="Maliyet kartı" aria-label={`${urun.urunKodu} maliyet kartı`}><Calculator size={16} /></button>}
                                                 <button className="btn-icon" onClick={(e) => openEdit(e, urun)}><Edit2 size={16} /></button>
                                             </div>
                                         </div>
                                         <div style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
                                             {urun.urunAdi}
                                         </div>
+                                        {maliyetGoster && <div style={{ marginBottom: '8px' }}><MaliyetRozet urun={urun} kurlar={kurlar} ayar={maliyetAyar} /></div>}
 
                                         {/* Stok Alanı */}
                                         <div style={{
@@ -703,6 +727,7 @@ export default function Urunler() {
                     </div>
                 </Modal>
             )}
+            {maliyetUrun && <MaliyetKarti urun={urunler.find(u => u.id === maliyetUrun.id) || maliyetUrun} onClose={() => setMaliyetUrun(null)} />}
         </div>
     );
 }

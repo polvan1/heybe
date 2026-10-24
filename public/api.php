@@ -71,6 +71,7 @@ require __DIR__ . '/inc/sefer.php';
 require __DIR__ . '/inc/kesimhane.php';
 require __DIR__ . '/inc/yapayzeka.php';
 require __DIR__ . '/inc/guvenlik.php';
+require __DIR__ . '/inc/kur.php';
 
 // ---- CSRF KORUMASI ----
 // Değişiklik yapan her istek özel bir başlık taşımalı. Tarayıcılar başka bir
@@ -107,6 +108,7 @@ if (isset($_GET['irsaliye_oku'])) irsaliyeOkuIstegi($pdo);
 if (isset($_GET['ai']))           aiDurumIstegi($pdo);
 if (isset($_GET['push']))         pushIstegi($pdo, (string)$_GET['push']);
 if (isset($_GET['sefer']))        seferIstegi($pdo, (string)$_GET['sefer']);
+if (isset($_GET['kur']))          kurIstegi($pdo, (string)$_GET['kur']);
 
 $ben = girisGerekli($pdo);
 

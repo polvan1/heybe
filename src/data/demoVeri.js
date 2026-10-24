@@ -69,6 +69,19 @@ export function demoVerisiOlustur() {
             firmaFiyatlari: {}, stokAdet: 0, aktif: true, createdAt: tarih(55),
         };
     });
+    // Örnek maliyet kartları (kurgusal fiyatlar): kumaş, aksesuar, operasyonlar, satış fiyatı
+    const op = (ad, dakika) => ({ id: id('op'), ad, dakika });
+    const kalem = (kategori, ad, miktar, birim, birimFiyat, paraBirimi = 'TRY') => ({ id: id('mk'), kategori, ad, miktar, birim, birimFiyat, paraBirimi });
+    urunler[0].maliyet = {
+        kalemler: [kalem('kumas', 'Süprem 30/1', 0.22, 'kg', 4.4, 'USD'), kalem('aksesuar', 'Ense bandı + etiket', 1, 'takım', 2.1), kalem('ambalaj', 'Poşet', 1, 'adet', 0.9)],
+        operasyonlar: [op('Omuz çatma', 0.6), op('Yaka ribanası takma', 1.4), op('Kol takma', 1.8), op('Yan dikiş', 1.2), op('Etek-kol reçme', 1.5)],
+        satisFiyati: 2.3, satisParaBirimi: 'USD', genelGiderOrani: null, hedefKarMarji: null,
+    };
+    urunler[1].maliyet = {
+        kalemler: [kalem('kumas', 'İki İplik Şardonlu', 0.55, 'kg', 210), kalem('aksesuar', 'Kapüşon ipi + metal uç', 1, 'takım', 6.5), kalem('baski', 'Göğüs baskısı', 1, 'adet', 9)],
+        operasyonlar: [op('Omuz çatma', 0.8), op('Kol takma', 2.2), op('Ribana takma', 2.6), op('Yan dikiş', 1.6)],
+        satisFiyati: 260, satisParaBirimi: 'TRY', genelGiderOrani: 12, hedefKarMarji: 25,
+    };
     // Örnek firma bazlı fiyat anlaşması: Ece Dikim Evi tişörtü daha ucuza dikiyor
     urunler[0].firmaFiyatlari = { [firmalar[4].id]: { dikim: 12.5 } };
 
@@ -201,6 +214,7 @@ export function demoVerisiOlustur() {
     return {
         // Sevkiyat aracının çıkış noktası (demo)
         merkez: { ad: 'HİS Merkez (Merter)', lat: 41.0105, lng: 28.895 },
+        maliyetAyar: { genelGiderOrani: 10, hedefKarMarji: 20, dakikaUcreti: 2.4 },
         myhis_firmalar: firmalar,
         myhis_urunler: urunler,
         myhis_partiler: partiler,

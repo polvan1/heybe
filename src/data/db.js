@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   irsaliyeler: 'myhis_irsaliyeler',
   tema: 'myhis_tema',
   merkez: 'myhis_merkez',
+  maliyetAyar: 'myhis_maliyetAyar',
   kullanicilar: 'myhis_kullanicilar',
   islemGunlugu: 'myhis_islemGunlugu',
   kumasStok: 'myhis_kumasStok',
@@ -112,7 +113,7 @@ function farkHesapla(key) {
 }
 
 // Koleksiyon değil, tek değer olarak gönderilen ayarlar
-const AYAR_ANAHTARLARI = [STORAGE_KEYS.tema, STORAGE_KEYS.merkez];
+const AYAR_ANAHTARLARI = [STORAGE_KEYS.tema, STORAGE_KEYS.merkez, STORAGE_KEYS.maliyetAyar];
 
 function schedulePersist(key) {
   pendingKeys.add(key);
@@ -1012,10 +1013,13 @@ export function getKumasStoklar() {
 // borç olarak yazılır (kumasStokId ile bağlı). Kayıt değişince borç da güncellenir;
 // "Hesabı Kapat" ile kapanmış borca dokunulmaz. Kesimhane yetkilisi fiyat görmez/girmez
 // (sunucu, kesimhanenin miktar düzeltmesinde bağlı borcu kendisi günceller).
-export const kumasTutari = (k) => Math.round((parseFloat(k?.birimFiyat) || 0) * (parseFloat(k?.miktar) || 0) * 100) / 100;
+// Dövizli alımda (paraBirimi USD/EUR/GBP) giriş anındaki kur ile TL'ye çevrilir; cari borç TL'dir
+const kumasKuru = (k) => (k?.paraBirimi && k.paraBirimi !== 'TRY' ? (parseFloat(k.kur) || 0) : 1);
+export const kumasTutari = (k) => Math.round((parseFloat(k?.birimFiyat) || 0) * (parseFloat(k?.miktar) || 0) * kumasKuru(k) * 100) / 100;
 
 const kumasCariAciklamasi = (k) =>
-  `Kumaş alımı: ${k.kumasAdi}${k.renk ? ` (${k.renk})` : ''}${k.referansNo ? ` • İrs. ${k.referansNo}` : ''}`;
+  `Kumaş alımı: ${k.kumasAdi}${k.renk ? ` (${k.renk})` : ''}${k.referansNo ? ` • İrs. ${k.referansNo}` : ''}`
+  + (k.paraBirimi && k.paraBirimi !== 'TRY' ? ` • ${k.miktar} ${k.birim || ''} × ${k.birimFiyat} ${k.paraBirimi} (kur ${k.kur})` : '');
 
 const kumasCariAlanlari = (k) => ({
   firmaId: k.gelenFirmaId,
@@ -1026,6 +1030,8 @@ const kumasCariAlanlari = (k) => ({
   miktar: parseFloat(k.miktar) || 0,
   birim: k.birim || '',
   birimFiyat: parseFloat(k.birimFiyat) || 0,
+  paraBirimi: k.paraBirimi || 'TRY',
+  kur: kumasKuru(k),
   aciklama: kumasCariAciklamasi(k),
   tarih: k.tarih,
 });
@@ -1305,6 +1311,20 @@ export function getMerkez() {
   if (!m) return null;
   if (typeof m === 'object') return m;
   try { return JSON.parse(m); } catch (e) { return null; }
+}
+
+// Maliyet ayarları (tüm modeller için varsayılan): genel gider %, hedef kâr marjı %, dakika ücreti ₺
+export const VARSAYILAN_MALIYET_AYAR = { genelGiderOrani: 10, hedefKarMarji: 20, dakikaUcreti: 0 };
+export function getMaliyetAyar() {
+  let m = inMemoryDb[STORAGE_KEYS.maliyetAyar];
+  if (typeof m === 'string') { try { m = JSON.parse(m); } catch (e) { m = null; } }
+  return { ...VARSAYILAN_MALIYET_AYAR, ...(m && typeof m === 'object' ? m : {}) };
+}
+
+export function setMaliyetAyar(ayar) {
+  inMemoryDb[STORAGE_KEYS.maliyetAyar] = { ...getMaliyetAyar(), ...ayar };
+  schedulePersist(STORAGE_KEYS.maliyetAyar);
+  logIslem('Maliyet Ayarları', `Genel gider %${inMemoryDb[STORAGE_KEYS.maliyetAyar].genelGiderOrani}, hedef marj %${inMemoryDb[STORAGE_KEYS.maliyetAyar].hedefKarMarji}`);
 }
 
 export function setMerkez(merkez) {

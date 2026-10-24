@@ -88,6 +88,10 @@ jobs:
           AI_SAGLAYICI: ${{ vars.AI_SAGLAYICI }}
         run: php scripts/ai-test.php scripts/ornek/kesim-sevk-irsaliyesi.jpg scripts/ornek/kesim-sevk-irsaliyesi.beklenen.json
 
+      - name: Döviz kuru testi (TCMB)
+        continue-on-error: true
+        run: php scripts/kur-test.php
+
       - name: Hedefi belirle
         id: hedef
         env:

@@ -10,9 +10,44 @@ import {
 } from 'lucide-react';
 import { excelIndir } from '../utils/excel';
 import { raporYazdir, tlBicim } from '../utils/raporYazdir';
+import { useKurlar, paraBicim } from '../data/kur';
+import { modelMaliyeti, partiMaliyeti, partiUretimAdedi, maliyetTanimliMi } from '../utils/maliyet';
 
 export default function Raporlar() {
-    const { partiler, firmalar, urunler, cariHareketler } = useApp();
+    const { partiler, firmalar, urunler, cariHareketler, kumasStoklar, maliyetAyar } = useApp();
+    const { kurlar } = useKurlar();
+
+    // ======== MALİYET VE KÂRLILIK ========
+    // Model bazında: kart maliyeti, satış fiyatı, marj; tamamlanan partilerde gerçekleşen kâr
+    // Atölye bazında: partilere yazılan fason borçları ve adet başı ortalama
+    const karlilik = useMemo(() => {
+        const modeller = urunler.filter(maliyetTanimliMi).map(u => {
+            const h = modelMaliyeti(u, { kurlar, ayar: maliyetAyar });
+            const ups = partiler.filter(p => p.urunId === u.id);
+            const tamamlanan = ups.filter(p => p.durum === 'tamamlandi');
+            const gercek = tamamlanan.map(p => partiMaliyeti(p, { urun: u, cariHareketler, kumasStoklar, kurlar, ayar: maliyetAyar }));
+            const gelir = gercek.reduce((t, g) => t + (g.gelir || 0), 0);
+            const kar = gercek.reduce((t, g) => t + (g.kar || 0), 0);
+            return {
+                id: u.id, urunKodu: u.urunKodu, urunAdi: u.urunAdi, birimMaliyet: h.birimMaliyet, satis: h.satisTl, marj: h.karMarji,
+                hedef: h.hedefKarMarji, uretilen: ups.reduce((t, p) => t + partiUretimAdedi(p), 0),
+                tamamlananAdet: gercek.reduce((t, g) => t + g.adet, 0), gelir: h.satisTl !== null ? gelir : null, kar: h.satisTl !== null ? kar : null,
+            };
+        }).sort((a, b) => (b.kar ?? -Infinity) - (a.kar ?? -Infinity));
+        const atolye = {};
+        cariHareketler.filter(h => h.tip === 'borc' && h.partiId).forEach(h => {
+            const p = partiler.find(x => x.id === h.partiId);
+            if (!p) return;
+            const a = atolye[h.firmaId] || (atolye[h.firmaId] = { firmaId: h.firmaId, partiler: new Set(), toplam: 0, adet: 0 });
+            if (!a.partiler.has(p.id)) { a.partiler.add(p.id); a.adet += partiUretimAdedi(p); }
+            a.toplam += Number(h.tutar) || 0;
+        });
+        const atolyeler = Object.values(atolye).map(a => {
+            const f = firmalar.find(x => x.id === a.firmaId);
+            return { ad: f?.ad || 'Bilinmeyen', tip: f?.tip || '', parti: a.partiler.size, adet: a.adet, toplam: a.toplam, adetBasi: a.adet ? a.toplam / a.adet : 0 };
+        }).sort((a, b) => b.toplam - a.toplam);
+        return { modeller, atolyeler };
+    }, [urunler, partiler, cariHareketler, kumasStoklar, firmalar, kurlar, maliyetAyar]);
 
     const reports = useMemo(() => {
         // ======== ÜRETİM ÖZETİ ========
@@ -182,6 +217,17 @@ export default function Raporlar() {
                 sutunlar: [{ baslik: 'Firma' }, { baslik: 'Tür' }, { baslik: 'Borç', tip: 'para' }, { baslik: 'Ödenen', tip: 'para' }, { baslik: 'Bakiye', tip: 'para' }],
                 satirlar: r.cariRapor.map(c => [c.firmaAd, FIRMA_TIP_LABELS[c.firmaTip] || c.firmaTip, c.borc, c.odenen, c.bakiye]),
                 toplamSatiri: ['TOPLAM', '', r.toplamBorc, r.toplamOdenen, r.toplamBakiye],
+            },
+            {
+                ad: 'Model Kârlılığı', baslik: 'Model Maliyet ve Kârlılık',
+                sutunlar: [{ baslik: 'Ürün Kodu' }, { baslik: 'Ürün' }, { baslik: 'Birim Maliyet', tip: 'para' }, { baslik: 'Satış Fiyatı', tip: 'para' }, { baslik: 'Marj %', tip: 'sayi' },
+                    { baslik: 'Üretilen Adet', tip: 'sayi' }, { baslik: 'Tamamlanan Gelir', tip: 'para' }, { baslik: 'Gerçekleşen Kâr', tip: 'para' }],
+                satirlar: karlilik.modeller.map(m => [m.urunKodu, m.urunAdi, m.birimMaliyet, m.satis, m.marj === null ? null : Math.round(m.marj * 10) / 10, m.uretilen, m.gelir, m.kar]),
+            },
+            {
+                ad: 'Atölye Fason', baslik: 'Atölye Bazında Fason Maliyeti',
+                sutunlar: [{ baslik: 'Firma' }, { baslik: 'Tür' }, { baslik: 'Parti', tip: 'sayi' }, { baslik: 'Adet', tip: 'sayi' }, { baslik: 'Toplam Fason', tip: 'para' }, { baslik: 'Adet Başı', tip: 'para' }],
+                satirlar: karlilik.atolyeler.map(a => [a.ad, FIRMA_TIP_LABELS[a.tip] || a.tip, a.parti, a.adet, a.toplam, a.adetBasi]),
             },
             {
                 ad: 'Aylık Trend', baslik: 'Son 6 Ay',
@@ -464,6 +510,77 @@ export default function Raporlar() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* ======== MALİYET VE KÂRLILIK ======== */}
+            <div className="card" style={{ marginBottom: '24px' }}>
+                <div className="card-header">
+                    <h3 className="card-title"><TrendingUp size={18} /> Model Maliyet ve Kârlılık</h3>
+                    <span className="text-sm text-muted">{karlilik.modeller.length} model</span>
+                </div>
+                {karlilik.modeller.length === 0 ? (
+                    <div className="text-sm text-muted" style={{ padding: '16px', textAlign: 'center' }}>
+                        Henüz maliyet kartı olan model yok. Ürünler sayfasında modelin <strong>Maliyet kartı</strong> düğmesiyle kumaş, aksesuar ve satış fiyatını girin.
+                    </div>
+                ) : (
+                    <div className="table-container" style={{ border: 'none' }}>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th style={{ textAlign: 'right' }}>Birim Maliyet</th>
+                                    <th style={{ textAlign: 'right' }}>Satış</th>
+                                    <th style={{ textAlign: 'right' }}>Marj</th>
+                                    <th style={{ textAlign: 'right' }}>Üretilen</th>
+                                    <th style={{ textAlign: 'right' }}>Gerçekleşen Kâr</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {karlilik.modeller.map(m => (
+                                    <tr key={m.id}>
+                                        <td><div style={{ fontWeight: 600 }}>{m.urunKodu}</div><div className="text-xs text-muted">{m.urunAdi}</div></td>
+                                        <td style={{ textAlign: 'right' }}>{paraBicim(m.birimMaliyet)}</td>
+                                        <td style={{ textAlign: 'right' }}>{m.satis !== null ? paraBicim(m.satis) : '—'}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: 700, color: m.marj === null ? 'var(--text-muted)' : m.marj < 0 ? 'var(--color-danger)' : m.marj < m.hedef ? 'var(--color-warning)' : 'var(--color-success)' }}>
+                                            {m.marj === null ? '—' : `%${m.marj.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`}
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>{m.uretilen.toLocaleString('tr-TR')}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{m.kar !== null && m.tamamlananAdet ? paraBicim(m.kar) : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                {karlilik.atolyeler.length > 0 && (
+                    <>
+                        <h4 style={{ margin: '20px 0 8px', fontSize: '0.9rem' }}>Atölye bazında fason maliyeti</h4>
+                        <div className="table-container" style={{ border: 'none' }}>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Firma</th>
+                                        <th style={{ textAlign: 'right' }}>Parti</th>
+                                        <th style={{ textAlign: 'right' }}>Adet</th>
+                                        <th style={{ textAlign: 'right' }}>Toplam Fason</th>
+                                        <th style={{ textAlign: 'right' }}>Adet Başı</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {karlilik.atolyeler.map(a => (
+                                        <tr key={a.ad}>
+                                            <td><span style={{ fontWeight: 600 }}>{a.ad}</span> <span className={`badge ${firmaRozetSinifi(a.tip)}`} style={{ marginLeft: '6px' }}>{FIRMA_TIP_LABELS[a.tip] || a.tip}</span></td>
+                                            <td style={{ textAlign: 'right' }}>{a.parti}</td>
+                                            <td style={{ textAlign: 'right' }}>{a.adet.toLocaleString('tr-TR')}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 700 }}>{paraBicim(a.toplam)}</td>
+                                            <td style={{ textAlign: 'right' }}>{paraBicim(a.adetBasi)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </>
                 )}

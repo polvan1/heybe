@@ -37,7 +37,7 @@ const PAGE_TITLES = {
     '/firmalar': 'Firmalar',
     '/urunler': 'Ürünler',
     '/partiler': 'Partiler',
-    '/is-akisi': 'İş Akışı',
+    '/is-akisi': 'Atölye Kanban',
     '/stok-takibi': 'Stok Takibi',
     '/kumas-stok': 'Kumaş Stok',
     '/irsaliyeler': 'İrsaliyeler',

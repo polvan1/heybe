@@ -10,6 +10,7 @@ import { silmeOnayi } from '../utils/guvenlik';
 import { apiIstek } from '../data/api';
 import { FIRMA_TIP_LABELS, kumasTutari, kumasCariKapali } from '../data/db';
 import { cariYazabilir } from '../data/yetki';
+import { PARA_BIRIMLERI, paraSembolu, kurDegeri, useKurlar } from '../data/kur';
 import { secilebilirFirmalar, firmaSecenekAdi, firmaAktifMi } from '../utils/firma';
 
 const BIRIMLER = ['kg', 'metre', 'top'];
@@ -40,6 +41,7 @@ export default function KumasStok() {
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
     // Alış fiyatı tedarikçinin carisine borç yazar → yalnızca cari yazabilen kullanıcı girer
     const fiyatGirebilir = cariYazabilir(currentUser);
+    const { kurlar } = useKurlar();
     const kesimhaneler = firmalar.filter(f => f.tip === 'kesimhane');
     const kesimhaneSecenekleri = (seciliId) => secilebilirFirmalar(firmalar, { tip: 'kesimhane', seciliId })
         .map(f => ({ value: f.id, label: firmaSecenekAdi(f) }));
@@ -56,7 +58,7 @@ export default function KumasStok() {
     const varsayilanKesimhane = () => kesimhaneKullanici
         ? (currentUser.firmaId || '')
         : (kesimhaneFiltre !== 'all' && kesimhaneFiltre !== 'yok' ? kesimhaneFiltre : '');
-    const BOS_FORM = { kumasAdi: '', renk: '', topAdedi: '', miktar: '', birim: 'kg', birimFiyat: '', gelenFirmaId: '', kesimhaneId: '', referansNo: '', notlar: '' };
+    const BOS_FORM = { kumasAdi: '', renk: '', topAdedi: '', miktar: '', birim: 'kg', birimFiyat: '', paraBirimi: 'TRY', kur: '', gelenFirmaId: '', kesimhaneId: '', referansNo: '', notlar: '' };
     const [form, setForm] = useState(BOS_FORM);
     const [duzenlenenId, setDuzenlenenId] = useState(null);
     const duzenlenen = duzenlenenId ? kumasStoklar.find(k => k.id === duzenlenenId) : null;
@@ -184,7 +186,7 @@ export default function KumasStok() {
         setForm(k ? {
             ...BOS_FORM,
             kumasAdi: k.kumasAdi || '', renk: k.renk || '', topAdedi: k.topAdedi ?? '', miktar: k.miktar ?? '',
-            birim: k.birim || 'kg', birimFiyat: k.birimFiyat ?? '', gelenFirmaId: k.gelenFirmaId || '',
+            birim: k.birim || 'kg', birimFiyat: k.birimFiyat ?? '', paraBirimi: k.paraBirimi || 'TRY', kur: k.kur ?? '', gelenFirmaId: k.gelenFirmaId || '',
             kesimhaneId: k.kesimhaneId || '', referansNo: k.referansNo || '', notlar: k.notlar || '',
         } : yeniForm());
         setShowForm(true);
@@ -211,7 +213,11 @@ export default function KumasStok() {
             kesimhaneAdi: kesimhaneAdi(kesimhaneId),
             notlar: form.notlar.trim(),
         };
-        if (fiyatGirebilir) veri.birimFiyat = parseFloat(form.birimFiyat) || null;
+        if (fiyatGirebilir) {
+            veri.birimFiyat = parseFloat(form.birimFiyat) || null;
+            veri.paraBirimi = form.paraBirimi || 'TRY';
+            veri.kur = veri.paraBirimi === 'TRY' ? null : (parseFloat(form.kur) || kurDegeri(veri.paraBirimi, kurlar) || null);
+        }
         if (duzenlenenId) kumasStokGuncelle(duzenlenenId, veri);
         else kumasStokEkle(veri);
         setShowForm(false);
@@ -232,11 +238,12 @@ export default function KumasStok() {
             { baslik: 'Miktar', tip: 'sayi' }, { baslik: 'Birim' }, { baslik: 'Kesimhane' }, { baslik: 'Geldiği Firma' },
             { baslik: 'İrsaliye/Ref.' }, { baslik: 'Parti' }, { baslik: 'Not' },
         ];
-        if (fiyatGirebilir) sutunlar.push({ baslik: 'Birim Fiyat', tip: 'para' }, { baslik: 'Tutar', tip: 'para' });
+        if (fiyatGirebilir) sutunlar.push({ baslik: 'Birim Fiyat', tip: 'sayi' }, { baslik: 'Para / Kur' }, { baslik: 'Tutar (TL)', tip: 'para' });
         const satirlar = filtered.map(k => {
             const r = [k.tarih, k.kumasAdi, k.renk || '', k.topAdedi || null, Number(k.miktar) || 0, k.birim,
                 k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId), k.gelenFirmaAdi || '', k.referansNo || '', k.partiNo || '', k.notlar || ''];
             if (fiyatGirebilir) r.push(k.birimFiyat || null, k.tutar || null);
+            if (fiyatGirebilir) r.splice(r.length - 1, 0, k.paraBirimi && k.paraBirimi !== 'TRY' ? `${k.paraBirimi} @ ${k.kur}` : 'TRY');
             return r;
         });
         const ozet = {};
@@ -387,7 +394,7 @@ export default function KumasStok() {
                                     {k.referansNo && <>{k.referansNo} •</>}
                                     <span>{new Date(k.tarih).toLocaleDateString('tr-TR')}</span>
                                     {fiyatGirebilir && k.tutar > 0 && (
-                                        <span className="kumas-tutar">• {tl(k.birimFiyat)}/{k.birim} = <strong>{tl(k.tutar)}</strong></span>
+                                        <span className="kumas-tutar">• {k.paraBirimi && k.paraBirimi !== 'TRY' ? `${Number(k.birimFiyat).toLocaleString('tr-TR')} ${paraSembolu(k.paraBirimi)}` : tl(k.birimFiyat)}/{k.birim} = <strong>{tl(k.tutar)}</strong></span>
                                     )}
                                 </div>
                             </div>
@@ -554,12 +561,26 @@ export default function KumasStok() {
                     {fiyatGirebilir && (
                         <div className="form-row">
                             <div className="form-group">
-                                <label className="form-label">Birim Alış Fiyatı (₺/{form.birim})</label>
-                                <input className="form-input" type="number" inputMode="decimal" step="0.01" min="0" value={form.birimFiyat}
-                                    onChange={e => setForm({ ...form, birimFiyat: e.target.value })} placeholder="İsteğe bağlı" disabled={formCariKapali} />
+                                <label className="form-label" htmlFor="kumas-fiyat">Birim Alış Fiyatı ({paraSembolu(form.paraBirimi)}/{form.birim})</label>
+                                <div className="fiyat-para">
+                                    <input id="kumas-fiyat" className="form-input" type="number" inputMode="decimal" step="0.01" min="0" value={form.birimFiyat}
+                                        onChange={e => setForm({ ...form, birimFiyat: e.target.value })} placeholder="İsteğe bağlı" disabled={formCariKapali} />
+                                    <select className="form-input" value={form.paraBirimi} disabled={formCariKapali} aria-label="Para birimi"
+                                        onChange={e => setForm({ ...form, paraBirimi: e.target.value, kur: e.target.value === 'TRY' ? '' : String(kurDegeri(e.target.value, kurlar) || '') })}>
+                                        {PARA_BIRIMLERI.map(p => <option key={p.kod} value={p.kod}>{p.kod}</option>)}
+                                    </select>
+                                </div>
+                                {form.paraBirimi !== 'TRY' && (
+                                    <div className="kur-satiri">
+                                        <label htmlFor="kumas-kur">Kur (1 {form.paraBirimi} =)</label>
+                                        <input id="kumas-kur" className="form-input" type="number" inputMode="decimal" step="0.0001" value={form.kur} disabled={formCariKapali}
+                                            onChange={e => setForm({ ...form, kur: e.target.value })} placeholder={kurDegeri(form.paraBirimi, kurlar) ? String(kurDegeri(form.paraBirimi, kurlar)) : 'Kur girin'} />
+                                        <span>₺</span>
+                                    </div>
+                                )}
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Tutar</label>
+                                <label className="form-label">Tutar (TL)</label>
                                 <div className="form-input kumas-tutar-kutu" aria-live="polite">{formTutari > 0 ? tl(formTutari) : '—'}</div>
                             </div>
                         </div>

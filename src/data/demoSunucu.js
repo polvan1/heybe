@@ -4,7 +4,7 @@
 import { ApiHatasi } from './api';
 import { demoVerisiOlustur } from './demoVeri';
 
-const DEPO_ANAHTARI = 'hiserp_demo_v5'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
+const DEPO_ANAHTARI = 'hiserp_demo_v6'; // veri yapısı değişince artırılır (eski demo verisi sıfırlanır)
 
 // public/inc/auth.php ile aynı kurallar
 const YETKI_YAZMA = {
@@ -50,8 +50,9 @@ function depodanOku() {
     } catch (e) { /* depolama kapalı: bellekte çalış */ }
     if (!durum || !durum.veri) {
         const veri = demoVerisiOlustur();
-        durum = { veri, tema: 'light', merkez: veri.merkez };
+        durum = { veri, tema: 'light', merkez: veri.merkez, maliyetAyar: veri.maliyetAyar };
         delete veri.merkez;
+        delete veri.maliyetAyar;
         kaydet();
     }
     try { bellekOturum = sessionStorage.getItem(OTURUM_ANAHTARI) || bellekOturum; } catch (e) { /* bellekte */ }
@@ -199,6 +200,18 @@ export async function demoIstek(sorgu, govde) {
         }
     }
 
+    if (p.has('kur')) {
+        // Demo: TCMB'ye bağlanılmaz, örnek kurlar kullanılır
+        const ben = girisGerekli();
+        const demoKur = { kurlar: { USD: 41.95, EUR: 48.70, GBP: 56.10 }, tarih: new Date().toLocaleDateString('tr-TR'), kaynak: 'Demo (örnek kur)', eski: false, elle: false };
+        if (p.get('kur') === 'elle') {
+            if (ben.rol !== 'admin') hata(403, 'yetki_yok', 'Kurları sadece yönetici girebilir.');
+            d.kurElle = g.kurlar && Object.values(g.kurlar).some(v => Number(v) > 0) ? { kurlar: g.kurlar, tarih: new Date().toLocaleDateString('tr-TR') } : null;
+            kaydet();
+        }
+        return d.kurElle ? { ...d.kurElle, kaynak: 'Elle girildi', eski: false, elle: true } : demoKur;
+    }
+
     if (p.has('foto')) {
         girisGerekli();
         // Demoda fotoğraf sunucuya gitmez; görselin kendisi saklanır
@@ -324,6 +337,7 @@ export async function demoIstek(sorgu, govde) {
         });
         sonuc.myhis_tema = d.tema;
         if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
+        if (d.maliyetAyar) sonuc.myhis_maliyetAyar = JSON.stringify(d.maliyetAyar);
         return sonuc;
     }
 
@@ -348,6 +362,10 @@ export async function demoIstek(sorgu, govde) {
         d.veri[k] = liste;
     });
     if (g.myhis_tema === 'light' || g.myhis_tema === 'dark') d.tema = g.myhis_tema;
+    if (g.myhis_maliyetAyar && typeof g.myhis_maliyetAyar === 'object' && (yetkiVar(ben, 'ayarlar') || yetkiVar(ben, 'urunler'))) {
+        const m = g.myhis_maliyetAyar; const s = (a, ust) => Math.max(0, Math.min(ust, Number(m[a]) || 0));
+        d.maliyetAyar = { genelGiderOrani: s('genelGiderOrani', 500), hedefKarMarji: s('hedefKarMarji', 95), dakikaUcreti: s('dakikaUcreti', 100000) };
+    }
     if (g.myhis_merkez && Number.isFinite(+g.myhis_merkez.lat) && Number.isFinite(+g.myhis_merkez.lng)
         && (yetkiVar(ben, 'ayarlar') || yetkiVar(ben, 'harita'))) {
         d.merkez = { ad: String(g.myhis_merkez.ad || 'Merkez').slice(0, 120), lat: +g.myhis_merkez.lat, lng: +g.myhis_merkez.lng };
@@ -397,8 +415,8 @@ function fasoncuVerisi(d, ben) {
 
 // ---- Kesimhane yetkilisi (public/inc/kesimhane.php ile aynı kurallar) ----
 const KESIMHANE_FIRMA_ALANLARI = ['id', 'ad', 'tip', 'telefon', 'adres', 'yetkiliKisi', 'lat', 'lng', 'konumAdres', 'aktif'];
-const KESIMHANE_URUN_GIZLI = ['kesimFiyat', 'dikimFiyat', 'utuFiyat', 'firmaFiyatlari', 'fiyatlar'];
-const KESIMHANE_KUMAS_GIZLI = ['birimFiyat', 'tutar', 'cariHareketId'];
+const KESIMHANE_URUN_GIZLI = ['kesimFiyat', 'dikimFiyat', 'utuFiyat', 'firmaFiyatlari', 'fiyatlar', 'maliyet'];
+const KESIMHANE_KUMAS_GIZLI = ['birimFiyat', 'tutar', 'cariHareketId', 'paraBirimi', 'kur'];
 const kumasBagliBorc = (d, k) => {
     const borc = k?.cariHareketId ? d.veri.myhis_cariHareketler.find(h => h.id === k.cariHareketId) : null;
     return borc && !borc.hesaplandi && borc.kumasStokId === k.id ? borc : null;
@@ -503,7 +521,8 @@ function kesimhaneYazimi(d, ben, degisiklikler) {
         KESIMHANE_KUMAS_GIZLI.forEach(a => { if (mevcut && a in mevcut) yeni[a] = mevcut[a]; else delete yeni[a]; });
         const borc = kumasBagliBorc(d, mevcut);
         if (borc) {
-            const tutar = Math.round((parseFloat(yeni.miktar) || 0) * (parseFloat(mevcut.birimFiyat) || 0) * 100) / 100;
+            const kur = mevcut.paraBirimi && mevcut.paraBirimi !== 'TRY' ? (parseFloat(mevcut.kur) || 1) : 1;
+            const tutar = Math.round((parseFloat(yeni.miktar) || 0) * (parseFloat(mevcut.birimFiyat) || 0) * kur * 100) / 100;
             if (Math.abs(tutar - (borc.tutar || 0)) > 0.001) {
                 (degisiklikler.myhis_cariHareketler ||= { upsert: [] }).upsert ||= [];
                 degisiklikler.myhis_cariHareketler.upsert.push({ ...kopya(borc), tutar, miktar: parseFloat(yeni.miktar) || 0 });

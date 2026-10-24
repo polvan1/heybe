@@ -203,6 +203,15 @@ function veriYaz($pdo, $ben, $govde) {
         if (isset($govde['myhis_tema']) && in_array($govde['myhis_tema'], ['light', 'dark'], true)) {
             $pdo->prepare("REPLACE INTO settings (s_key, s_value) VALUES ('myhis_tema', ?)")->execute([$govde['myhis_tema']]);
         }
+        // Maliyet ayarları: { genelGiderOrani, hedefKarMarji, dakikaUcreti } (yüzde / ₺ dk)
+        if (isset($govde['myhis_maliyetAyar']) && is_array($govde['myhis_maliyetAyar'])
+            && (yetkiVar($ben, 'ayarlar') || yetkiVar($ben, 'urunler'))) {
+            $m = $govde['myhis_maliyetAyar'];
+            $sayi = fn($a, $ust) => isset($m[$a]) && is_numeric($m[$a]) ? max(0, min($ust, (float)$m[$a])) : 0;
+            $deger = json_encode(['genelGiderOrani' => $sayi('genelGiderOrani', 500), 'hedefKarMarji' => $sayi('hedefKarMarji', 95),
+                'dakikaUcreti' => $sayi('dakikaUcreti', 100000)]);
+            $pdo->prepare("REPLACE INTO settings (s_key, s_value) VALUES ('myhis_maliyetAyar', ?)")->execute([$deger]);
+        }
         // Sevkiyat aracının çıkış noktası (merkez): { ad, lat, lng }
         if (isset($govde['myhis_merkez']) && is_array($govde['myhis_merkez'])
             && (yetkiVar($ben, 'ayarlar') || yetkiVar($ben, 'harita'))) {

@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext';
 import { Settings, Sun, Moon, Database, Download, Upload, RefreshCw, Shield, Info, Bell, BellOff, Send } from 'lucide-react';
 import Notice from '../components/ui/Notice';
 import SilmeSifresiAyari from '../components/SilmeSifresiAyari';
+import MaliyetAyarlari from '../components/MaliyetAyarlari';
+import { maliyetGorur } from '../utils/maliyet';
 import { pushDestekliMi, pushDurumu, pushAc, pushKapat, pushTest, iosKuruluDegilMi } from '../data/push';
 
 export default function Ayarlar() {
@@ -208,6 +210,8 @@ export default function Ayarlar() {
                         </div>
                     )}
                 </div>
+
+                {maliyetGorur(currentUser) && <MaliyetAyarlari />}
 
                 {/* Güvenlik */}
                 <div className="card">

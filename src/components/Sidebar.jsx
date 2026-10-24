@@ -20,7 +20,7 @@ const NAV_SECTIONS = [
             { to: '/islerim', icon: ClipboardList, label: 'İşlerim', yetki: 'islerim' },
             { to: '/gorevlerim', icon: Truck, label: 'Görevlerim', yetki: 'gorevlerim' },
             { to: '/partiler', icon: Layers, label: 'Partiler', yetki: 'partiler' },
-            { to: '/is-akisi', icon: GitBranch, label: 'İş Akışı', yetki: 'is_akisi' },
+            { to: '/is-akisi', icon: GitBranch, label: 'Atölye Kanban', yetki: 'is_akisi' },
             { to: '/is-talep-takvimi', icon: CalendarClock, label: 'Takvim', yetki: 'takvim' },
         ]
     },

@@ -6,6 +6,8 @@ import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
 import { ArrowLeft, CheckCircle, UserPlus, ChevronRight, Edit2, Printer, AlertTriangle, TrendingDown, DollarSign, History, Camera, X, Trash2, Tag } from 'lucide-react';
 import { yazdirPartiEtiketi } from '../utils/partiEtiketi';
+import PartiKarlilik from '../components/PartiKarlilik';
+import { maliyetGorur } from '../utils/maliyet';
 import { DURUM_LABELS, DURUM_SIRALAMA, ADIM_FIRMA_TIP, FIRMA_TIP_LABELS, getPartiById, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
 import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
@@ -224,6 +226,8 @@ export default function PartiDetay() {
                     <div className="text-xs text-muted" style={{ marginTop: '6px', textAlign: 'right' }}>Adet başı: {adetBasiMaliyet} ₺</div>
                 </div>
             )}
+
+            {maliyetGorur(currentUser) && <PartiKarlilik parti={parti} />}
 
             {/* Renk Tablosu */}
             {parti.renkler && parti.renkler.length > 0 && (

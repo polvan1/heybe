@@ -25,6 +25,11 @@ Bu kurallar sunucuda da uygulanır (`public/inc/kesimhane.php`).
 - **QR:** Parti Detay → "Etiket" ile QR'lı parti etiketi basılır (10×7 cm ya da A4'e 8'li). Partiler → "QR Okut" ile etiket/irsaliye QR'ı okutulup parti açılır ve sıradaki adıma ilerletilir.
 - **Excel/PDF:** Cari ekstre (tarih aralıklı, yürüyen bakiye), cari listesi, partiler, irsaliyeler, kumaş stok ve raporlar Excel (.xlsx) olarak; ekstre, cari listesi ve raporlar PDF olarak alınır.
 
+## Atölye kanbanı, maliyet ve döviz
+- **Atölye Kanban** (İş Akışı): kartı sürükleyip sonraki aşamaya bırakın (telefonda basılı tutun); adet girişi penceresi açılır. Kartta aşamadaki gün (gecikince kırmızı), model, atölye, adet ve QR etiket. Üstte **atölye yükü**: eldeki iş / günlük kapasite (öğrenilmiş ya da firma kapasitesi) → normal / yoğun (>3 gün) / darboğaz (>7 gün).
+- **Maliyet kartı** (Ürünler → hesap makinesi): kumaş/aksesuar/baskı kalemleri (TRY, USD, EUR, GBP), fason fiyatları, operasyonlar ve dakikaları, genel gider %, hedef kâr marjı → birim maliyet, önerilen satış fiyatı, mevcut fiyattaki kâr. Parti Detay'da planlanan / gerçekleşen maliyet ve kâr; Raporlar'da model kârlılığı ve atölye bazında fason maliyeti (Excel'e de çıkar). Kesimhane ve fasoncu maliyeti görmez.
+- **Döviz kuru**: TCMB günlük kuru sunucuda alınır (1 saat önbellek, ulaşılamazsa son kur); yönetici Ayarlar'dan elle kur girebilir. Dövizli kumaş alımı giriş günündeki kurla TL'ye çevrilip cariye yazılır.
+
 ## Arayüz ve tasarım sistemi
 - Tüm renk, aralık (8px sistemi), köşe, gölge ve hareket değerleri tek yerde:
   `src/styles/tokens.css` (açık tema `:root`, koyu tema `[data-theme="dark"]`).
