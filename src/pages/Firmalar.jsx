@@ -55,9 +55,9 @@ export default function Firmalar() {
 
     // Silme, yanlışlıkla dokunmayı önlemek için karttan kaldırıldı —
     // firma silme artık Düzenle penceresinde ve güvenlik şifresiyle yapılır.
-    const handleModalSil = () => {
+    const handleModalSil = async () => {
         const firma = firmalar.find(f => f.id === editId);
-        if (!silmeOnayi(`${firma?.ad || ''} firması silinecek.`)) return;
+        if (!(await silmeOnayi(`${firma?.ad || ''} firması silinecek.`))) return;
         const result = firmaSil(editId);
         if (result && result.ok === false) {
             alert(result.reason);

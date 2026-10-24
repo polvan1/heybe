@@ -70,6 +70,7 @@ require __DIR__ . '/inc/dosya.php';
 require __DIR__ . '/inc/sefer.php';
 require __DIR__ . '/inc/kesimhane.php';
 require __DIR__ . '/inc/yapayzeka.php';
+require __DIR__ . '/inc/guvenlik.php';
 
 // ---- CSRF KORUMASI ----
 // Değişiklik yapan her istek özel bir başlık taşımalı. Tarayıcılar başka bir

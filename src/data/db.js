@@ -1,6 +1,7 @@
 // HİS ERP - Veri Katmanı (sunucu API senkronizasyonlu)
 import { apiIstek, ApiHatasi } from './api';
 import { cariYazabilir } from './yetki';
+import { kvOku, kvYaz, kvSil, durumAnahtari, SON_KULLANICI, agHatasiMi } from './cevrimdisi';
 
 const STORAGE_KEYS = {
   firmalar: 'myhis_firmalar',
@@ -34,10 +35,59 @@ let senkronHali = {};   // key → Map(id → JSON metni)
 let pendingKeys = new Set();
 let persistTimer = null;
 
+// --- ÇEVRİMDIŞI ÇALIŞMA ---
+// Gönderilemeyen değişiklikler pendingKeys'te kalır ve (kullanıcıya özel) IndexedDB'ye
+// yazılır; sayfa kapansa da kaybolmaz. Bağlantı gelince / belirli aralıklarla tekrar
+// gönderilir. Uygulama internetsiz açılırsa son veriler bu cihazdan yüklenir.
+let cevrimdisi = false;       // son istek ağ hatasıyla bitti
+let tekrarTimer = null;
+let tekrarBekleme = 5000;     // 5 sn → 60 sn'ye kadar katlanarak
+let tazelemeGerekli = false;  // çevrimdışı bekleyenler gönderilince güncel hali çek
+let gonderim = null;          // devam eden gönderim (aynı anda iki gönderim olmasın)
+let saklaTimer = null;
+
+export const cevrimdisiMi = () => cevrimdisi;
+
+// Kullanıcıya gösterilen bekleyen değişiklik sayısı (işlem günlüğü kayıtları sayılmaz)
+export function bekleyenDegisiklikSayisi() {
+  let n = 0;
+  pendingKeys.forEach(k => {
+    if (k === STORAGE_KEYS.islemGunlugu) return;
+    if (AYAR_ANAHTARLARI.includes(k)) { n += 1; return; }
+    const f = farkHesapla(k);
+    n += f.upsert.length + f.delete.length;
+  });
+  return n;
+}
+
 function notifySync(ok, mesaj) {
   try {
-    window.dispatchEvent(new CustomEvent('myhis:sync', { detail: { ok, mesaj } }));
+    window.dispatchEvent(new CustomEvent('myhis:sync', {
+      detail: { ok, mesaj, cevrimdisi, bekleyen: bekleyenDegisiklikSayisi() },
+    }));
   } catch (e) { /* SSR/test ortamı */ }
+}
+
+// Bu kullanıcının verisini ve gönderilmemiş değişikliklerini cihaza yaz
+function durumuSakla(hemen = false) {
+  const kullaniciId = aktifKullanici?.id;
+  if (!kullaniciId) return;
+  if (saklaTimer) clearTimeout(saklaTimer);
+  const yaz = () => {
+    saklaTimer = null;
+    kvYaz(durumAnahtari(kullaniciId), { zaman: Date.now(), veri: inMemoryDb, hal: senkronHali, bekleyen: [...pendingKeys] });
+  };
+  if (hemen) yaz(); else saklaTimer = setTimeout(yaz, 400);
+}
+
+function tekrarPlanla() {
+  if (tekrarTimer || pendingKeys.size === 0) return;
+  tekrarTimer = setTimeout(() => { tekrarTimer = null; flushPersist(); }, tekrarBekleme);
+  tekrarBekleme = Math.min(tekrarBekleme * 2, 60000);
+}
+
+export async function sonKullanici() {
+  return (await kvOku(SON_KULLANICI)) || null;
 }
 
 function haliKaydet(key, dizi) {
@@ -66,13 +116,21 @@ const AYAR_ANAHTARLARI = [STORAGE_KEYS.tema, STORAGE_KEYS.merkez];
 
 function schedulePersist(key) {
   pendingKeys.add(key);
+  durumuSakla();
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(flushPersist, 250);
 }
 
-export async function flushPersist() {
+// secenek.keepalive: sayfa kapanırken (tarayıcı 64 KB'tan büyük keepalive gövdesini reddeder)
+export async function flushPersist(secenek = {}) {
   if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
+  if (gonderim) { await gonderim.catch(() => {}); }
   if (pendingKeys.size === 0) return true;
+  gonderim = gonder(secenek);
+  try { return await gonderim; } finally { gonderim = null; }
+}
+
+async function gonder(secenek) {
   const keys = [...pendingKeys];
   pendingKeys.clear();
 
@@ -87,33 +145,60 @@ export async function flushPersist() {
   }
 
   try {
-    const cevap = await apiIstek('', payload, { keepalive: true });
+    const keepalive = !!secenek.keepalive && JSON.stringify(payload).length < 60000;
+    const cevap = await apiIstek('', payload, { keepalive });
     // Başarılı: gönderilen koleksiyonların sunucu hali artık yerel hal
     Object.keys(payload.degisiklikler).forEach(k => haliKaydet(k, inMemoryDb[k]));
+    cevrimdisi = false;
+    tekrarBekleme = 5000;
+    if (tekrarTimer) { clearTimeout(tekrarTimer); tekrarTimer = null; }
+    durumuSakla();
     notifySync(true);
-    // Sunucu bazı alanları kendisi belirlediyse (ör. kesimhanenin partisine parti no) güncel hali çek
-    if (cevap?.yenile) {
+    // Sunucu bazı alanları kendisi belirlediyse (ör. kesimhanenin partisine parti no) ya da
+    // çevrimdışı bekleyenler yeni gönderildiyse (arada başkalarının yaptıkları) güncel hali çek
+    if (cevap?.yenile || tazelemeGerekli) {
+      tazelemeGerekli = false;
       refetchFromServer(false).then(ok => { if (ok) window.dispatchEvent(new CustomEvent('myhis:veri-yenilendi')); });
     }
     return true;
   } catch (e) {
-    if (e instanceof ApiHatasi && (e.durum === 403 || e.durum === 401)) {
+    keys.forEach(k => pendingKeys.add(k));
+    if (e instanceof ApiHatasi && e.durum === 403) {
       // Yetkisiz değişiklik: tekrar denemenin anlamı yok → sunucudaki hale geri dön
       console.warn('Değişiklik reddedildi:', e.mesaj || e.message);
-      notifySync(false, e.message);
       await refetchFromServer(true);
+      durumuSakla(true);
+      notifySync(false, e.message);
       window.dispatchEvent(new CustomEvent('myhis:veri-yenilendi'));
       return false;
     }
-    console.error('Veritabanı sunucuya kaydedilemedi:', e);
-    keys.forEach(k => pendingKeys.add(k)); // bağlantı hatası: tekrar denenebilsin
-    notifySync(false);
+    if (e instanceof ApiHatasi && e.durum === 401) {
+      // Oturum düştü: değişiklikler cihazda kalır, yeniden giriş yapılınca gönderilir
+      durumuSakla(true);
+      notifySync(false, 'Oturumunuz sona erdi. Tekrar giriş yapınca bekleyen değişiklikler gönderilecek.');
+      return false;
+    }
+    // Bağlantı / sunucu hatası: cihazda sakla, kendiliğinden tekrar dene
+    if (agHatasiMi(e)) cevrimdisi = true;
+    tazelemeGerekli = true;
+    console.warn('Değişiklikler gönderilemedi, tekrar denenecek:', e.message);
+    durumuSakla(true);
+    tekrarPlanla();
+    notifySync(false, cevrimdisi ? '' : e.message);
     return false;
   }
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => { flushPersist(); });
+  window.addEventListener('beforeunload', () => { durumuSakla(true); flushPersist({ keepalive: true }); });
+  window.addEventListener('pagehide', () => durumuSakla(true));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') durumuSakla(true); });
+  // Bağlantı geri geldi: bekleyenleri hemen gönder
+  window.addEventListener('online', () => {
+    tekrarBekleme = 5000;
+    if (tekrarTimer) { clearTimeout(tekrarTimer); tekrarTimer = null; }
+    if (pendingKeys.size) flushPersist();
+  });
 }
 
 async function persistNow(keys) {
@@ -128,6 +213,7 @@ function sunucuVerisiniUygula(data, hepsi) {
     if (Array.isArray(data[k])) haliKaydet(k, data[k]);
   });
   if (hepsi) pendingKeys.clear();
+  durumuSakla();
 }
 
 // Sunucudan güncel veriyi çek (başka cihazda yapılan değişiklikleri almak için).
@@ -138,22 +224,58 @@ export async function refetchFromServer(hepsi = false) {
     const data = await apiIstek();
     if (!data || typeof data !== 'object') return false;
     sunucuVerisiniUygula(data, hepsi);
+    if (cevrimdisi) {
+      // Bağlantı geri geldi
+      cevrimdisi = false;
+      tekrarBekleme = 5000;
+      if (pendingKeys.size) flushPersist(); else notifySync(true);
+    }
     return true;
   } catch (e) {
+    if (agHatasiMi(e) && !cevrimdisi) { cevrimdisi = true; notifySync(false); }
     return false;
   }
 }
 
-export async function initDB() {
+// Girişte verileri yükle. Cihazda bu kullanıcının gönderilmemiş değişiklikleri varsa
+// sunucu verisinin üzerine geri konur ve gönderilir; sunucuya ulaşılamazsa son
+// veriler cihazdan açılır (dönüş: { cevrimdisi: true }).
+export async function initDB(kullanici) {
   inMemoryDb = {};
   senkronHali = {};
   pendingKeys.clear();
+  cevrimdisi = false;
+  if (kullanici) aktifKullanici = kullanici;
+  const kayit = kullanici?.id ? await kvOku(durumAnahtari(kullanici.id)) : null;
   try {
     const data = await apiIstek();
     sunucuVerisiniUygula(data || {}, true);
+    if (kullanici?.id) kvYaz(SON_KULLANICI, kullanici);
+    if (kayit?.bekleyen?.length) {
+      kayit.bekleyen.forEach(k => {
+        if (kayit.veri?.[k] !== undefined) inMemoryDb[k] = kayit.veri[k];
+        if (kayit.hal?.[k]) senkronHali[k] = kayit.hal[k];
+        pendingKeys.add(k);
+      });
+      tazelemeGerekli = true;
+      flushPersist();
+    }
+    return { cevrimdisi: false };
   } catch (error) {
+    if (agHatasiMi(error) && kayit?.veri) {
+      inMemoryDb = kayit.veri;
+      senkronHali = kayit.hal || {};
+      (kayit.bekleyen || []).forEach(k => pendingKeys.add(k));
+      cevrimdisi = true;
+      tazelemeGerekli = true;
+      notifySync(false);
+      tekrarPlanla();
+      return { cevrimdisi: true };
+    }
     console.error('Veritabanı yükleme hatası:', error);
+    if (agHatasiMi(error)) cevrimdisi = true;
     notifySync(false);
+    return { cevrimdisi };
   }
 }
 
@@ -1352,9 +1474,24 @@ export async function girisYap(kimlik, sifre) {
   return r.kullanici;
 }
 
+// Dönüş false: kullanıcı, gönderilemeyen değişiklikler yüzünden çıkışı iptal etti
 export async function cikisYap() {
   try { await flushPersist(); } catch (e) { /* yoksay */ }
+  const bekleyen = bekleyenDegisiklikSayisi();
+  if (bekleyen > 0 && !window.confirm(`${bekleyen} değişiklik henüz sunucuya gönderilemedi (internet yok). Çıkış yaparsanız bu değişiklikler silinir.\n\nYine de çıkılsın mı?`)) {
+    return false;
+  }
+  // Bu cihazdaki kayıtlı veriyi temizle (ortak kullanılan cihazda başkası görmesin)
+  if (aktifKullanici?.id) await kvSil(durumAnahtari(aktifKullanici.id));
+  await kvSil(SON_KULLANICI);
+  if (saklaTimer) { clearTimeout(saklaTimer); saklaTimer = null; }
+  if (tekrarTimer) { clearTimeout(tekrarTimer); tekrarTimer = null; }
+  pendingKeys.clear();
+  inMemoryDb = {};
+  senkronHali = {};
   try { await apiIstek('auth=cikis', {}); } catch (e) { /* oturum zaten düşmüş olabilir */ }
+  aktifKullanici = null;
+  return true;
 }
 
 export async function ilkKurulumYap(ad, email, sifre) {

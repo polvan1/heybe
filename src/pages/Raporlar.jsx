@@ -6,8 +6,10 @@ import BarChart from '../components/ui/BarChart';
 import MetricTile from '../components/ui/MetricTile';
 import {
     BarChart3, TrendingUp, Package, Layers, Wallet,
-    Factory, Award, Calendar, PieChart, ArrowUpRight, ArrowDownRight
+    Factory, Award, Calendar, PieChart, ArrowUpRight, ArrowDownRight, FileSpreadsheet, FileText
 } from 'lucide-react';
+import { excelIndir } from '../utils/excel';
+import { raporYazdir, tlBicim } from '../utils/raporYazdir';
 
 export default function Raporlar() {
     const { partiler, firmalar, urunler, cariHareketler } = useApp();
@@ -151,11 +153,67 @@ export default function Raporlar() {
         };
     }, [partiler, firmalar, urunler, cariHareketler]);
 
+    // Raporun tabloları: Excel'de ayrı sayfalar, PDF'te alt alta
+    const raporTablolari = () => {
+        const r = reports;
+        return [
+            {
+                ad: 'Özet', baslik: 'Üretim Özeti',
+                sutunlar: [{ baslik: 'Gösterge', genislik: 28 }, { baslik: 'Değer', tip: 'sayi' }],
+                satirlar: [
+                    ['Toplam parti', r.toplamParti], ['Aktif parti', r.aktifPartiler], ['Tamamlanan parti', r.tamamlananPartiler],
+                    ['Toplam üretim (adet)', r.toplamUretim], ['Tamamlanan (adet)', r.tamamlananUretim], ['Devam eden (adet)', r.aktifUretim],
+                    ['Tamamlanma oranı (%)', r.tamamlanmaOrani],
+                ],
+            },
+            {
+                ad: 'Ürünler', baslik: 'Ürün Bazlı Üretim',
+                sutunlar: [{ baslik: 'Ürün Kodu' }, { baslik: 'Ürün' }, { baslik: 'Parti', tip: 'sayi' }, { baslik: 'Toplam Adet', tip: 'sayi' }, { baslik: 'Tamamlanan', tip: 'sayi' }, { baslik: 'Devam Eden', tip: 'sayi' }],
+                satirlar: r.urunListesi.map(u => [u.urunKodu, u.urunAdi, u.partiSayisi, u.toplamAdet, u.tamamlanan, u.devamEden]),
+            },
+            {
+                ad: 'Dikimhaneler', baslik: 'Dikimhane Performansı',
+                sutunlar: [{ baslik: 'Dikimhane' }, { baslik: 'Yetkili' }, { baslik: 'Parti', tip: 'sayi' }, { baslik: 'Aktif', tip: 'sayi' }, { baslik: 'Tamamlanan', tip: 'sayi' },
+                    { baslik: 'Toplam Adet', tip: 'sayi' }, { baslik: 'Günlük Ort.', tip: 'sayi' }, { baslik: 'Kapasite', tip: 'sayi' }, { baslik: 'Verim (%)', tip: 'sayi' }],
+                satirlar: r.dikimhaneRapor.map(d => [d.ad, d.yetkili || '', d.partiSayisi, d.aktifParti, d.tamamlananParti, d.toplamAdet, d.gunlukOrtalama, d.kapasite || null, d.verimlilik || null]),
+            },
+            {
+                ad: 'Cari', baslik: 'Cari Durum',
+                sutunlar: [{ baslik: 'Firma' }, { baslik: 'Tür' }, { baslik: 'Borç', tip: 'para' }, { baslik: 'Ödenen', tip: 'para' }, { baslik: 'Bakiye', tip: 'para' }],
+                satirlar: r.cariRapor.map(c => [c.firmaAd, FIRMA_TIP_LABELS[c.firmaTip] || c.firmaTip, c.borc, c.odenen, c.bakiye]),
+                toplamSatiri: ['TOPLAM', '', r.toplamBorc, r.toplamOdenen, r.toplamBakiye],
+            },
+            {
+                ad: 'Aylık Trend', baslik: 'Son 6 Ay',
+                sutunlar: [{ baslik: 'Ay' }, { baslik: 'Parti', tip: 'sayi' }, { baslik: 'Adet', tip: 'sayi' }],
+                satirlar: r.aylikTrend.map(a => [a.ay, a.partiSayisi, a.toplamAdet]),
+            },
+        ];
+    };
+    const tarihMetni = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const excelAl = () => excelIndir('Rapor', raporTablolari().map(t => ({ ...t, ustBilgi: [`HİS ERP — ${t.baslik}`, tarihMetni] })));
+    const pdfAl = () => raporYazdir({
+        baslik: 'Üretim ve Cari Raporu', altBaslik: tarihMetni, yatay: true,
+        ozet: [
+            { etiket: 'Toplam parti', deger: String(reports.toplamParti) },
+            { etiket: 'Toplam üretim', deger: `${reports.toplamUretim.toLocaleString('tr-TR')} adet` },
+            { etiket: 'Tamamlanma', deger: `%${reports.tamamlanmaOrani}` },
+            { etiket: 'Cari bakiye', deger: tlBicim(reports.toplamBakiye), vurgu: true },
+        ],
+        tablolar: raporTablolari().slice(1),
+    });
+
     return (
         <div className="animate-fade-in">
             <div className="page-header">
-                <h1 className="page-title">Raporlar</h1>
-                <span className="text-sm text-muted">{new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                <div>
+                    <h1 className="page-title">Raporlar</h1>
+                    <span className="text-sm text-muted">{tarihMetni}</span>
+                </div>
+                <div className="page-header-actions" style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-ghost" onClick={excelAl}><FileSpreadsheet size={18} /> Excel</button>
+                    <button className="btn btn-ghost" onClick={pdfAl}><FileText size={18} /> PDF</button>
+                </div>
             </div>
 
             {/* ======== ÜST ÖZET KARTLARI ======== */}

@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Settings, Sun, Moon, Database, Download, Upload, RefreshCw, Shield, Info, Bell, BellOff, Send } from 'lucide-react';
 import Notice from '../components/ui/Notice';
+import SilmeSifresiAyari from '../components/SilmeSifresiAyari';
 import { pushDestekliMi, pushDurumu, pushAc, pushKapat, pushTest, iosKuruluDegilMi } from '../data/push';
 
 export default function Ayarlar() {
-    const { tema, toggleTema, yedekIndir, yedekYukle, refresh } = useApp();
+    const { tema, toggleTema, yedekIndir, yedekYukle, refresh, currentUser } = useApp();
     const [mesaj, setMesaj] = useState(null); // { tip: 'ok'|'hata', metin }
     const [bildirimDurum, setBildirimDurum] = useState('kontrol'); // kontrol|acik|kapali|engellendi|desteklenmiyor
     const [bildirimBusy, setBildirimBusy] = useState(false);
@@ -221,10 +222,12 @@ export default function Ayarlar() {
                                 <li><strong>Yönetici:</strong> Tüm sayfalara tam erişim</li>
                                 <li><strong>Üretim Sorumlusu:</strong> Partiler, iş akışı, stok</li>
                                 <li><strong>Muhasebe:</strong> Cari hesaplar, raporlar</li>
-                                <li><strong>Fasoncu:</strong> Özelleştirilebilir — sadece izin verilen sayfalar</li>
+                                <li><strong>Kesimhane Yetkilisi:</strong> Sadece kendi kesimhanesinin partileri, irsaliyeleri ve kumaş stoğu</li>
+                                <li><strong>Fasoncu:</strong> Sadece kendi firmasının işleri; diğer firmaları, fiyatları ve carileri görmez</li>
                                 <li><strong>İzleyici:</strong> Sadece görüntüleme</li>
                             </ul>
                         </div>
+                        {currentUser?.rol === 'admin' && <SilmeSifresiAyari />}
                     </div>
                 </div>
 

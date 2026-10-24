@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
-import { Wallet, Eye, CreditCard, Search, Power } from 'lucide-react';
+import { Wallet, Eye, CreditCard, Search, Power, FileSpreadsheet, FileText } from 'lucide-react';
+import { excelIndir } from '../utils/excel';
+import { raporYazdir, tlBicim } from '../utils/raporYazdir';
 import { FIRMA_TIP_LABELS } from '../data/db';
 import { FIRMA_TIPLERI, firmaRozetSinifi, firmaAktifMi, firmaSecenekAdi } from '../utils/firma';
 
@@ -39,6 +41,34 @@ export default function CariHesaplar() {
     // Bakiyesi olan firmaları üste getir
     const sorted = [...firmaWithBakiye].sort((a, b) => b.bakiye - a.bakiye);
 
+    // Görünen liste (filtre + arama) Excel / PDF
+    const disaAktarVerisi = () => {
+        const sutunlar = [
+            { baslik: 'Firma' }, { baslik: 'Tür' }, { baslik: 'Durum' }, { baslik: 'Yetkili' }, { baslik: 'Telefon' },
+            { baslik: 'Vade (ayın)', tip: 'sayi' }, { baslik: 'Açık Borç', tip: 'para' }, { baslik: 'Ödeme', tip: 'para' }, { baslik: 'Bakiye', tip: 'para' },
+        ];
+        const satirlar = sorted.map(f => [f.ad, FIRMA_TIP_LABELS[f.tip] || f.tip, firmaAktifMi(f) ? 'Aktif' : 'Pasif', f.yetkiliKisi || '', f.telefon || '',
+            f.odemeVadesi || null, f.borc, f.alacak, f.bakiye]);
+        const toplam = (k) => sorted.reduce((t, f) => t + (Number(f[k]) || 0), 0);
+        const toplamSatiri = ['TOPLAM', '', '', '', '', null, toplam('borc'), toplam('alacak'), toplam('bakiye')];
+        return { sutunlar, satirlar, toplamSatiri, toplamBakiye: toplam('bakiye') };
+    };
+    const filtreMetni = () => [tipFilter === 'all' ? 'Tüm firmalar' : (FIRMA_TIP_LABELS[tipFilter] || tipFilter), pasifleriGoster ? 'pasifler dahil' : '', search.trim() ? `"${search.trim()}"` : '']
+        .filter(Boolean).join(' · ');
+    const excelAl = () => {
+        const v = disaAktarVerisi();
+        excelIndir('Cari_Hesaplar', [{ ad: 'Cari Hesaplar', ustBilgi: ['Cari Hesaplar — Açık Bakiyeler', filtreMetni()], ...v }]);
+    };
+    const pdfAl = () => {
+        const v = disaAktarVerisi();
+        raporYazdir({
+            baslik: 'Cari Hesaplar', altBaslik: filtreMetni(), yatay: true,
+            ozet: [{ etiket: 'Firma', deger: String(sorted.length) }, { etiket: 'Toplam açık bakiye', deger: tlBicim(v.toplamBakiye), vurgu: true }],
+            tablolar: [v],
+            not: 'Açık bakiye = henüz "Hesabı Kapat" yapılmamış borçlar − ödemeler (pozitif: firmaya borçluyuz).',
+        });
+    };
+
     const handleSavePayment = () => {
         if (!paymentForm.firmaId || !paymentForm.tutar || parseFloat(paymentForm.tutar) <= 0) {
             alert('Lütfen firma ve geçerli bir tutar seçin.');
@@ -64,9 +94,13 @@ export default function CariHesaplar() {
                     <h1 className="page-title">Cari Hesaplar</h1>
                     <span className="text-sm text-muted">{sorted.length} firma</span>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowPaymentModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CreditCard size={18} /> Hızlı Ödeme Yap
-                </button>
+                <div className="page-header-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button className="btn btn-ghost" onClick={excelAl} title="Görünen listeyi Excel'e aktar"><FileSpreadsheet size={18} /> Excel</button>
+                    <button className="btn btn-ghost" onClick={pdfAl} title="Görünen listeyi PDF olarak yazdır"><FileText size={18} /> PDF</button>
+                    <button className="btn btn-primary" onClick={() => setShowPaymentModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CreditCard size={18} /> Hızlı Ödeme Yap
+                    </button>
+                </div>
             </div>
 
             {/* Arama */}

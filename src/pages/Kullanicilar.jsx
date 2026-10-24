@@ -130,9 +130,9 @@ export default function Kullanicilar() {
         }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         const user = kullanicilar.find(k => k.id === id);
-        if (!silmeOnayi(`${user?.ad || ''} kullanıcısı silinecek.`)) return;
+        if (!(await silmeOnayi(`${user?.ad || ''} kullanıcısı silinecek.`))) return;
         kullaniciSil(id).catch(err => alert('Silinemedi: ' + err.message));
     };
 

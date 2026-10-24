@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import Notice from '../components/ui/Notice';
-import { ArrowLeft, CheckCircle, Wallet, CreditCard, Eye, Printer, History, ClipboardCheck, AlertCircle, Star, Power, FilePlus } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Wallet, CreditCard, Eye, Printer, History, ClipboardCheck, AlertCircle, Star, Power, FilePlus, FileSpreadsheet, FileText } from 'lucide-react';
+import { cariEkstreExcel, cariEkstrePdf, cariEkstreHesapla } from '../utils/cariEkstre';
 import { FIRMA_TIP_LABELS } from '../data/db';
 import { firmaRozetSinifi, firmaAktifMi } from '../utils/firma';
 
@@ -20,6 +21,9 @@ export default function CariDetay() {
     const bosOdeme = () => ({ tutar: '', aciklama: '', tarih: new Date().toISOString().split('T')[0] });
     const [showOdemeModal, setShowOdemeModal] = useState(false);
     const [odemeForm, setOdemeForm] = useState(bosOdeme);
+    // Ekstre: tarih aralığı seçilip Excel ya da PDF alınır
+    const ayBasi = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; };
+    const [ekstre, setEkstre] = useState(null); // { bas, bit }
 
     const firma = firmalar.find(f => f.id === id);
     if (!firma) {
@@ -151,11 +155,13 @@ export default function CariDetay() {
             // Eğer devir geçmesini İSTEMİYORSAK burayı hesaplandi: true yapıyoruz.
             // Fakat önceki isteğinizde "devretmeli" dediğiniz için:
             // Kullanıcı son mesajında "devir geçmemesi gerekiyordu" dediği için bunu da kapatıyoruz.
+            // Kapatılan dönemin borç/ödeme toplamı eşitlensin diye fazla ödeme BORÇ olarak mahsup edilir
+            // (eskiden 'alacak' yazılıyordu; ekstrede bakiyeyi iki kat bozuyordu)
             cariHareketEkle({
                 firmaId: id,
-                tip: 'alacak',
+                tip: 'borc',
                 tutar: Math.abs(netBakiye),
-                aciklama: 'Önceki Hesaptan Devreden Alacak (Kapatıldı)',
+                aciklama: 'Fazla ödeme mahsubu (Kapatıldı)',
                 tarih: new Date().toISOString().split('T')[0],
                 hesaplandi: true,
                 hesapTarihi: new Date().toISOString()
@@ -329,6 +335,9 @@ export default function CariDetay() {
                         </button>
                         <button className="btn btn-outline btn-sm" onClick={handlePrint}>
                             <Printer size={14} /> Son Durum Çıktısı
+                        </button>
+                        <button className="btn btn-outline btn-sm" onClick={() => setEkstre({ bas: ayBasi(), bit: new Date().toISOString().split('T')[0] })}>
+                            <FileSpreadsheet size={14} /> Ekstre (Excel/PDF)
                         </button>
                         <button className="btn btn-ghost btn-sm" onClick={aktiflikDegistir} title={aktif ? 'Firmayı pasife al' : 'Firmayı yeniden aktifleştir'}>
                             <Power size={14} /> {aktif ? 'Pasife Al' : 'Aktifleştir'}
@@ -566,6 +575,50 @@ export default function CariDetay() {
                     <div className="text-xs text-muted">Güncel açık bakiye: {bakiyeInfo.bakiye?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</div>
                 </Modal>
             )}
+
+            {/* EKSTRE MODALI */}
+            {ekstre && (() => {
+                const hareketler = cariHareketler.filter(h => h.firmaId === id);
+                const secenek = { ...ekstre, partiler };
+                const on = cariEkstreHesapla(hareketler, secenek);
+                const hazirAralik = (bas, bit = new Date().toISOString().split('T')[0]) => setEkstre({ bas, bit });
+                const ayOnce = (n) => { const d = new Date(); d.setMonth(d.getMonth() - n, 1); return d.toISOString().split('T')[0]; };
+                return (
+                    <Modal
+                        title={`Cari Ekstre — ${firma.ad}`}
+                        onClose={() => setEkstre(null)}
+                        footer={<>
+                            <button className="btn btn-ghost" onClick={() => setEkstre(null)}>Kapat</button>
+                            <button className="btn btn-outline" onClick={() => cariEkstrePdf(firma, hareketler, secenek)}><FileText size={16} /> PDF</button>
+                            <button className="btn btn-primary" onClick={() => cariEkstreExcel(firma, hareketler, secenek)}><FileSpreadsheet size={16} /> Excel</button>
+                        </>}
+                    >
+                        <div className="filter-row" style={{ marginBottom: '12px' }}>
+                            <button className="filter-btn" onClick={() => hazirAralik(ayBasi())}>Bu ay</button>
+                            <button className="filter-btn" onClick={() => hazirAralik(ayOnce(2))}>Son 3 ay</button>
+                            <button className="filter-btn" onClick={() => hazirAralik(`${new Date().getFullYear()}-01-01`)}>Bu yıl</button>
+                            <button className="filter-btn" onClick={() => hazirAralik('', '')}>Tümü</button>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="ekstre-bas">Başlangıç</label>
+                                <input id="ekstre-bas" type="date" className="form-input" value={ekstre.bas} onChange={e => setEkstre({ ...ekstre, bas: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="ekstre-bit">Bitiş</label>
+                                <input id="ekstre-bit" type="date" className="form-input" value={ekstre.bit} onChange={e => setEkstre({ ...ekstre, bit: e.target.value })} />
+                            </div>
+                        </div>
+                        <div className="ekstre-ozet">
+                            <div><span>Devreden</span><strong>{on.devir.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong></div>
+                            <div><span>Dönem borç</span><strong>{on.donemBorc.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong></div>
+                            <div><span>Dönem ödeme</span><strong>{on.donemOdeme.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong></div>
+                            <div><span>Dönem sonu bakiye</span><strong>{on.sonBakiye.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong></div>
+                        </div>
+                        <div className="text-xs text-muted" style={{ marginTop: '8px' }}>{on.satirlar.length} hareket · kapatılmış hesaplar dahil</div>
+                    </Modal>
+                );
+            })()}
 
             {/* HESAP ÖZET/GÖR MODALI */}
             {showHesapModal && (

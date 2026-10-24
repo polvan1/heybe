@@ -42,9 +42,9 @@ export default function StokTakibi() {
         setModal(null);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         const stok = stoklar.find(s => s.id === id);
-        if (!silmeOnayi(`${stok?.ad || 'Stok kaydı'} silinecek.`)) return;
+        if (!(await silmeOnayi(`${stok?.ad || 'Stok kaydı'} silinecek.`))) return;
         stokSil(id);
     };
 

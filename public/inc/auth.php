@@ -106,6 +106,7 @@ function yazabilirMi($k, $koleksiyon) {
     if ($k['rol'] === 'admin') return true;
     if (in_array($koleksiyon, HERKES_YAZAR, true)) return true;
     if ($k['rol'] === 'izleyici') return false; // izleyici sadece görüntüler
+    if ($k['rol'] === 'fasoncu') return false;  // fasoncu sadece teslim bildirir (bildirim = HERKES_YAZAR)
     if ($k['rol'] === 'kesimhane') {
         // Kesimhane yetkilisi yalnızca kendi partileri, irsaliyeleri ve kumaş stoğu
         // üzerinde çalışır; kayıt bazlı kontroller sync.php → kesimhaneYazimi()'nda
@@ -187,6 +188,7 @@ function authIstegi($pdo, $islem) {
         $sayi = (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn();
         jsonYanit(['kurulumGerekli' => $sayi === 0, 'kullanici' => kullaniciGuvenli(aktifKullanici($pdo))]);
     }
+    if (strpos($islem, 'silme_') === 0) silmeIstegi($pdo, $islem);   // inc/guvenlik.php
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonHata(405, 'yontem', 'POST gerekli.');
     $govde = jsonGovde();
@@ -331,6 +333,7 @@ function kullaniciIstegi($pdo, $islem) {
 
     if ($islem === 'sil') {
         if ($id === $ben['id']) jsonHata(400, 'kendini_silme', 'Oturumu açık olan kullanıcıyı silemezsiniz.');
+        if (!silmeIzniVar()) jsonHata(403, 'silme_onayi_gerekli', 'Silme işlemi için güvenlik şifresi doğrulanmalı.');
         $pdo->prepare("DELETE FROM kullanicilar WHERE id = ?")->execute([$id]);
         gunlugeYaz($pdo, $ben, 'Kullanıcı Silindi', $mevcut['ad']);
         jsonYanit(['success' => true]);

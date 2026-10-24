@@ -207,9 +207,9 @@ export default function Urunler() {
 
     // Silme, yanlışlıkla dokunmayı önlemek için listeden kaldırıldı —
     // ürün silme artık Düzenle penceresinde ve güvenlik şifresiyle yapılır.
-    const handleModalSil = () => {
+    const handleModalSil = async () => {
         const urun = urunler.find(u => u.id === editId);
-        if (!silmeOnayi(`${urun?.urunKodu || ''} — ${urun?.urunAdi || ''} ürünü silinecek.`)) return;
+        if (!(await silmeOnayi(`${urun?.urunKodu || ''} — ${urun?.urunAdi || ''} ürünü silinecek.`))) return;
         urunSil(editId);
         setModal(null);
     };

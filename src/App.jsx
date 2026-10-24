@@ -6,7 +6,8 @@ import BottomNav from './components/BottomNav';
 import Login from './pages/Login';
 import { useApp } from './context/AppContext';
 import { hasYetki, firstAllowedRoute } from './data/yetki';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, CloudUpload } from 'lucide-react';
+import { flushPersist, cevrimdisiMi, bekleyenDegisiklikSayisi } from './data/db';
 
 // Sayfa bazlı code splitting: her sayfa ayrı chunk olarak yüklenir
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -81,7 +82,9 @@ export default function App() {
     const { currentUser } = useApp();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [syncHata, setSyncHata] = useState(false);
+    // Senkron durumu: { ok, cevrimdisi, bekleyen, mesaj } (db.js 'myhis:sync' olayı)
+    const [sync, setSync] = useState(() => ({ ok: !cevrimdisiMi(), cevrimdisi: cevrimdisiMi(), bekleyen: bekleyenDegisiklikSayisi() }));
+    const [gonderiliyor, setGonderiliyor] = useState(false);
     const location = useLocation();
 
     // Auto-close mobile sidebar on route change
@@ -91,10 +94,18 @@ export default function App() {
 
     // Sunucu senkronizasyon durumu (db.js 'myhis:sync' olayı yayınlar)
     useEffect(() => {
-        const handler = (e) => setSyncHata(!e.detail.ok);
+        const handler = (e) => setSync(e.detail);
         window.addEventListener('myhis:sync', handler);
+        // Olay, bu bileşen yüklenmeden (girişte) yayınlanmış olabilir
+        setSync({ ok: !cevrimdisiMi(), cevrimdisi: cevrimdisiMi(), bekleyen: bekleyenDegisiklikSayisi() });
         return () => window.removeEventListener('myhis:sync', handler);
-    }, []);
+    }, [currentUser]);
+
+    const simdiGonder = async () => {
+        setGonderiliyor(true);
+        await flushPersist();
+        setGonderiliyor(false);
+    };
 
     // iOS KLAVYE DÜZELTMESİ: klavye açılınca iOS tüm görünümü yukarı kaydırıyor;
     // klavye kapanınca bazen sayfayı kaydırılmış bırakıyor ve sabit alt menü
@@ -151,10 +162,20 @@ export default function App() {
                     title={getTitle()}
                     onMenuClick={() => setSidebarOpen(true)}
                 />
-                {syncHata && (
-                    <div className="sync-banner" role="alert">
+                {(!sync.ok || sync.cevrimdisi) && (
+                    <div className={`sync-banner ${sync.cevrimdisi ? 'sync-banner--cevrimdisi' : ''}`} role="status">
                         <WifiOff size={16} />
-                        Değişiklikler sunucuya kaydedilemedi! Bağlantınızı kontrol edin — bağlantı gelince otomatik tekrar denenecek.
+                        <span>
+                            {sync.cevrimdisi ? 'Çevrimdışı çalışıyorsunuz.' : (sync.mesaj || 'Değişiklikler sunucuya kaydedilemedi.')}
+                            {sync.bekleyen > 0
+                                ? ` ${sync.bekleyen} değişiklik bu cihazda saklandı; bağlantı gelince otomatik gönderilecek.`
+                                : sync.cevrimdisi ? ' Yaptığınız değişiklikler bu cihazda saklanır.' : ''}
+                        </span>
+                        {sync.bekleyen > 0 && (
+                            <button type="button" className="sync-banner-btn" onClick={simdiGonder} disabled={gonderiliyor}>
+                                <CloudUpload size={14} /> {gonderiliyor ? 'Gönderiliyor…' : 'Şimdi dene'}
+                            </button>
+                        )}
                     </div>
                 )}
                 <main className={`main-content ${location.pathname === '/' ? 'main-content--home' : ''}`}>

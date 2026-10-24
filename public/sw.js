@@ -1,12 +1,33 @@
 // HİS ERP - Service Worker
 // Strateji:
-//  - api.php  : HER ZAMAN ağ (veri asla önbellekten gelmez)
+//  - api.php  : HER ZAMAN ağ (veri asla önbellekten gelmez; çevrimdışı veri uygulamada IndexedDB'de)
 //  - assets/  : önce önbellek (dosya adları hash'li olduğu için güvenli)
 //  - diğerleri: önce ağ, çevrimdışıysa önbellek
-const CACHE_NAME = 'his-erp-v2';
+// Kurulumda asset-listesi.json'daki tüm sayfa dosyaları indirilir: internet yokken
+// daha önce hiç açılmamış sayfalar da açılabilir.
+const CACHE_NAME = 'his-erp-v3';
+const KABUK = ['./', './index.html', './manifest.json', './his-logo.png', './icon-192.png'];
 
-self.addEventListener('install', () => {
-    self.skipWaiting();
+async function onbellegiDoldur() {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(KABUK.map(u => cache.add(u).catch(() => {})));
+    try {
+        const yanit = await fetch('./asset-listesi.json', { cache: 'no-store' });
+        if (!yanit.ok) return;
+        const liste = await yanit.json();
+        const gecerli = new Set(liste.map(f => new URL('./' + f, self.registration.scope).href));
+        // Eski sürümlerden kalan asset'leri temizle
+        for (const istek of await cache.keys()) {
+            if (istek.url.includes('/assets/') && !gecerli.has(istek.url)) await cache.delete(istek);
+        }
+        await Promise.all([...gecerli].map(async (u) => {
+            if (!(await cache.match(u))) await cache.add(u).catch(() => {});
+        }));
+    } catch (e) { /* liste yoksa (geliştirme) sadece açılan dosyalar önbelleğe alınır */ }
+}
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(onbellegiDoldur().finally(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -15,6 +36,11 @@ self.addEventListener('activate', (event) => {
             .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
             .then(() => self.clients.claim())
     );
+});
+
+// Uygulama her açılışta yeni sürüm dosyalarını önbelleğe almasını isteyebilir
+self.addEventListener('message', (event) => {
+    if (event.data === 'onbellegi-guncelle') event.waitUntil(onbellegiDoldur());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -51,7 +77,8 @@ self.addEventListener('fetch', (event) => {
                 }
                 return res;
             })
-            .catch(() => caches.match(request))
+            .catch(async () => (await caches.match(request)) ||
+                (request.mode === 'navigate' ? (await caches.match('./index.html')) || caches.match('./') : undefined))
     );
 });
 

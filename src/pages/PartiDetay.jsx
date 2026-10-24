@@ -4,7 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
-import { ArrowLeft, CheckCircle, UserPlus, ChevronRight, Edit2, Printer, AlertTriangle, TrendingDown, DollarSign, History, Camera, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, UserPlus, ChevronRight, Edit2, Printer, AlertTriangle, TrendingDown, DollarSign, History, Camera, X, Trash2, Tag } from 'lucide-react';
+import { yazdirPartiEtiketi } from '../utils/partiEtiketi';
 import { DURUM_LABELS, DURUM_SIRALAMA, ADIM_FIRMA_TIP, FIRMA_TIP_LABELS, getPartiById, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
 import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
@@ -24,6 +25,7 @@ export default function PartiDetay() {
     const [showIlerletModal, setShowIlerletModal] = useState(false);
     const [ilerletCikanAdet, setIlerletCikanAdet] = useState('');
     const [editUtupaketciId, setEditUtupaketciId] = useState('');
+    const [etiket, setEtiket] = useState(null); // { kopya, boyut }
     const [fotoBusy, setFotoBusy] = useState(false);
     const [buyukFoto, setBuyukFoto] = useState(null);
 
@@ -85,7 +87,41 @@ export default function PartiDetay() {
                     <ArrowLeft size={18} /> Geri
                 </button>
                 <h1 className="page-title">{parti.partiNo} — {parti.urunKodu}</h1>
+                <button className="btn btn-soft" onClick={() => setEtiket({ kopya: '1', boyut: 'etiket' })} style={{ marginLeft: 'auto' }}>
+                    <Tag size={16} /> Etiket
+                </button>
             </div>
+
+            {etiket && (
+                <Modal
+                    title={`Parti etiketi — ${parti.partiNo}`}
+                    onClose={() => setEtiket(null)}
+                    footer={<>
+                        <button className="btn btn-ghost" onClick={() => setEtiket(null)}>İptal</button>
+                        <button className="btn btn-primary" onClick={() => { yazdirPartiEtiketi(parti, { ...etiket, firmalar }); setEtiket(null); }}>
+                            <Printer size={16} /> Yazdır
+                        </button>
+                    </>}
+                >
+                    <p className="text-sm text-muted" style={{ marginBottom: '12px' }}>
+                        Etiket QR kodu, telefonla ya da Partiler → "QR Okut" ile okutulunca bu partiyi açar ve sıradaki adıma ilerletmeyi sağlar.
+                    </p>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="etiket-kopya">Etiket adedi (paket/çuval)</label>
+                            <input id="etiket-kopya" className="form-input" type="number" min="1" max="200" inputMode="numeric"
+                                value={etiket.kopya} onChange={e => setEtiket({ ...etiket, kopya: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="etiket-boyut">Kâğıt</label>
+                            <select id="etiket-boyut" className="form-input" value={etiket.boyut} onChange={e => setEtiket({ ...etiket, boyut: e.target.value })}>
+                                <option value="etiket">Termal etiket 10×7 cm</option>
+                                <option value="a4">A4 (sayfada 8 etiket)</option>
+                            </select>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
             {/* Parti Bilgisi */}
             <div className="card mb-4">
@@ -386,8 +422,8 @@ export default function PartiDetay() {
                     </div>
                     <button
                         className="btn btn-danger btn-sm"
-                        onClick={() => {
-                            if (!silmeOnayi(`${parti.partiNo} — ${parti.urunAdi} partisi silinecek.`)) return;
+                        onClick={async () => {
+                            if (!(await silmeOnayi(`${parti.partiNo} — ${parti.urunAdi} partisi silinecek.`))) return;
                             partiSil(parti.id);
                             navigate('/partiler');
                         }}

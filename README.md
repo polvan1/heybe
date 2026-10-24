@@ -17,6 +17,14 @@ irsaliyelerini ve kumaş stoğunu görür. Parti oluşturur, kesim adetlerini gi
 yönetici onaylar. Diğer rollerin oluşturduğu irsaliyeler doğrudan "Onaylandı" olur.
 Bu kurallar sunucuda da uygulanır (`public/inc/kesimhane.php`).
 
+## Güvenlik ve çalışma kuralları
+- **Silme şifresi** sunucuda doğrulanır (kodda şifre yoktur). Yönetici Ayarlar → Güvenlik'ten ortak bir silme şifresi belirler; belirlenmemişse herkes kendi giriş şifresini girer. Doğru şifreden sonra 10 dakika silme izni verilir; 5 hatalı denemede 15 dakika kilit.
+- **Fasoncu** sadece kendi firmasının partilerini, irsaliyelerini ve carisini görür; diğer firmaların bilgileri ve fiyatları sunucudan hiç gönderilmez. Fasoncu yalnızca teslim bildirimi yapar.
+- **Pasif firmalar** yeni parti, irsaliye ve kumaş girişine atanamaz (sunucu da reddeder); geçmiş kayıtları korunur.
+- **Çevrimdışı çalışma:** İnternet yokken yapılan değişiklikler cihazda (IndexedDB) saklanır, bağlantı gelince otomatik gönderilir. Uygulama internetsiz de açılır (son veriler). Çıkış yapınca cihazdaki kayıt silinir.
+- **QR:** Parti Detay → "Etiket" ile QR'lı parti etiketi basılır (10×7 cm ya da A4'e 8'li). Partiler → "QR Okut" ile etiket/irsaliye QR'ı okutulup parti açılır ve sıradaki adıma ilerletilir.
+- **Excel/PDF:** Cari ekstre (tarih aralıklı, yürüyen bakiye), cari listesi, partiler, irsaliyeler, kumaş stok ve raporlar Excel (.xlsx) olarak; ekstre, cari listesi ve raporlar PDF olarak alınır.
+
 ## Arayüz ve tasarım sistemi
 - Tüm renk, aralık (8px sistemi), köşe, gölge ve hareket değerleri tek yerde:
   `src/styles/tokens.css` (açık tema `:root`, koyu tema `[data-theme="dark"]`).

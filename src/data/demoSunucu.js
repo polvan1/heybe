@@ -24,6 +24,18 @@ const TUM_YETKILER = ['anasayfa', 'islerim', 'partiler', 'is_akisi', 'takvim', '
 
 let durum = null;
 
+// public/inc/guvenlik.php ile aynı kurallar: silme şifresi (oturuma 10 dk izin),
+// pasif firmaya yeni iş atanamaz, fasoncu sadece kendi işlerini görür
+const SILME_KORUMALI = ['myhis_partiler', 'myhis_irsaliyeler', 'myhis_firmalar', 'myhis_urunler',
+    'myhis_stoklar', 'myhis_stokHareketleri', 'myhis_kumasStok', 'myhis_kumasTurleri', 'myhis_cariHareketler', 'myhis_isAkisi'];
+const PASIF_FIRMA_ALANLARI = {
+    myhis_partiler: ['kesimhaneId', 'dikimhaneId', 'utupaketciId'],
+    myhis_irsaliyeler: ['gonderenFirmaId', 'alanFirmaId'],
+    myhis_kumasStok: ['gelenFirmaId', 'kesimhaneId'],
+};
+let silmeIzniBitis = 0; // sekmeye özel (sunucudaki oturum gibi)
+const silmeIzniVar = () => silmeIzniBitis > Date.now();
+
 // Veri her istekte depodan okunur: aynı tarayıcıda iki sekme açıkken (ör. biri sevk
 // sorumlusu, biri şoför) birinin yaptığı değişikliği diğeri de görür.
 // Oturum ise sekmeye özeldir (sessionStorage), böylece iki sekmede farklı kişi girebilir.
@@ -88,7 +100,7 @@ function girisGerekli() {
 
 function yazabilirMi(k, koleksiyon) {
     if (k.rol === 'admin' || HERKES_YAZAR.includes(koleksiyon)) return true;
-    if (k.rol === 'izleyici') return false;
+    if (k.rol === 'izleyici' || k.rol === 'fasoncu') return false;
     if (k.rol === 'kesimhane') {
         if (koleksiyon === 'myhis_partiler' || koleksiyon === 'myhis_irsaliyeler') return yetkiVar(k, 'partiler') || yetkiVar(k, 'irsaliyeler');
         if (koleksiyon === 'myhis_kumasStok' || koleksiyon === 'myhis_kumasTurleri') return yetkiVar(k, 'kumas_stok');
@@ -120,7 +132,25 @@ export async function demoIstek(sorgu, govde) {
             oturumAyarla(k.id); d.oturum = k.id;
             return { success: true, kullanici: guvenli(k) };
         }
-        if (islem === 'cikis') { oturumAyarla(null); d.oturum = null; return { success: true }; }
+        if (islem === 'cikis') { oturumAyarla(null); d.oturum = null; silmeIzniBitis = 0; return { success: true }; }
+        if (islem.startsWith('silme_')) {
+            const ben = girisGerekli();
+            if (islem === 'silme_bilgi') return { ayarli: !!d.silmeSifresi, izin: silmeIzniVar() };
+            if (islem === 'silme_onay') {
+                const sifre = String(g.sifre || '');
+                if (!sifre || sifre !== (d.silmeSifresi || ben.sifre)) hata(403, 'sifre_hatali', 'Şifre hatalı — silme işlemi iptal edildi.');
+                silmeIzniBitis = Date.now() + 600000;
+                return { success: true, sure: 600 };
+            }
+            if (islem === 'silme_sifresi') {
+                if (ben.rol !== 'admin') hata(403, 'yetki_yok', 'Silme şifresini sadece yönetici belirleyebilir.');
+                if (String(g.mevcutSifre || '') !== ben.sifre) hata(403, 'sifre_hatali', 'Giriş şifreniz hatalı.');
+                const yeni = String(g.sifre || '');
+                if (yeni && yeni.length < 4) hata(400, 'zayif_sifre', 'Silme şifresi en az 4 karakter olmalı.');
+                d.silmeSifresi = yeni || null; kaydet();
+                return { success: true, ayarli: !!yeni };
+            }
+        }
         hata(400, 'bilinmeyen', 'Demo modunda desteklenmiyor.');
     }
 
@@ -162,6 +192,7 @@ export async function demoIstek(sorgu, govde) {
         }
         if (islem === 'sil') {
             if (k.id === ben.id) hata(400, 'kendini_silme', 'Oturumu açık olan kullanıcıyı silemezsiniz.');
+            if (!silmeIzniVar()) hata(403, 'silme_onayi_gerekli', 'Silme işlemi için güvenlik şifresi doğrulanmalı.');
             d.veri.kullanicilar = d.veri.kullanicilar.filter(u => u.id !== k.id);
             gunluk(ben, 'Kullanıcı Silindi', k.ad); kaydet();
             return { success: true };
@@ -278,8 +309,8 @@ export async function demoIstek(sorgu, govde) {
             if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
             return sonuc;
         }
-        if (ben.rol === 'kesimhane') {
-            Object.assign(sonuc, kesimhaneVerisi(d, ben));
+        if (ben.rol === 'kesimhane' || ben.rol === 'fasoncu') {
+            Object.assign(sonuc, ben.rol === 'kesimhane' ? kesimhaneVerisi(d, ben) : fasoncuVerisi(d, ben));
             sonuc.myhis_tema = d.tema;
             if (d.merkez) sonuc.myhis_merkez = JSON.stringify(d.merkez);
             return sonuc;
@@ -300,6 +331,10 @@ export async function demoIstek(sorgu, govde) {
     const degisiklikler = g.degisiklikler || {};
     const reddedilen = Object.keys(degisiklikler).filter(k => !(k in d.veri) || !k.startsWith('myhis_') || !yazabilirMi(ben, k));
     if (reddedilen.length) hata(403, 'yetki_yok', 'Bu verileri değiştirme yetkiniz yok.');
+    if (SILME_KORUMALI.some(k => degisiklikler[k]?.delete?.length) && !silmeIzniVar()) {
+        hata(403, 'silme_onayi_gerekli', 'Silme işlemi için güvenlik şifresi doğrulanmalı. Tekrar deneyin.');
+    }
+    pasifFirmaKontrol(d, degisiklikler);
     const yenile = ben.rol === 'kesimhane' ? kesimhaneYazimi(d, ben, degisiklikler) : false;
     Object.entries(degisiklikler).forEach(([k, { upsert = [], delete: sil = [] }]) => {
         let liste = d.veri[k];
@@ -319,6 +354,45 @@ export async function demoIstek(sorgu, govde) {
     }
     kaydet();
     return { success: true, yenile };
+}
+
+function pasifFirmaKontrol(d, degisiklikler) {
+    const firmalar = Object.fromEntries(d.veri.myhis_firmalar.map(f => [f.id, f]));
+    (degisiklikler.myhis_firmalar?.upsert || []).forEach(f => { if (f?.id) firmalar[f.id] = f; });
+    Object.entries(PASIF_FIRMA_ALANLARI).forEach(([anahtar, alanlar]) => {
+        (degisiklikler[anahtar]?.upsert || []).forEach(kayit => {
+            const mevcut = d.veri[anahtar].find(x => x.id === kayit?.id) || {};
+            alanlar.forEach(alan => {
+                const id = kayit?.[alan];
+                if (!id || firmalar[id]?.aktif !== false || mevcut[alan] === id) return;
+                hata(403, 'pasif_firma', `${firmalar[id].ad} pasif durumda; yeni işe atanamaz. Önce firmayı aktifleştirin.`);
+            });
+        });
+    });
+}
+
+function fasoncuVerisi(d, ben) {
+    const f = ben.firmaId || '';
+    const sonuc = {};
+    Object.keys(d.veri).forEach(k => { if (k.startsWith('myhis_')) sonuc[k] = []; });
+    const partiFirmaya = (p) => [p.kesimhaneId, p.dikimhaneId, p.utupaketciId].includes(f) || (p.firmaAtamalari || []).some(a => a.firmaId === f);
+    if (f) {
+        sonuc.myhis_partiler = kopya(d.veri.myhis_partiler.filter(partiFirmaya)).map(p => {
+            if (p.kesimhaneId !== f) delete p.kesimBirimFiyat;
+            if (p.dikimhaneId !== f) delete p.dikimBirimFiyat;
+            if (p.utupaketciId !== f) delete p.utuBirimFiyat;
+            if (Array.isArray(p.firmaAtamalari)) p.firmaAtamalari = p.firmaAtamalari.filter(a => a.firmaId === f);
+            return p;
+        });
+        sonuc.myhis_irsaliyeler = kopya(d.veri.myhis_irsaliyeler.filter(i => irsFirmaya(i, f)));
+        sonuc.myhis_cariHareketler = kopya(d.veri.myhis_cariHareketler.filter(h => h.firmaId === f));
+        sonuc.myhis_isAkisi = kopya(d.veri.myhis_isAkisi.filter(a => a.firmaId === f));
+    }
+    sonuc.myhis_urunler = kopya(d.veri.myhis_urunler).map(u => { KESIMHANE_URUN_GIZLI.forEach(a => delete u[a]); return u; });
+    sonuc.myhis_firmalar = d.veri.myhis_firmalar.map(x => x.id === f ? kopya(x) : sec(x, KESIMHANE_FIRMA_ALANLARI));
+    sonuc.myhis_bildirimler = kopya(d.veri.myhis_bildirimler.filter(b => b.kullaniciId === ben.id));
+    sonuc.myhis_kullanicilar = [{ id: ben.id, ad: ben.ad, rol: ben.rol, firmaId: ben.firmaId, aktif: true }];
+    return sonuc;
 }
 
 // ---- Kesimhane yetkilisi (public/inc/kesimhane.php ile aynı kurallar) ----

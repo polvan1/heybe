@@ -4,8 +4,10 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
 import { yazdirIrsaliye } from '../utils/irsaliyePrint';
-import { Plus, Eye, Layers, Printer, Search, Download, Edit2, Archive, ArchiveRestore, MapPin, Trash2 } from 'lucide-react';
-import { DURUM_LABELS, exportToCSV, isPartiArsivde, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
+import { Plus, Eye, Layers, Printer, Search, FileSpreadsheet, Edit2, Archive, ArchiveRestore, MapPin, Trash2, QrCode } from 'lucide-react';
+import QrPartiOkut from '../components/QrPartiOkut';
+import { DURUM_LABELS, isPartiArsivde, firmaFiyatBul, partiDurumEtiketi } from '../data/db';
+import { listeyiExceleAktar } from '../utils/excel';
 import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 import { secilebilirFirmalar } from '../utils/firma';
 
@@ -43,6 +45,7 @@ export default function Partiler() {
     const [selectedUrunId, setSelectedUrunId] = useState('');
     const [renkler, setRenkler] = useState([]);
     const [yeniRenk, setYeniRenk] = useState('');
+    const [qrAcik, setQrAcik] = useState(false);
     const [kesimhaneId, setKesimhaneId] = useState('');
     const [dikimhaneId, setDikimhaneId] = useState('');
     const [utupaketciId, setUtupaketciId] = useState('');
@@ -93,15 +96,31 @@ export default function Partiler() {
     const arsivSayisi = partiler.filter(p => isPartiArsivde(p, cariHareketler)).length;
     const sorted = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    const handleExportCSV = () => {
-        exportToCSV(sorted, [
-            { label: 'Parti No', key: 'partiNo' },
-            { label: 'Ürün', key: 'urunAdi' },
-            { label: 'Ürün Kodu', key: 'urunKodu' },
-            { label: 'Toplam Adet', key: 'toplamAdet' },
-            { label: 'Durum', key: r => DURUM_LABELS[r.durum] || r.durum },
-            { label: 'Tarih', key: r => r.createdAt ? new Date(r.createdAt).toLocaleDateString('tr-TR') : '' },
-        ], 'partiler');
+    // Görünen (filtrelenmiş) partiler Excel'e; fiyatlar sadece kesimhane olmayanlara
+    const handleExportExcel = () => {
+        const firmaAdi = (fid) => firmalar.find(f => f.id === fid)?.ad || '';
+        const sutunlar = [
+            { baslik: 'Parti No', deger: p => p.partiNo },
+            { baslik: 'Tarih', tip: 'tarih', deger: p => p.createdAt },
+            { baslik: 'Ürün Kodu', deger: p => p.urunKodu },
+            { baslik: 'Ürün', deger: p => p.urunAdi },
+            { baslik: 'Durum', deger: p => partiDurumEtiketi(p) || DURUM_LABELS[p.durum] || p.durum },
+            { baslik: 'Planlanan Adet', tip: 'sayi', deger: p => p.toplamAdet || 0 },
+            { baslik: 'Kesilen Adet', tip: 'sayi', deger: p => p.kesilenAdet || null },
+            { baslik: 'Kalan Adet', tip: 'sayi', deger: p => p.kalanAdet ?? null },
+            { baslik: 'Kesimhane', deger: p => firmaAdi(p.kesimhaneId) },
+            { baslik: 'Dikimhane', deger: p => firmaAdi(p.dikimhaneId) },
+            { baslik: 'Ütü/Paket', deger: p => firmaAdi(p.utupaketciId) },
+            { baslik: 'Renkler', deger: p => (p.renkler || []).map(r => `${r.renk}: ${r.toplam || 0}`).join(', ') },
+        ];
+        if (!kesimhaneKullanici) {
+            sutunlar.push(
+                { baslik: 'Kesim ₺/adet', tip: 'para', deger: p => p.kesimBirimFiyat || null },
+                { baslik: 'Dikim ₺/adet', tip: 'para', deger: p => p.dikimBirimFiyat || null },
+                { baslik: 'Ütü ₺/adet', tip: 'para', deger: p => p.utuBirimFiyat || null },
+            );
+        }
+        listeyiExceleAktar('Partiler', sorted, sutunlar, { toplamlar: [5, 6, 7] });
     };
 
     const addRenk = () => {
@@ -247,10 +266,16 @@ export default function Partiler() {
         <div className="animate-fade-in">
             <div className="page-header">
                 <h1 className="page-title">Partiler</h1>
-                <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
-                    <Plus size={18} /> Yeni Parti
-                </button>
+                <div className="page-header-actions" style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-soft" onClick={() => setQrAcik(true)} title="Etiket veya irsaliyedeki QR'ı okut">
+                        <QrCode size={18} /> QR Okut
+                    </button>
+                    <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
+                        <Plus size={18} /> Yeni Parti
+                    </button>
+                </div>
             </div>
+            {qrAcik && <QrPartiOkut onClose={() => setQrAcik(false)} />}
 
             {/* Arama + Export */}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
@@ -263,8 +288,8 @@ export default function Partiler() {
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <button className="btn btn-ghost" onClick={handleExportCSV} title="CSV'ye Aktar" style={{ flexShrink: 0 }}>
-                    <Download size={18} />
+                <button className="btn btn-ghost" onClick={handleExportExcel} title="Excel'e aktar" aria-label="Excel'e aktar" style={{ flexShrink: 0 }}>
+                    <FileSpreadsheet size={18} />
                 </button>
             </div>
 

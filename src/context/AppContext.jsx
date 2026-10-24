@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import * as db from '../data/db';
+import { agHatasiMi } from '../data/cevrimdisi';
 
 const AppContext = createContext();
 
@@ -55,7 +56,7 @@ export function AppProvider({ children }) {
 
     // Giriş yapılınca (veya kayıtlı oturum varsa) verileri sunucudan yükle
     const oturumuAc = useCallback(async (user) => {
-        await db.initDB();
+        await db.initDB(user);
         setCurrentUser(user);
         refresh();
     }, [refresh, setCurrentUser]);
@@ -68,8 +69,14 @@ export function AppProvider({ children }) {
                 setKurulumGerekli(!!durum.kurulumGerekli);
                 if (durum.kullanici) await oturumuAc(durum.kullanici);
             } catch (e) {
-                console.error('Sunucuya bağlanılamadı:', e);
-                setSunucuHatasi(e.message || 'Sunucuya bağlanılamadı.');
+                // İnternet yok: bu cihazda son çalışan kullanıcının verisiyle çevrimdışı aç
+                const son = agHatasiMi(e) ? await db.sonKullanici() : null;
+                if (son) {
+                    await oturumuAc(son);
+                } else {
+                    console.error('Sunucuya bağlanılamadı:', e);
+                    setSunucuHatasi(agHatasiMi(e) ? 'İnternet bağlantısı yok. Bağlantı gelince tekrar deneyin.' : (e.message || 'Sunucuya bağlanılamadı.'));
+                }
             }
             setLoading(false);
         };
@@ -130,7 +137,8 @@ export function AppProvider({ children }) {
     }, [oturumuAc]);
 
     const logout = useCallback(async () => {
-        await db.cikisYap();
+        const cikildi = await db.cikisYap();
+        if (cikildi === false) return;
         setCurrentUser(null);
     }, [setCurrentUser]);
 

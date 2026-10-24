@@ -93,8 +93,9 @@ function soforVerisi($pdo, $ben) {
 
 // GET: kullanıcının görebileceği tüm veriler
 function veriOku($pdo, $ben) {
-    if ($ben['rol'] === 'sofor' || $ben['rol'] === 'kesimhane') {
-        $sonuc = $ben['rol'] === 'sofor' ? soforVerisi($pdo, $ben) : kesimhaneVerisi($pdo, $ben);
+    if (in_array($ben['rol'], ['sofor', 'kesimhane', 'fasoncu'], true)) {
+        $sonuc = $ben['rol'] === 'sofor' ? soforVerisi($pdo, $ben)
+            : ($ben['rol'] === 'kesimhane' ? kesimhaneVerisi($pdo, $ben) : fasoncuVerisi($pdo, $ben));
         try {
             foreach ($pdo->query("SELECT s_key, s_value FROM settings")->fetchAll() as $s) {
                 if (in_array($s['s_key'], ['myhis_tema', 'myhis_merkez'], true)) $sonuc[$s['s_key']] = $s['s_value'];
@@ -144,6 +145,10 @@ function veriYaz($pdo, $ben, $govde) {
         echo json_encode(['error' => 'yetki_yok', 'mesaj' => 'Bu verileri değiştirme yetkiniz yok.', 'reddedilen' => $reddedilen], JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    // Korumalı silmeler şifre onayı ister; pasif firmaya yeni iş atanamaz (inc/guvenlik.php)
+    silmeKontrol($degisiklikler);
+    pasifFirmaKontrol($pdo, $degisiklikler);
 
     // Kesimhane yetkilisi: kayıt bazlı sahiplik kontrolü ve sunucu tarafı numaralandırma
     $GLOBALS['yaziDuzeltildi'] = $ben['rol'] === 'kesimhane' ? kesimhaneYazimi($pdo, $ben, $degisiklikler) : false;

@@ -3,8 +3,9 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import Notice from '../components/ui/Notice';
 import SearchableSelect from '../components/SearchableSelect';
-import { Plus, FileText, Trash2, Search, Download, Printer, Check, X, Truck, Eye, ArrowRight, MessageCircle, Share2, ScanLine, FileDown, Loader2, Image as ImageIcon } from 'lucide-react';
-import { IRSALIYE_DURUM_LABELS, IRSALIYE_TIP_LABELS, DURUM_LABELS, exportToCSV } from '../data/db';
+import { Plus, FileText, Trash2, Search, FileSpreadsheet, Printer, Check, X, Truck, Eye, ArrowRight, MessageCircle, Share2, ScanLine, FileDown, Loader2, Image as ImageIcon } from 'lucide-react';
+import { IRSALIYE_DURUM_LABELS, IRSALIYE_TIP_LABELS, DURUM_LABELS } from '../data/db';
+import { listeyiExceleAktar } from '../utils/excel';
 import { yazdirIrsaliye } from '../utils/irsaliyePrint';
 import { whatsappAc, irsaliyeMetni } from '../utils/whatsapp';
 import { irsaliyePdfPaylas } from '../utils/irsaliyePdf';
@@ -141,8 +142,8 @@ export default function Irsaliyeler() {
 
     // Silme karttan kaldırıldı — irsaliye silme artık detay penceresinde
     // ve güvenlik şifresiyle yapılır (yanlışlıkla dokunma önlemi).
-    const handleDetaySil = (irsaliye) => {
-        if (!silmeOnayi(`${irsaliye.irsaliyeNo} numaralı irsaliye silinecek.`)) return;
+    const handleDetaySil = async (irsaliye) => {
+        if (!(await silmeOnayi(`${irsaliye.irsaliyeNo} numaralı irsaliye silinecek.`))) return;
         irsaliyeSil(irsaliye.id);
         setDetay(null);
     };
@@ -157,17 +158,21 @@ export default function Irsaliyeler() {
         return '';
     };
 
-    const handleExportCSV = () => {
-        exportToCSV(sorted, [
-            { label: 'İrsaliye No', key: 'irsaliyeNo' },
-            { label: 'Parti No', key: 'partiNo' },
-            { label: 'Ürün', key: 'urunAdi' },
-            { label: 'Gönderen', key: 'gonderenFirmaAdi' },
-            { label: 'Alan', key: 'alanFirmaAdi' },
-            { label: 'Adet', key: 'toplamAdet' },
-            { label: 'Durum', key: r => IRSALIYE_DURUM_LABELS[r.durum] || r.durum },
-            { label: 'Tarih', key: r => formatDate(r.tarih) },
-        ], 'irsaliyeler');
+    const handleExportExcel = () => {
+        listeyiExceleAktar('Irsaliyeler', sorted, [
+            { baslik: 'İrsaliye No', deger: r => r.irsaliyeNo },
+            { baslik: 'Tarih', tip: 'tarih', deger: r => r.tarih },
+            { baslik: 'Tür', deger: r => IRSALIYE_TIP_LABELS[r.tip] || r.tip },
+            { baslik: 'Parti No', deger: r => r.partiNo },
+            { baslik: 'Ürün Kodu', deger: r => r.urunKodu },
+            { baslik: 'Ürün', deger: r => r.urunAdi },
+            { baslik: 'Gönderen', deger: r => r.gonderenFirmaAdi },
+            { baslik: 'Alan', deger: r => r.alanFirmaAdi },
+            { baslik: 'Adet', tip: 'sayi', deger: r => r.toplamAdet || 0 },
+            { baslik: 'Durum', deger: r => IRSALIYE_DURUM_LABELS[r.durum] || r.durum },
+            { baslik: 'Renkler', deger: r => (r.renkler || []).map(x => `${x.renk}: ${x.toplam || 0}`).join(', ') },
+            { baslik: 'Not', deger: r => r.notlar },
+        ], { toplamlar: [8] });
     };
 
     return (
@@ -195,8 +200,8 @@ export default function Irsaliyeler() {
                     <Search size={18} className="search-icon" />
                     <input type="text" placeholder="İrsaliye no, parti no veya ürün ara..." value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
-                <button className="btn btn-ghost" onClick={handleExportCSV} title="CSV'ye Aktar" style={{ flexShrink: 0 }}>
-                    <Download size={18} />
+                <button className="btn btn-ghost" onClick={handleExportExcel} title="Excel'e aktar" aria-label="Excel'e aktar" style={{ flexShrink: 0 }}>
+                    <FileSpreadsheet size={18} />
                 </button>
             </div>
 

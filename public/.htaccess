@@ -9,7 +9,7 @@
 
 # index.html, service worker ve manifest her zaman taze gelsin (yeni sürüm hemen görünsün)
 <IfModule mod_headers.c>
-  <FilesMatch "^(index\.html|sw\.js|manifest\.json)$">
+  <FilesMatch "^(index\.html|sw\.js|manifest\.json|asset-listesi\.json)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>

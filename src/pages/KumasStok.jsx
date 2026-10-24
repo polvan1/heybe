@@ -2,7 +2,8 @@ import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
 import SearchableSelect from '../components/SearchableSelect';
-import { Plus, Trash2, Search, Scissors, Camera, PackagePlus, Settings2, Loader2, Sparkles, Factory, Layers, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Search, Scissors, Camera, PackagePlus, Settings2, Loader2, Sparkles, Factory, Layers, Edit2, FileSpreadsheet } from 'lucide-react';
+import { excelIndir } from '../utils/excel';
 import Notice from '../components/ui/Notice';
 import { gorselDataUrl } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
@@ -189,8 +190,12 @@ export default function KumasStok() {
         setShowForm(true);
     };
 
-    const handleKaydet = () => {
+    const handleKaydet = async () => {
         if (!form.kumasAdi.trim() || !parseFloat(form.miktar)) return;
+        // Fiyat/firma kaldırılırsa bağlı cari borç silinir → silme şifresi gerekir
+        const borcSilinecek = fiyatGirebilir && duzenlenen?.cariHareketId && !kumasCariKapali(duzenlenen)
+            && (!(kumasTutari(form) > 0) || !form.gelenFirmaId);
+        if (borcSilinecek && !(await silmeOnayi(`${duzenlenen.gelenFirmaAdi || 'Tedarikçi'} carisindeki ${tl(duzenlenen.tutar)} kumaş alımı borcu silinecek.`))) return;
         const firma = firmalar.find(f => f.id === form.gelenFirmaId);
         const kesimhaneId = (kesimhaneKullanici ? currentUser.firmaId : form.kesimhaneId) || null;
         const veri = {
@@ -215,9 +220,37 @@ export default function KumasStok() {
     const formTutari = kumasTutari(form);
     const formCariKapali = duzenlenen ? kumasCariKapali(duzenlenen) : false;
 
-    const handleSil = (k) => {
-        if (!silmeOnayi(`${k.kumasAdi} — ${k.miktar} ${k.birim} kumaş girişi silinecek.`)) return;
+    const handleSil = async (k) => {
+        if (!(await silmeOnayi(`${k.kumasAdi} — ${k.miktar} ${k.birim} kumaş girişi silinecek.`))) return;
         kumasStokSil(k.id);
+    };
+
+    // Görünen kumaş girişleri + tür/renk özeti Excel'e (fiyatlar sadece cari yetkisi olanlara)
+    const excelAl = () => {
+        const sutunlar = [
+            { baslik: 'Tarih', tip: 'tarih' }, { baslik: 'Kumaş' }, { baslik: 'Renk' }, { baslik: 'Top', tip: 'sayi' },
+            { baslik: 'Miktar', tip: 'sayi' }, { baslik: 'Birim' }, { baslik: 'Kesimhane' }, { baslik: 'Geldiği Firma' },
+            { baslik: 'İrsaliye/Ref.' }, { baslik: 'Parti' }, { baslik: 'Not' },
+        ];
+        if (fiyatGirebilir) sutunlar.push({ baslik: 'Birim Fiyat', tip: 'para' }, { baslik: 'Tutar', tip: 'para' });
+        const satirlar = filtered.map(k => {
+            const r = [k.tarih, k.kumasAdi, k.renk || '', k.topAdedi || null, Number(k.miktar) || 0, k.birim,
+                k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId), k.gelenFirmaAdi || '', k.referansNo || '', k.partiNo || '', k.notlar || ''];
+            if (fiyatGirebilir) r.push(k.birimFiyat || null, k.tutar || null);
+            return r;
+        });
+        const ozet = {};
+        filtered.forEach(k => {
+            const a = `${k.kumasAdi}|${k.renk || ''}|${k.birim}`;
+            if (!ozet[a]) ozet[a] = [k.kumasAdi, k.renk || '', 0, 0, k.birim];
+            ozet[a][2] += parseFloat(k.topAdedi) || 0;
+            ozet[a][3] += parseFloat(k.miktar) || 0;
+        });
+        excelIndir('Kumas_Stok', [
+            { ad: 'Girişler', sutunlar, satirlar },
+            { ad: 'Özet', sutunlar: [{ baslik: 'Kumaş' }, { baslik: 'Renk' }, { baslik: 'Top', tip: 'sayi' }, { baslik: 'Miktar', tip: 'sayi' }, { baslik: 'Birim' }],
+                satirlar: Object.values(ozet).sort((x, y) => y[3] - x[3]) },
+        ]);
     };
 
     const handleTurEkle = () => {
@@ -236,6 +269,9 @@ export default function KumasStok() {
                 <div className="page-header-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button className="btn btn-ghost" onClick={() => setShowTurler(true)}>
                         <Settings2 size={16} /> Türler
+                    </button>
+                    <button className="btn btn-ghost" onClick={excelAl} disabled={!filtered.length} title="Görünen girişleri Excel'e aktar">
+                        <FileSpreadsheet size={16} /> Excel
                     </button>
                     <button className="btn btn-success" onClick={() => kameraRef.current?.click()} disabled={okumaBusy}>
                         {okumaBusy ? <Loader2 size={17} className="animate-spin" /> : <Camera size={17} />}
@@ -580,7 +616,7 @@ export default function KumasStok() {
                                     <span className="text-xs text-muted" style={{ marginLeft: '8px' }}>{t.birim}</span>
                                 </div>
                                 {!kesimhaneKullanici && (
-                                    <button className="btn-icon" onClick={() => { if (silmeOnayi(`"${t.ad}" kumaş türü silinecek.`)) kumasTuruSil(t.id); }} style={{ color: 'var(--accent-danger)' }}>
+                                    <button className="btn-icon" onClick={async () => { if (await silmeOnayi(`"${t.ad}" kumaş türü silinecek.`)) kumasTuruSil(t.id); }} style={{ color: 'var(--accent-danger)' }}>
                                         <Trash2 size={14} />
                                     </button>
                                 )}

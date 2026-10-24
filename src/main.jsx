@@ -44,7 +44,10 @@ window.addEventListener('orientationchange', () => setTimeout(iosAltBoslukOlc, 3
 // PWA: Service worker kaydı (sadece production build'de; demoda yok)
 if (import.meta.env.PROD && import.meta.env.VITE_DEMO !== '1' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(err => {
+        navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').then(kayit => {
+            // Yeni sürümün tüm sayfa dosyalarını çevrimdışı kullanım için önbelleğe al
+            navigator.serviceWorker.ready.then(() => kayit.active?.postMessage('onbellegi-guncelle'));
+        }).catch(err => {
             console.warn('Service worker kaydedilemedi:', err);
         });
     });
