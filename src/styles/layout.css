@@ -74,8 +74,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: 0 var(--space-6);
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-header-bg);
+  border-bottom: 1px solid var(--color-header-bg);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -97,7 +97,7 @@
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.02em;
-  color: var(--color-text);
+  color: var(--color-header-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,7 +120,7 @@
 .header-user-name {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
+  color: var(--color-header-text-secondary);
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -138,10 +138,9 @@
   width: var(--icon-button-size);
   height: var(--icon-button-size);
   border-radius: var(--radius-full);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  box-shadow: var(--shadow-button);
+  background: var(--color-header-btn);
+  border: 1px solid var(--color-header-btn-border);
+  color: var(--color-header-text);
   cursor: pointer;
   flex-shrink: 0;
   transition:
@@ -155,9 +154,7 @@
 .header-burger:hover,
 .theme-toggle:hover,
 .notification-bell:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-header-btn-hover);
 }
 
 .header-burger:active,
@@ -170,13 +167,12 @@
 .theme-toggle:focus-visible,
 .notification-bell:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-header-focus);
 }
 
 .notification-bell[aria-expanded="true"] {
-  color: var(--color-primary);
-  background: var(--color-nav-active);
-  border-color: transparent;
+  background: var(--color-header-btn-hover);
+  border-color: var(--color-header-text);
 }
 
 @media (min-width: 1024px) {
@@ -257,7 +253,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--color-bg);
+  border: 2px solid var(--color-header-bg);
   font-variant-numeric: tabular-nums;
 }
 
@@ -395,8 +391,8 @@
   left: 0;
   bottom: calc(-1 * var(--alt-bosluk, 0px));
   width: var(--sidebar-width);
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
   display: flex;
   flex-direction: column;
   z-index: 200;
@@ -442,7 +438,7 @@
 }
 
 .sidebar-collapse-btn-header:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-sidebar-hover);
   color: var(--color-text);
 }
 
@@ -457,7 +453,7 @@
 
 /* Bölümler arasında ince, temiz ayraç */
 .sidebar-section + .sidebar-section {
-  border-top: 1px solid var(--color-divider);
+  border-top: 1px solid var(--color-sidebar-divider);
   margin: var(--space-2) var(--space-4) 0;
   padding-top: var(--space-2);
 }
@@ -509,7 +505,7 @@
 }
 
 .nav-item:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-sidebar-hover);
   color: var(--color-text);
 }
 
@@ -518,13 +514,13 @@
 }
 
 .nav-item.active {
-  background: var(--color-nav-active);
+  background: var(--color-sidebar-active);
   color: var(--color-text);
   font-weight: var(--font-weight-semibold);
 }
 
 .nav-item.active .nav-icon {
-  color: var(--color-primary);
+  color: var(--color-sidebar-active-icon);
 }
 
 .nav-item:focus-visible {
@@ -547,7 +543,7 @@
   margin: 0 var(--space-3) var(--space-3);
   border-radius: var(--radius-md);
   color: var(--color-icon);
-  border-top: 1px solid var(--color-divider);
+  border-top: 1px solid var(--color-sidebar-divider);
   font-size: var(--font-size-xs);
   white-space: nowrap;
   transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
@@ -555,7 +551,7 @@
 
 .sidebar-collapse-btn:hover {
   color: var(--color-text);
-  background: var(--color-surface-hover);
+  background: var(--color-sidebar-hover);
 }
 
 /* Daralt/Genişlet masaüstü özelliğidir */
@@ -583,8 +579,7 @@
   }
 
   .sidebar .sidebar-logo {
-    height: 36px;
-    padding: 4px 6px;
+    height: 30px;
   }
 
   .sidebar .sidebar-section + .sidebar-section {
@@ -617,8 +612,7 @@
   }
 
   .sidebar.collapsed .sidebar-logo {
-    height: 36px;
-    padding: 4px 6px;
+    height: 30px;
   }
 
   .sidebar.collapsed .sidebar-section + .sidebar-section {
@@ -739,26 +733,18 @@
 /* Uygulama logosu (PNG beyaz zeminlidir; her iki temada da kart gibi durur) */
 .app-logo {
   display: block;
-  background: #fff;
-  border-radius: var(--radius-sm);
   object-fit: contain;
 }
 
 .sidebar-logo {
-  height: 42px;
+  height: 40px;
   width: auto;
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xs);
 }
 
 .login-logo {
   height: 60px;
   width: auto;
   margin: 0 auto var(--space-4);
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xs);
 }
 
 /* Sayfa yüklenirken */

@@ -58,6 +58,22 @@
   --status-tamamlandi: #1F9D6B;
   --firma-kumasci: #0E8F8A;                     /* kumaş tedarikçisi rozeti */
 
+  /* --- Marka: üst panel logo mavisi, yan menü açık mavi tonu --- */
+  --color-brand: #20509B;                       /* HİS logosundaki mavi */
+  --color-header-bg: var(--color-brand);
+  --color-header-text: #FFFFFF;
+  --color-header-text-secondary: rgba(255, 255, 255, 0.82);
+  --color-header-btn: rgba(255, 255, 255, 0.12);
+  --color-header-btn-hover: rgba(255, 255, 255, 0.22);
+  --color-header-btn-border: rgba(255, 255, 255, 0.24);
+  --color-header-focus: rgba(255, 255, 255, 0.45);
+  --color-sidebar-bg: #EAF1FA;
+  --color-sidebar-border: #D3E0F0;
+  --color-sidebar-divider: #D9E5F3;
+  --color-sidebar-hover: rgba(32, 80, 155, 0.07);
+  --color-sidebar-active: rgba(32, 80, 155, 0.13);
+  --color-sidebar-active-icon: #20509B;
+
   /* --- Grafikler --- */
   --chart-bar: #24394B;                         /* koyu lacivert çubuk */
   --chart-bar-muted: rgba(36, 57, 75, 0.14);
@@ -133,7 +149,7 @@
   --bg-tertiary: var(--color-surface-hover);
   --bg-card: var(--color-surface);
   --bg-card-hover: var(--color-surface-muted);
-  --bg-sidebar: var(--color-surface);
+  --bg-sidebar: var(--color-sidebar-bg);
   --bg-overlay: var(--color-overlay);
   --text-primary: var(--color-text);
   --text-secondary: var(--color-text-secondary);
@@ -199,6 +215,15 @@
   --status-utupakette: #F28DB5;
   --status-tamamlandi: #4CC892;
   --firma-kumasci: #4FD1C5;
+
+  --color-brand: #20509B;
+  --color-header-bg: #1A427F;                   /* logo mavisinin koyu temaya uygun tonu */
+  --color-sidebar-bg: #132233;
+  --color-sidebar-border: #233448;
+  --color-sidebar-divider: #22344A;
+  --color-sidebar-hover: rgba(127, 176, 240, 0.08);
+  --color-sidebar-active: rgba(127, 176, 240, 0.16);
+  --color-sidebar-active-icon: #7FB0F0;
 
   --chart-bar: #E9EDF2;                         /* kırık beyaz çubuk */
   --chart-bar-muted: rgba(233, 237, 242, 0.16);

@@ -103,9 +103,11 @@ export function AppProvider({ children }) {
             document.documentElement.setAttribute('data-theme', tema);
             // Tarayıcı/telefon üst çubuğu zemin rengini izlesin
             const meta = document.querySelector('meta[name="theme-color"]');
-            if (meta) meta.setAttribute('content', tema === 'dark' ? '#0D1B27' : '#F7F9FB');
+            // Giriş yapılınca telefonun üst çubuğu mavi üst panelle birleşir
+            const renk = currentUser ? (tema === 'dark' ? '#1A427F' : '#20509B') : (tema === 'dark' ? '#0D1B27' : '#F7F9FB');
+            if (meta) meta.setAttribute('content', renk);
         }
-    }, [tema, loading]);
+    }, [tema, loading, currentUser]);
 
     // OTOMATİK TAZELEME: uygulama öne gelince + açıkken her 60 sn'de bir
     // sunucudan güncel veri çekilir. Böylece başka cihazda/kişide yapılan
