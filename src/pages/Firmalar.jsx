@@ -44,7 +44,8 @@ export default function Firmalar() {
     const handleSave = () => {
         if (!form.ad.trim()) return;
         const data = { ...form, odemeVadesi: form.odemeVadesi ? parseInt(form.odemeVadesi, 10) : null };
-        if (data.tip === 'kumasci') data.gunlukKapasite = '';
+        // Boş sayı alanları null gönderilir (sunucu MySQL'de boş metni sayı kolonuna yazamaz)
+        data.gunlukKapasite = data.tip === 'kumasci' || form.gunlukKapasite === '' ? null : (parseInt(form.gunlukKapasite, 10) || null);
         if (editId) {
             firmaGuncelle(editId, data);
         } else {

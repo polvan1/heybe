@@ -28,6 +28,53 @@ const TABLO_HARITASI = [
 const JSON_KOLONLAR = ['asorti', 'fiyatlar', 'renkler', 'teslimatGecmisi', 'firmaAtamalari', 'yetkiler', 'fotolar', 'firmaFiyatlari', 'duraklar'];
 const BOOL_KOLONLAR = ['aktif', 'okundu', 'hesaplandi', 'tamamlandi', 'arsivde'];
 
+// Kolon tipleri (semaTanimi'nden): 'int' | 'double' | 'bool' | ['varchar', n] | 'text'
+function kolonTipleri($tablo) {
+    static $onbellek = [];
+    if (isset($onbellek[$tablo])) return $onbellek[$tablo];
+    $tipler = [];
+    foreach (semaTanimi()[$tablo] ?? [] as $kolon => $tanim) {
+        $t = strtoupper($tanim);
+        if (strpos($t, 'TINYINT') === 0) $tipler[$kolon] = 'bool';
+        elseif (strpos($t, 'INT') === 0) $tipler[$kolon] = 'int';
+        elseif (strpos($t, 'DOUBLE') === 0) $tipler[$kolon] = 'double';
+        elseif (preg_match('/^VARCHAR\((\d+)\)/', $t, $m)) $tipler[$kolon] = ['varchar', (int)$m[1]];
+        else $tipler[$kolon] = 'text';
+    }
+    return $onbellek[$tablo] = $tipler;
+}
+
+// Uygulamadan gelen değeri kolonun tipine uygun hale getirir. MySQL katı modda (STRICT)
+// sayı kolonuna boş metin ('') ya da uzun metin gelirse TÜM kayıt reddedilir; bu yüzden
+// boş sayı NULL olur, sığmayan değer kolonda NULL bırakılıp ekAlanlar'a taşınır.
+// Dönüş: [kolona yazılacak değer, taştı mı]
+function kolonDegeri($tablo, $kolon, $deger) {
+    if (is_array($deger) || is_object($deger)) $deger = json_encode($deger, JSON_UNESCAPED_UNICODE);
+    $tip = kolonTipleri($tablo)[$kolon] ?? 'text';
+    if ($deger === null) return [null, false];
+    if ($tip === 'bool') {
+        if (is_bool($deger)) return [$deger ? 1 : 0, false];
+        if ($deger === '' ) return [0, false];
+        return [in_array(strtolower((string)$deger), ['1', 'true', 'evet', 'on'], true) ? 1 : 0, false];
+    }
+    if ($deger === true) $deger = 1;
+    if ($deger === false) $deger = 0;
+    if ($tip === 'int' || $tip === 'double') {
+        if ($deger === '') return [null, false];
+        $metin = is_string($deger) ? str_replace(',', '.', trim($deger)) : $deger;
+        if (!is_numeric($metin)) return [null, true];
+        $sayi = (float)$metin;
+        if ($tip === 'int') {
+            if (abs($sayi) > 2147483647) return [null, true];
+            // Küsuratlı değer tam sayı kolonuna yuvarlanmadan ekAlanlar'da aynen saklanır
+            return $sayi == round($sayi) ? [(int)$sayi, false] : [null, true];
+        }
+        return [$sayi, false];
+    }
+    if (is_array($tip) && is_string($deger) && mb_strlen($deger, 'UTF-8') > $tip[1]) return [null, true];
+    return [$deger, false];
+}
+
 function satirCoz($satir) {
     // Tabloda kolonu olmayan alanlar ekAlanlar içinde saklanır; geri birleştir
     if (array_key_exists(EK_KOLON, $satir)) {
@@ -179,17 +226,17 @@ function veriYaz($pdo, $ben, $govde) {
             foreach ((isset($d['upsert']) && is_array($d['upsert']) ? $d['upsert'] : []) as $satir) {
                 if (!is_array($satir) || empty($satir['id'])) continue;
                 $filtreli = [];
-                if (in_array(EK_KOLON, $kolonlar, true)) {
-                    $ek = array_diff_key($satir, array_flip($kolonlar));
-                    $filtreli[EK_KOLON] = $ek ? json_encode($ek, JSON_UNESCAPED_UNICODE) : null;
-                }
+                $ek = in_array(EK_KOLON, $kolonlar, true) ? array_diff_key($satir, array_flip($kolonlar)) : [];
                 foreach ($kolonlar as $kolon) {
                     if ($kolon === EK_KOLON || !array_key_exists($kolon, $satir)) continue;
-                    $deger = $satir[$kolon];
-                    if (is_array($deger) || is_object($deger)) $deger = json_encode($deger, JSON_UNESCAPED_UNICODE);
-                    if ($deger === true) $deger = 1;
-                    if ($deger === false) $deger = 0;
+                    [$deger, $tasan] = kolonDegeri($tablo, $kolon, $satir[$kolon]);
                     $filtreli[$kolon] = $deger;
+                    // Kolona sığmayan değer (ör. sayı alanına metin) kaybolmasın: ekAlanlar'da saklanır,
+                    // okurken kolon boş olduğu için oradan geri gelir (satirCoz)
+                    if ($tasan && in_array(EK_KOLON, $kolonlar, true)) $ek[$kolon] = $satir[$kolon];
+                }
+                if (in_array(EK_KOLON, $kolonlar, true)) {
+                    $filtreli[EK_KOLON] = $ek ? json_encode($ek, JSON_UNESCAPED_UNICODE) : null;
                 }
                 $k = array_keys($filtreli);
                 $sql = "REPLACE INTO `$tablo` (`" . implode('`, `', $k) . "`) VALUES (" . implode(', ', array_fill(0, count($k), '?')) . ")";
