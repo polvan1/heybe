@@ -23,15 +23,15 @@ $gorsel = file_get_contents($argv[1]);
 if ($gorsel === false) { fwrite(STDERR, "Görsel okunamadı\n"); exit(1); }
 $tur = strtolower(pathinfo($argv[1], PATHINFO_EXTENSION)) === 'png' ? 'image/png' : 'image/jpeg';
 $baglam = [
-    'modeller' => ['HS-1021 — Basic Bisiklet Yaka Tişört', 'HS-2015 — Halter Yaka Atlet', 'HS-3002 — Çocuk Eşofman Takımı'],
-    'atolyeler' => ['Akın Konfeksiyon', 'Ece Dikim Evi', 'Güneş Tekstil Atölyesi'],
+    'modeller' => ['HS-1021 — Basic Bisiklet Yaka Tişört', 'HS-2015 — Halter Yaka Atlet', 'HS-3002 — Çocuk Eşofman Takımı', '1032 — Fermuarlı Takım Alt'],
+    'atolyeler' => ['Akın Konfeksiyon', 'Ece Dikim Evi', 'Güneş Tekstil Atölyesi', 'Deneme Atölye'],
     'kesimhaneler' => ['Yıldız Kesim', 'Doğan Kesimhane'],
     'partiler' => ['P-0009', 'P-0010'],
 ];
 $bas = microtime(true);
 $kumasModu = str_starts_with(basename($argv[1]), 'kumas');
 $prompt = $kumasModu ? kumasIrsaliyePrompt(['Süprem', 'Ribana', 'Kaşkorse', 'İki İplik']) : sevkIrsaliyePrompt($baglam);
-echo 'Okunan belge: ' . ($kumasModu ? 'kumaşçı fişi' : 'kesim sevk irsaliyesi') . "\n";
+echo 'Okunan belge: ' . ($kumasModu ? 'kumaşçı fişi' : 'kesim / sevk formu') . "\n";
 $sonuc = aiGorselJsonOku($prompt, $tur, base64_encode($gorsel));
 $sure = round(microtime(true) - $bas, 1);
 if (isset($sonuc['hata'])) {
@@ -74,18 +74,34 @@ if (!empty($argv[2]) && is_file($argv[2])) {
     // Uygulamadaki eşleştirme gibi: büyük/küçük harf, boşluk ve tire farkı önemsiz
     $anahtarYap = fn($model, $renk) => preg_replace('/[^0-9A-ZÇĞİÖŞÜ|]/u', '', mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $model . '|' . $renk), 'UTF-8'));
     $okunan = [];
+    $okunanBeden = [];
     foreach ($sonuc['veri']['satirlar'] ?? [] as $s) {
         $okunan[$anahtarYap((string)($s['model'] ?? ''), (string)($s['renk'] ?? ''))] = (int)($s['adet'] ?? 0);
+        $okunanBeden[$anahtarYap((string)($s['model'] ?? ''), (string)($s['renk'] ?? ''))] = is_array($s['bedenler'] ?? null) ? $s['bedenler'] : [];
     }
+    // Beden hücreleri (tire = soldakiyle aynı kuralı dahil): 2XL / 2X farkı önemsiz
+    $bedenSade = function ($b) {
+        $o = [];
+        foreach ((array)$b as $k => $v) {
+            $k = strtoupper(str_replace(['XXL', '2XL'], '2X', (string)$k));
+            if ((int)$v > 0) $o[$k] = (int)$v;
+        }
+        ksort($o);
+        return $o;
+    };
     $dogru = 0;
     foreach ($beklenen['satirlar'] as $b) {
         $anahtar = $anahtarYap($b['model'], $b['renk']);
         $ok = isset($okunan[$anahtar]) && $okunan[$anahtar] === (int)$b['adet'];
-        if ($ok) $dogru++;
-        echo ($ok ? '  ✓ ' : '  ✗ ') . "{$b['model']} / {$b['renk']} / {$b['adet']}" . ($ok ? '' : ' → okunan: ' . ($okunan[$anahtar] ?? 'yok')) . "\n";
+        $bedenOk = !isset($b['bedenler']) || $bedenSade($okunanBeden[$anahtar] ?? []) === $bedenSade($b['bedenler']);
+        if ($ok && $bedenOk) $dogru++;
+        echo ($ok && $bedenOk ? '  ✓ ' : '  ✗ ') . "{$b['model']} / {$b['renk']} / {$b['adet']}"
+            . (isset($b['bedenler']) ? ' ' . json_encode($b['bedenler']) : '')
+            . ($ok ? '' : ' → okunan: ' . ($okunan[$anahtar] ?? 'yok'))
+            . ($bedenOk ? '' : ' → bedenler: ' . json_encode($okunanBeden[$anahtar] ?? null, JSON_UNESCAPED_UNICODE)) . "\n";
     }
-    $alanlar = ['alan', 'gonderen', 'irsaliyeNo'];
-    foreach ($alanlar as $a) echo "  $a: " . ($sonuc['veri'][$a] ?? '') . " (beklenen: {$beklenen[$a]})\n";
+    $alanlar = ['alan', 'gonderen', 'irsaliyeNo', 'toplamAdet'];
+    foreach ($alanlar as $a) if (array_key_exists($a, $beklenen)) echo "  $a: " . ($sonuc['veri'][$a] ?? '') . " (beklenen: {$beklenen[$a]})\n";
     $toplam = count($beklenen['satirlar']);
     echo "Satır doğruluğu: $dogru / $toplam\n";
     if ($dogru < $toplam) echo "::warning::Okuma $toplam satırdan $dogru tanesini doğru buldu.\n";

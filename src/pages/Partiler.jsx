@@ -25,7 +25,7 @@ const DURUM_FILTERS = [
 ];
 
 export default function Partiler() {
-    const { partiler, urunler, firmalar, cariHareketler, partiEkle, partiArsivle, partiIlerlet, firmaEkle, urunEkle, currentUser } = useApp();
+    const { partiler, urunler, firmalar, cariHareketler, irsaliyeler = [], partiEkle, partiArsivle, partiIlerlet, firmaEkle, urunEkle, currentUser } = useApp();
     // Kesimhane yetkilisi: parti hep kendi kesimhanesine açılır, fiyatları görmez, arşivleyemez
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
     const [ilerletParti, setIlerletParti] = useState(null);
@@ -60,6 +60,8 @@ export default function Partiler() {
     const [kesimhaneId, setKesimhaneId] = useState('');
     const [dikimhaneId, setDikimhaneId] = useState('');
     const [utupaketciId, setUtupaketciId] = useState('');
+    // Varsayılan: parti açılınca kesilmiş ve atölyeye gönderilmiş sayılır (Dikimde) — irsaliye de oluşur
+    const [kesildiGonderildi, setKesildiGonderildi] = useState(true);
     const [customAsorti, setCustomAsorti] = useState(null);
     const [isEditingAsorti, setIsEditingAsorti] = useState(false);
 
@@ -310,13 +312,32 @@ export default function Partiler() {
         setKesimhaneId(kesimhaneKullanici ? (currentUser.firmaId || '') : '');
         setDikimhaneId('');
         setUtupaketciId('');
+        setKesildiGonderildi(true);
         setCustomAsorti(null);
         setIsEditingAsorti(false);
     };
 
     const handleSave = () => {
         if (!selectedUrun || !customAsorti || renkler.length === 0 || !kesimhaneId || !dikimhaneId || toplamAdet === 0) return;
+        const simdi = new Date().toISOString();
+        const atolyeyeGitti = kesildiGonderildi ? {
+            durum: 'dikimde',
+            kesimDurumu: 'gonderildi',
+            kesilenAdet: toplamAdet,
+            kesilenRenkler: renkler.map(r => ({ renk: r.renk, adet: r.toplam })),
+            kesimTarihi: simdi,
+            gonderimTarihi: simdi,
+            dikimBaslamaTarihi: simdi,
+            dikimeGonderilenAdet: toplamAdet,
+            sonCikanAdet: toplamAdet,
+            kalanAdet: 0,
+            teslimatGecmisi: [{
+                id: `tg_${Date.now().toString(36)}`, tarih: simdi, firmaAdi: 'Parti açılışı',
+                adim: 'Kesimde → Dikimde (kesildi, atölyeye gitti)', girenAdet: toplamAdet, cikanAdet: toplamAdet, fire: 0,
+            }],
+        } : {};
         partiEkle({
+            ...atolyeyeGitti,
             urunId: selectedUrun.id,
             urunKodu: selectedUrun.urunKodu,
             urunAdi: selectedUrun.urunAdi,
@@ -364,8 +385,14 @@ export default function Partiler() {
             gonderen = kesimhane; alan = dikimhane; hedefLabel = 'DİKİME GÖNDERİM';
         }
 
-        // Ortak sade şablonla yazdır (İrsaliyeler sayfasıyla aynı format)
+        // Kayıtlı (otomatik düzenlenmiş) irsaliye varsa numarasıyla o basılır
+        const tipKodu = hedef === 'utupaketci' ? 'dikimhane_utupaketci' : hedef === 'baskici' ? 'kesimhane_baskici' : 'kesimhane_dikimhane';
+        const kayitli = irsaliyeler.filter(i => i.partiId === parti.id && i.tip === tipKodu && i.durum !== 'iptal')
+            .sort((a, b) => new Date(b.tarih || 0) - new Date(a.tarih || 0))[0];
+        if (kayitli) { yazdirIrsaliye(kayitli, boyut, { parti, firmalar }); return; }
+        // MY HİS kesim formu düzeninde yazdır (İrsaliyeler sayfasıyla aynı format)
         yazdirIrsaliye({
+            tip: tipKodu,
             partiId: parti.id,
             partiNo: parti.partiNo,
             urunKodu: parti.urunKodu,
@@ -380,7 +407,7 @@ export default function Partiler() {
             alanFirmaAdi: alan?.ad || '',
             alanTel: alan?.telefon || '',
             alanAdres: alan?.adres || '',
-        }, boyut);
+        }, boyut, { parti, firmalar });
     };
 
     const formatMonthDay = (dateStr) => {
@@ -700,6 +727,10 @@ export default function Partiler() {
                                         </div>
                                     );
                                 })}
+                                <label className="firma-aktif-anahtar">
+                                    <input type="checkbox" checked={kesildiGonderildi} onChange={e => setKesildiGonderildi(e.target.checked)} />
+                                    <span>Kesildi ve atölyeye gitti <span className="text-muted">— parti doğrudan "Dikimde" açılır, kesim → atölye irsaliyesi oluşur</span></span>
+                                </label>
                             </div>
 
                             {/* 3. Renk ve Kat Girişi */}

@@ -1,0 +1,13 @@
+{
+  "alan": "Deneme Atölye",
+  "gonderen": "",
+  "irsaliyeNo": "004812",
+  "toplamAdet": 3168,
+  "satirlar": [
+    { "model": "1032", "renk": "Gri", "adet": 657, "bedenler": { "S": 219, "M": 219, "L": 219 } },
+    { "model": "1032", "renk": "Ekru", "adet": 696, "bedenler": { "S": 232, "M": 232, "L": 232 } },
+    { "model": "1032", "renk": "Lacivert", "adet": 561, "bedenler": { "S": 187, "M": 187, "L": 187 } },
+    { "model": "1032", "renk": "Siyah", "adet": 990, "bedenler": { "S": 330, "M": 330, "L": 330 } },
+    { "model": "1032", "renk": "Taş", "adet": 264, "bedenler": { "S": 88, "M": 88, "L": 88 } }
+  ]
+}

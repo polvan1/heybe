@@ -32,7 +32,7 @@ export default function Irsaliyeler() {
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
     const onaylayabilir = !kesimhaneKullanici;
 
-    // ---- Boş A5 şablon + okutma ----
+    // ---- Boş kesim formu + okutma ----
     const kameraRef = useRef(null);
     const [sablonModal, setSablonModal] = useState(false);
     const [sablon, setSablon] = useState({ kesimhaneId: '', atolyeId: '', kopya: 1 });
@@ -180,7 +180,7 @@ export default function Irsaliyeler() {
             <div className="page-header">
                 <h1 className="page-title">İrsaliyeler</h1>
                 <div className="page-header-actions">
-                    <button className="btn btn-ghost" onClick={sablonAc} title="Elle doldurulacak boş A5 kesim sevk irsaliyesi">
+                    <button className="btn btn-ghost" onClick={sablonAc} title="Elle doldurulacak boş MY HİS kesim formu (A4 yatay)">
                         <FileDown size={18} /> Boş Şablon
                     </button>
                     <button className="btn btn-ghost" onClick={() => kameraRef.current?.click()} disabled={okumaBusy} title="Doldurulmuş şablonun fotoğrafını çekin">
@@ -244,7 +244,7 @@ export default function Irsaliyeler() {
                                 <button className="btn btn-sm btn-soft irs-goruntule" onClick={(e) => { e.stopPropagation(); setDetay(i); }}>
                                     <Eye size={15} /> Görüntüle
                                 </button>
-                                <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); yazdirIrsaliye(i); }} title="Yazdır (A4)">
+                                <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); yazdirIrsaliye(i, 'A4', { parti: partiler.find(p => p.id === i.partiId), firmalar }); }} title="Yazdır (A4)">
                                     <Printer size={15} />
                                 </button>
                                 {i.durum === 'taslak' && onaylayabilir && (
@@ -347,8 +347,8 @@ export default function Irsaliyeler() {
                         >
                             <MessageCircle size={16} /> Metin
                         </button>
-                        <button className="btn btn-outline" onClick={() => yazdirIrsaliye(detay, 'A5')}><Printer size={16} /> A5</button>
-                        <button className="btn btn-primary" onClick={() => yazdirIrsaliye(detay, 'A4')}><Printer size={16} /> A4</button>
+                        <button className="btn btn-outline" onClick={() => yazdirIrsaliye(detay, 'A5', { parti: partiler.find(p => p.id === detay.partiId), firmalar })}><Printer size={16} /> A5</button>
+                        <button className="btn btn-primary" onClick={() => yazdirIrsaliye(detay, 'A4', { parti: partiler.find(p => p.id === detay.partiId), firmalar })}><Printer size={16} /> A4</button>
                     </>}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -393,10 +393,10 @@ export default function Irsaliyeler() {
                     </div>
                 </Modal>
             )}
-            {/* Boş A5 şablon yazdırma */}
+            {/* Boş kesim formu yazdırma */}
             {sablonModal && (
                 <Modal
-                    title="Boş kesim sevk irsaliyesi (A5)"
+                    title="Boş kesim formu (A4 yatay)"
                     onClose={() => setSablonModal(false)}
                     footer={<>
                         <button className="btn btn-ghost" onClick={() => setSablonModal(false)}>İptal</button>
@@ -404,11 +404,12 @@ export default function Irsaliyeler() {
                     </>}
                 >
                     <p className="text-sm text-muted" style={{ marginBottom: '16px' }}>
-                        Kesimhane formu elle doldurur (model no, renk, adet). Sonra "Şablonu Okut" ile fotoğrafı çekilir ve irsaliye otomatik oluşur.
+                        Kesimhane formu elle doldurur (model kodu, renk ve beden adetleri). Sonra fotoğrafı okutulur ve irsaliye otomatik oluşur.
+                        Eski basılı MY HİS formları da okutulabilir.
                         İsterseniz firma adları formda basılı gelsin.
                     </p>
                     <div className="form-group">
-                        <label className="form-label">Gönderen kesimhane (basılı)</label>
+                        <label className="form-label">Kesimhane (basılı)</label>
                         {kesimhaneKullanici ? (
                             <input className="form-input" value={firmalar.find(f => f.id === sablon.kesimhaneId)?.ad || ''} readOnly />
                         ) : (
@@ -418,7 +419,7 @@ export default function Irsaliyeler() {
                         )}
                     </div>
                     <div className="form-group">
-                        <label className="form-label">Alan atölye (basılı)</label>
+                        <label className="form-label">Atölye (basılı)</label>
                         <SearchableSelect value={sablon.atolyeId} onChange={v => setSablon({ ...sablon, atolyeId: v })}
                             options={secilebilirFirmalar(firmalar, { tip: 'atolye' }).map(f => ({ value: f.id, label: f.ad }))}
                             placeholder="Boş bırak (elle yazılsın)" clearLabel="Boş bırak" />

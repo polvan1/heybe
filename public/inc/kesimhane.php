@@ -139,7 +139,8 @@ function kesimhaneYazimi($pdo, $ben, &$degisiklikler) {
             if (($p['partiNo'] ?? '') !== $no) { $partiNoDegisen[$p['id']] = $no; $duzeltildi = true; }
             $p['partiNo'] = $no;
             $p['kesimhaneId'] = $firmaId;
-            $p['durum'] = 'kesimde';
+            // Yeni parti kesimde ya da "kesildi, atölyeye gitti" (dikimde) olarak açılabilir
+            $p['durum'] = ($p['durum'] ?? '') === 'dikimde' ? 'dikimde' : 'kesimde';
             $p['arsivde'] = false;
             $p['firmaAtamalari'] = [];
             $p['kesimBirimFiyat'] = sunucuFiyatBul($urun, $firmaId, 'kesim');

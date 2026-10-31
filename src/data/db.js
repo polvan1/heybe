@@ -480,11 +480,11 @@ export function addParti(parti) {
     id: generateId(),
     partiNo: 'P-' + String(maxPartiNo + 1).padStart(4, '0'),
     ...parti,
-    kalanAdet: parti.toplamAdet,
+    kalanAdet: parti.kalanAdet ?? parti.toplamAdet,
     // Defterden/Excel'den aktarılan iş atölyede (dikimde) ya da ütü/pakette başlayabilir
     durum: ['dikimde', 'utupakette'].includes(parti.durum) ? parti.durum : 'kesimde',
     firmaAtamalari: [],
-    teslimatGecmisi: [], // Yeni: teslimat log'u
+    teslimatGecmisi: parti.teslimatGecmisi || [], // teslimat log'u
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

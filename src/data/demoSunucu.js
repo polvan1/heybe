@@ -494,7 +494,7 @@ function kesimhaneYazimi(d, ben, degisiklikler) {
             const no = 'P-' + String(sonrakiNo(d.veri.myhis_partiler, 'partiNo', /^P-(\d+)$/, yeniPartiNolari)).padStart(4, '0');
             yeniPartiNolari.push(no); yeniPartiIdleri.add(p.id);
             if (p.partiNo !== no) partiNoDegisen[p.id] = no;
-            partiler[i] = { ...p, partiNo: no, kesimhaneId: f, durum: 'kesimde', arsivde: false, firmaAtamalari: [], olusturanFirmaId: f,
+            partiler[i] = { ...p, partiNo: no, kesimhaneId: f, durum: p.durum === 'dikimde' ? 'dikimde' : 'kesimde', arsivde: false, firmaAtamalari: [], olusturanFirmaId: f,
                 kesimBirimFiyat: fiyatBul(urun, f, 'kesim'), dikimBirimFiyat: fiyatBul(urun, p.dikimhaneId, 'dikim'), utuBirimFiyat: fiyatBul(urun, p.utupaketciId, 'utu') };
             duzeltildi = true;
         }

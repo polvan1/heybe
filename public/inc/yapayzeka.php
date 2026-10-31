@@ -189,26 +189,37 @@ function kumasIrsaliyePrompt($turler) {
         . "{\"firma\": \"\", \"irsaliyeNo\": \"\", \"tarih\": \"\", \"satirlar\": [{\"kumasTuru\": \"\", \"renk\": \"\", \"topAdedi\": 0, \"miktar\": 0, \"birim\": \"kg\", \"lotNo\": \"\"}]}";
 }
 
-// ---- Kesim sevk irsaliyesi (HİS A5 şablonu, elle doldurulmuş) ----
+// ---- Kesim / sevk formu (MY HİS kesim formu, elle doldurulmuş; eski HIS-KS1 formu da desteklenir) ----
 function sevkIrsaliyePrompt($baglam) {
-    return "Bu fotoğraf, HİS ERP'nin A5 \"KESİM SEVK İRSALİYESİ\" formunun ELLE doldurulmuş hali "
-        . "(form kodu HIS-KS1). Kesimhane, kestiği ürünleri dikim atölyesine gönderirken doldurur.\n"
-        . "Formda: Tarih, İrsaliye No, Gönderen Kesimhane, Alan Atölye, Parti No alanları ve "
-        . "Sıra | Model No | Renk | Beden Dağılımı | Adet sütunlu bir tablo vardır. El yazısını dikkatle oku.\n\n"
-        . "Bilinen model numaraları (ürün kodu — adı): " . aiListe($baglam['modeller'] ?? []) . "\n"
+    return "Bu fotoğraf, MY HİS firmasının ELLE doldurulmuş \"kesim / sevk formu\" (kesimhaneden dikim atölyesine giden iş). "
+        . "Form yatay olabilir ya da fotoğraf döndürülmüş olabilir; önce yönünü düzelterek oku. El yazısını dikkatle oku.\n\n"
+        . "FORM DÜZENİ: Üstte \"SİPARİŞ VEREN FİRMA\", logo ve kırmızı basılı seri numarası (№), \"Kesim Tarih\", \"Kesimhane Çıkış Tarih\" "
+        . "(bazen \"Kesimhane:\" satırı). Ana tabloda: MODEL KODU | MODEL ADI; \"ASORTİ DAĞITIMI\" satırı (beden başına seri adedi); "
+        . "\"RENK - BEDEN\" başlıklı satır ve sütunlar XS, S, M, L, XL, 2X, 3X, 4X, 5X, \"KESİLEN ADET\"; altında her renk için bir satır; "
+        . "en altta BEDEN / LASTİK ÖLÇÜSÜ ve NOT. Sağ tarafta ATÖLYE ADI, ATÖLYE'DEN ÇIKAN ADET, KESİM KRİTİKLERİ, DİKİM KRİTİKLERİ, "
+        . "ÜTÜ PAKET (ütücü adı) ve ÜTÜ'DEN ÇIKAN ADET kutuları vardır.\n"
+        . "(Eski \"KESİM SEVK İRSALİYESİ\" HIS-KS1 formu da gelebilir: Model No | Renk | Beden Dağılımı | Adet sütunlu; aynı şemaya çevir.)\n\n"
+        . "Bilinen model kodları (ürün kodu — adı): " . aiListe($baglam['modeller'] ?? []) . "\n"
         . "Bilinen atölyeler: " . aiListe($baglam['atolyeler'] ?? []) . "\n"
         . "Bilinen kesimhaneler: " . aiListe($baglam['kesimhaneler'] ?? []) . "\n"
         . "Açık parti numaraları: " . aiListe($baglam['partiler'] ?? []) . "\n\n"
-        . "Kurallar:\n"
-        . "- Tablodaki DOLU her satırı ayrı satır olarak döndür; boş satırları atla.\n"
-        . "- model: yazılan model numarası. Bilinen bir koda açıkça benziyorsa o kodu aynen yaz.\n"
-        . "- renk: yazılan renk adı (Türkçe, ilk harfi büyük).\n"
-        . "- adet: satırın toplam adedi (tam sayı). Beden dağılımı yazılıysa bedenler nesnesine koy, ör. {\"S\": 20, \"M\": 30}.\n"
-        . "- Bir hücre okunamıyorsa tahmin etme: sayı için null, metin için boş string yaz.\n"
-        . "- tarih: YYYY-AA-GG biçiminde (okunamazsa boş).\n\n"
+        . "KURALLAR:\n"
+        . "- Her DOLU renk satırı ayrı satırdır; boş satırları atla. model: formdaki MODEL KODU (her satıra aynısını yaz); "
+        . "bilinen bir koda açıkça benziyorsa o kodu aynen yaz.\n"
+        . "- renk: satırın başındaki renk adı (Türkçe, ilk harfi büyük; ör. Gri, Ekru, Lacivert, Siyah, Taş, Bordo).\n"
+        . "- bedenler: renk satırındaki beden hücreleri, ör. {\"S\": 219, \"M\": 219, \"L\": 219}. ÖNEMLİ: bir hücrede tire/çizgi "
+        . "(-, –, —, 〃, \" işareti) varsa SOLDAKİ hücrenin değerinin aynısı demektir (\"219 - -\" → S=219, M=219, L=219). "
+        . "Tamamen boş hücre o beden yok demektir.\n"
+        . "- adet: o satırın \"KESİLEN ADET\" değeri (tam sayı). Boşsa bedenlerin toplamı.\n"
+        . "- toplamAdet: kesilen adet sütununun altına yazılan toplam (yoksa null).\n"
+        . "- alan: ATÖLYE ADI. gonderen: yazılıysa kesimhane adı, değilse boş. utuPaket: ÜTÜ PAKET yanındaki ad.\n"
+        . "- irsaliyeNo: № yanındaki seri numarası (baştaki sıfırlarla). tarih: Kesimhane Çıkış Tarih, yoksa Kesim Tarih (YYYY-AA-GG).\n"
+        . "- notlar: NOT ile kesim/dikim kritiklerinde yazanlar (kısa).\n"
+        . "- Bir değer okunamıyorsa tahmin etme: sayı için null, metin için boş string yaz.\n\n"
         . "YALNIZCA şu şemada geçerli JSON döndür, başka metin yazma:\n"
-        . "{\"formKodu\": \"HIS-KS1\", \"tarih\": \"\", \"irsaliyeNo\": \"\", \"gonderen\": \"\", \"alan\": \"\", \"partiNo\": \"\", "
-        . "\"satirlar\": [{\"model\": \"\", \"renk\": \"\", \"bedenler\": {}, \"adet\": 0}], \"toplamAdet\": null, \"notlar\": \"\"}";
+        . "{\"formKodu\": \"MYHIS-KF\", \"tarih\": \"\", \"irsaliyeNo\": \"\", \"gonderen\": \"\", \"alan\": \"\", \"partiNo\": \"\", "
+        . "\"modelAdi\": \"\", \"utuPaket\": \"\", \"satirlar\": [{\"model\": \"\", \"renk\": \"\", \"bedenler\": {}, \"adet\": 0}], "
+        . "\"toplamAdet\": null, \"notlar\": \"\"}";
 }
 
 // POST api.php?irsaliye_oku=1   { data: dataUrl, tur: 'kumas'|'sevk', ... }
