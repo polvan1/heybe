@@ -4,7 +4,8 @@
 //     (1 = asortide 1 adet), boş/0 = o beden yok. "x", "✓", "var" de 1 sayılır.
 //  2) Eski şablon: tek "Bedenler" sütununda "S,M,L,XL" → asorti otomatik dağıtılır.
 import { excelIndir } from './excel';
-import { excelOku } from './excelOku';
+import { sayiOku } from './excelOku';
+export { sayiOku, tabloDosyasiOku as urunDosyasiOku } from './excelOku';
 
 export const SABLON_BEDENLERI = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 
@@ -25,17 +26,6 @@ export function bedenAdi(baslik) {
 
 const kucuk = (s) => String(s ?? '').trim().toLocaleLowerCase('tr');
 
-// "1,50" / "1.50" / 1.5 → 1.5 ; boş veya anlamsız → 0
-export function sayiOku(deger) {
-    if (typeof deger === 'number') return Number.isFinite(deger) ? deger : 0;
-    let s = String(deger ?? '').trim().replace(/[₺\s]|TL/gi, '');
-    if (!s) return 0;
-    if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
-    else s = s.replace(',', '.');
-    const n = Number(s);
-    return Number.isFinite(n) ? n : 0;
-}
-
 // Beden hücresi → asorti adedi (0 = beden yok)
 function bedenAdedi(deger) {
     if (typeof deger === 'number') return deger > 0 ? Math.max(1, Math.round(deger)) : 0;
@@ -53,15 +43,6 @@ export function otomatikDagilim(bedenler) {
         d[b] = i === Math.floor(bedenler.length / 2) ? 3 : (i === 0 || i === bedenler.length - 1 ? 1 : 2);
     });
     return d;
-}
-
-// CSV / TXT / Excel'den kopyalanmış metin (; , veya sekme ile ayrılmış) → satırlar
-export function metniSatirlaraBol(metin) {
-    const satirlar = String(metin).replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim().length > 0);
-    if (!satirlar.length) return [];
-    const ilk = satirlar[0];
-    const ayrac = ilk.includes('\t') ? '\t' : ilk.includes(';') ? ';' : ',';
-    return satirlar.map(l => l.split(ayrac).map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim()));
 }
 
 // Satırlar → { urunler: [{ urunKodu, urunAdi, bedenler, dagilim, kesimFiyat, dikimFiyat, utuFiyat, bedenYok }], bedenSutunlari }
@@ -119,14 +100,6 @@ export function urunSatirlariniCoz(satirlar) {
         });
     });
     return { urunler, bedenSutunlari };
-}
-
-// Seçilen dosyayı (xlsx / csv / txt) oku → satırlar
-export async function urunDosyasiOku(dosya) {
-    const ad = kucuk(dosya.name);
-    if (ad.endsWith('.xls')) throw new Error('Eski Excel biçimi (.xls) okunamıyor. Excel\'de "Farklı Kaydet → Excel Çalışma Kitabı (.xlsx)" ile kaydedip tekrar deneyin.');
-    if (ad.endsWith('.xlsx') || ad.endsWith('.xlsm')) return excelOku(dosya);
-    return metniSatirlaraBol(await dosya.text());
 }
 
 // Şablon: her beden ayrı sütun, 1 = asortide 1 adet

@@ -90,6 +90,16 @@ function hucre(ref, deger, tip, kalin) {
     return `<c r="${ref}" t="inlineStr"${kalin ? ` s="${STIL.kalin}"` : ''}><is><t xml:space="preserve">${xmlEsc(deger)}</t></is></c>`;
 }
 
+// Sütunda açılır liste (ör. firma türü): sutun.secenekler = ['A', 'B'] → başlığın altındaki 500 satır
+function secimListeleri(sutunlar, ilkSatir) {
+    const liste = sutunlar.map((s, i) => ({ s, i })).filter(({ s }) => s.secenekler?.length);
+    if (!liste.length) return '';
+    return `<dataValidations count="${liste.length}">${liste.map(({ s, i }) => {
+        const harf = sutunHarfi(i);
+        return `<dataValidation type="list" allowBlank="1" showErrorMessage="0" sqref="${harf}${ilkSatir}:${harf}${ilkSatir + 499}"><formula1>"${xmlEsc(s.secenekler.join(','))}"</formula1></dataValidation>`;
+    }).join('')}</dataValidations>`;
+}
+
 function sayfaXml({ sutunlar, satirlar, toplamSatiri, ustBilgi = [] }) {
     const genislikler = sutunlar.map((s, i) => s.genislik || Math.min(50, Math.max(
         String(s.baslik).length + 2,
@@ -121,6 +131,7 @@ function sayfaXml({ sutunlar, satirlar, toplamSatiri, ustBilgi = [] }) {
 <cols>${genislikler.map((g, i) => `<col min="${i + 1}" max="${i + 1}" width="${g}" customWidth="1"/>`).join('')}</cols>
 <sheetData>${xmlSatirlar.join('')}</sheetData>
 ${satirlar.length ? `<autoFilter ref="A${baslikNo}:${sonSutun}${veriSonu}"/>` : ''}
+${secimListeleri(sutunlar, baslikNo + 1)}
 <pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>
 </worksheet>`;
 }
@@ -156,7 +167,7 @@ function sayfaAdlari(sayfalar) {
     });
 }
 
-// sayfalar: [{ ad, sutunlar: [{ baslik, tip?: 'para'|'sayi'|'tarih', genislik? }], satirlar: [[...]], toplamSatiri?, ustBilgi?: [metin] }]
+// sayfalar: [{ ad, sutunlar: [{ baslik, tip?: 'para'|'sayi'|'tarih', genislik?, secenekler? }], satirlar: [[...]], toplamSatiri?, ustBilgi?: [metin] }]
 export function excelBlob(sayfalar) {
     const adlar = sayfaAdlari(sayfalar);
     const dosyalar = [

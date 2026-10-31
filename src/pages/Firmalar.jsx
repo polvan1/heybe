@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { Plus, Edit2, Trash2, Phone, MapPin, User, Search, Calendar, Power } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, MapPin, User, Search, Calendar, Power, Download, Upload } from 'lucide-react';
 import { FIRMA_TIP_LABELS } from '../data/db';
-import { FIRMA_TIPLERI, firmaRozetSinifi, firmaAktifMi } from '../utils/firma';
+import { FIRMA_TIPLERI, firmaRozetSinifi, firmaAktifMi, firmaTipi } from '../utils/firma';
 import Notice from '../components/ui/Notice';
 import { silmeOnayi } from '../utils/guvenlik';
+import { tabloDosyasiOku } from '../utils/excelOku';
+import { firmaSatirlariniCoz, firmaSablonuIndir, firmaAdiAnahtari, firmaGuncellemesi, yeniFirmaVerisi } from '../utils/firmaAktar';
 
 const TIPLER = [
     { value: 'all', label: 'Tümü' },
@@ -24,6 +26,9 @@ export default function Firmalar() {
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
     const [pasifleriGoster, setPasifleriGoster] = useState(false);
+    const dosyaRef = useRef(null);
+    const [aktarSatirlari, setAktarSatirlari] = useState(null);   // okunan Excel satırları
+    const [varsayilanTip, setVarsayilanTip] = useState('atolye');  // türü boş satırlar için
 
     const pasifSayisi = firmalar.filter(f => !firmaAktifMi(f)).length;
     const filtered = firmalar.filter(f => {
@@ -85,13 +90,59 @@ export default function Firmalar() {
 
     const updateField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+    // ---- EXCEL / CSV İÇE AKTARMA ----
+    // Aynı adlı firma zaten varsa yeni kayıt açılmaz; dosyada dolu olan bilgileri güncellenir.
+    const handleDosyaSec = async (e) => {
+        const dosya = e.target.files[0];
+        e.target.value = '';
+        if (!dosya) return;
+        try {
+            const satirlar = await tabloDosyasiOku(dosya);
+            if (firmaSatirlariniCoz(satirlar).length === 0) {
+                alert('Geçerli firma bulunamadı. İlk satır başlık (Firma Adı, Firma Türü, Telefon, Adres...), sonraki satırlar firmalar olmalıdır.');
+                return;
+            }
+            setAktarSatirlari(satirlar);
+        } catch (hata) {
+            alert(hata.message || 'Dosya okunamadı.');
+        }
+    };
+    const adaGore = new Map(firmalar.map(f => [firmaAdiAnahtari(f.ad), f]));
+    const aktarilacak = aktarSatirlari
+        ? firmaSatirlariniCoz(aktarSatirlari, { varsayilanTip }).map(f => ({ ...f, mevcut: adaGore.get(firmaAdiAnahtari(f.ad)) || null }))
+        : [];
+    const tipsizSayisi = aktarilacak.filter(f => !f.tipVerildi && !f.mevcut).length;
+    const handleAktarOnay = () => {
+        let yeni = 0, guncel = 0;
+        const eklenen = new Set();
+        aktarilacak.forEach(f => {
+            if (f.mevcut) { firmaGuncelle(f.mevcut.id, firmaGuncellemesi(f)); guncel++; return; }
+            const anahtar = firmaAdiAnahtari(f.ad);
+            if (eklenen.has(anahtar)) return;   // dosyada aynı firma iki kez yazılmışsa bir kez ekle
+            eklenen.add(anahtar);
+            firmaEkle(yeniFirmaVerisi(f));
+            yeni++;
+        });
+        setAktarSatirlari(null);
+        alert([yeni && `${yeni} firma eklendi`, guncel && `${guncel} firma güncellendi`].filter(Boolean).join(', ') + '.');
+    };
+
     return (
         <div className="animate-fade-in">
             <div className="page-header">
                 <h1 className="page-title">Firmalar</h1>
-                <button className="btn btn-primary" onClick={openAdd}>
-                    <Plus size={18} /> Firma Ekle
-                </button>
+                <div className="page-header-actions">
+                    <button className="btn btn-ghost" onClick={firmaSablonuIndir} title="Excel şablonunu indir">
+                        <Download size={16} /> Şablon
+                    </button>
+                    <button className="btn btn-success" onClick={() => dosyaRef.current?.click()} title="Excel (.xlsx) veya CSV'den firma aktar">
+                        <Upload size={16} /> Excel Aktar
+                    </button>
+                    <button className="btn btn-primary" onClick={openAdd}>
+                        <Plus size={18} /> Firma Ekle
+                    </button>
+                </div>
+                <input ref={dosyaRef} type="file" accept=".xlsx,.xlsm,.csv,.txt" style={{ display: 'none' }} onChange={handleDosyaSec} />
             </div>
 
             {/* Arama */}
@@ -263,6 +314,58 @@ export default function Firmalar() {
                             )}
                         </div>
                     )}
+                </Modal>
+            )}
+            {aktarSatirlari && (
+                <Modal
+                    title={`Excel'den Firma Aktarma (${aktarilacak.length} firma)`}
+                    onClose={() => setAktarSatirlari(null)}
+                    genis
+                    footer={
+                        <>
+                            <button className="btn btn-ghost" onClick={() => setAktarSatirlari(null)}>İptal</button>
+                            <button className="btn btn-success" onClick={handleAktarOnay}>
+                                <Upload size={16} /> {aktarilacak.length} Firmayı Aktar
+                            </button>
+                        </>
+                    }
+                >
+                    {tipsizSayisi > 0 && (
+                        <div className="aktar-varsayilan">
+                            <span>Türü boş veya tanınmayan {tipsizSayisi} firma şu türle eklensin:</span>
+                            <select className="form-input" value={varsayilanTip} onChange={e => setVarsayilanTip(e.target.value)}>
+                                {FIRMA_TIPLERI.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    <div className="aktar-tablo">
+                        <table>
+                            <thead>
+                                <tr><th>#</th><th>Firma Adı</th><th>Türü</th><th>Yetkili</th><th>Telefon</th><th>Adres</th><th>Durum</th></tr>
+                            </thead>
+                            <tbody>
+                                {aktarilacak.map((f, i) => (
+                                    <tr key={i}>
+                                        <td className="aktar-sira">{i + 1}</td>
+                                        <td><strong>{f.ad}</strong></td>
+                                        <td>
+                                            <span className={`badge ${firmaRozetSinifi(f.mevcut && !f.tipVerildi ? f.mevcut.tip : f.tip)}`}>
+                                                {firmaTipi(f.mevcut && !f.tipVerildi ? f.mevcut.tip : f.tip)?.kisa}
+                                            </span>
+                                            {!f.tipVerildi && !f.mevcut && <div className="aktar-uyari">{f.tipMetni ? `"${f.tipMetni}" tanınmadı` : 'Tür boş'}</div>}
+                                        </td>
+                                        <td>{f.yetkiliKisi || '-'}</td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>{f.telefon || '-'}</td>
+                                        <td className="aktar-adres">{f.adres || '-'}</td>
+                                        <td><span className={`badge ${f.mevcut ? 'dikimde' : 'tamamlandi'}`}>{f.mevcut ? 'Güncellenecek' : 'Yeni'}</span></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="aktar-bilgi">
+                        Aynı adlı firma zaten kayıtlıysa yeni firma açılmaz; dosyada dolu olan bilgileri (telefon, adres, yetkili...) güncellenir.
+                    </div>
                 </Modal>
             )}
         </div>

@@ -1588,3 +1588,28 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
 }
 .aktar-beden b { color: var(--color-primary); font-variant-numeric: tabular-nums; }
 .aktar-uyari { margin-top: 2px; font-size: var(--font-size-xs); color: var(--color-warning); }
+
+/* Excel'den aktarma önizleme tablosu (Firmalar) */
+.aktar-tablo { max-height: 420px; overflow: auto; -webkit-overflow-scrolling: touch; }
+.aktar-tablo table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+.aktar-tablo th {
+  position: sticky; top: 0; z-index: 1;
+  padding: var(--space-2); text-align: left; white-space: nowrap;
+  background: var(--color-surface-muted); border-bottom: 2px solid var(--color-border);
+  font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);
+}
+.aktar-tablo td { padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider); vertical-align: top; white-space: normal; }
+.aktar-sira { color: var(--color-text-tertiary); }
+.aktar-varsayilan {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
+  margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm); background: var(--color-warning-soft); border: 1px solid var(--color-warning-border);
+  font-size: var(--font-size-sm);
+}
+.aktar-varsayilan .form-input { width: auto; min-width: 200px; height: var(--control-height-sm); }
+.aktar-bilgi {
+  margin-top: var(--space-3); padding: 10px; border-radius: var(--radius-sm);
+  background: var(--color-primary-soft); color: var(--color-text-secondary); font-size: var(--font-size-sm);
+}
+.aktar-tablo .aktar-adres { min-width: 140px; max-width: 200px; }
+.aktar-tablo td:last-child { white-space: nowrap; }

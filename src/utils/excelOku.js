@@ -94,3 +94,31 @@ export async function excelOku(dosya) {
     });
     return Array.from(satirlar, s => s || []);
 }
+
+// "1,50" / "1.50" / 1.5 → 1.5 ; boş veya anlamsız → 0
+export function sayiOku(deger) {
+    if (typeof deger === 'number') return Number.isFinite(deger) ? deger : 0;
+    let s = String(deger ?? '').trim().replace(/[₺\s]|TL/gi, '');
+    if (!s) return 0;
+    if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else s = s.replace(',', '.');
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+}
+
+// CSV / TXT / Excel'den kopyalanmış metin (; , veya sekme ile ayrılmış) → satırlar
+export function metniSatirlaraBol(metin) {
+    const satirlar = String(metin).replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (!satirlar.length) return [];
+    const ilk = satirlar[0];
+    const ayrac = ilk.includes('\t') ? '\t' : ilk.includes(';') ? ';' : ',';
+    return satirlar.map(l => l.split(ayrac).map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim()));
+}
+
+// Seçilen dosyayı (xlsx / csv / txt) oku → satırlar
+export async function tabloDosyasiOku(dosya) {
+    const ad = String(dosya.name || '').toLowerCase();
+    if (ad.endsWith('.xls')) throw new Error('Eski Excel biçimi (.xls) okunamıyor. Excel\'de "Farklı Kaydet → Excel Çalışma Kitabı (.xlsx)" ile kaydedip tekrar deneyin.');
+    if (ad.endsWith('.xlsx') || ad.endsWith('.xlsm')) return excelOku(dosya);
+    return metniSatirlaraBol(await dosya.text());
+}
