@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle, Wallet, CreditCard, Eye, Printer, History, Clip
 import { cariEkstreExcel, cariEkstrePdf, cariEkstreHesapla } from '../utils/cariEkstre';
 import { FIRMA_TIP_LABELS } from '../data/db';
 import { firmaRozetSinifi, firmaAktifMi } from '../utils/firma';
+import { belgeAc } from '../utils/belgeGoster';
 
 export default function CariDetay() {
     const { id } = useParams();
@@ -180,7 +181,6 @@ export default function CariDetay() {
     };
 
     const handlePrint = () => {
-        const printWindow = window.open('', '_blank', 'width=800,height=900');
         const content = `
             <html>
                 <head>
@@ -276,13 +276,7 @@ export default function CariDetay() {
             </html>
         `;
 
-        printWindow.document.write(content);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-        }, 250);
+        belgeAc(content, { baslik: `Cari Ekstre — ${firma.ad}` });
     };
 
     return (

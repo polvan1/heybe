@@ -3,6 +3,7 @@
 // yazdırma (kayıtsız) bu şablonu kullanır.
 import QRCode from 'qrcode';
 import { IRSALIYE_TIP_LABELS } from '../data/db';
+import { belgeAc } from './belgeGoster';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -188,12 +189,5 @@ export async function yazdirIrsaliye(irsaliye, boyut = 'A4') {
 </body>
 </html>`;
 
-    const pw = window.open('', '_blank', 'width=800,height=900');
-    if (!pw) {
-        alert('Yazdırma penceresi açılamadı. Tarayıcınızın açılır pencere engelleyicisini kontrol edin.');
-        return;
-    }
-    pw.document.write(html);
-    pw.document.close();
-    pw.focus();
+    belgeAc(html, { baslik: `İrsaliye ${irsaliye.irsaliyeNo || irsaliye.partiNo || ''}`.trim() });
 }

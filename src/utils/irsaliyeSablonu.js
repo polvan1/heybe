@@ -2,6 +2,7 @@
 // Doldurulan form telefonla fotoğraflanıp "Şablonu Okut" ile sisteme irsaliye olarak girilir.
 // Yapay zekânın formu güvenle okuyabilmesi için düzen sade tutulur: büyük kutular, net
 // başlıklar, sabit sütunlar (Model No | Renk | Beden Dağılımı | Adet).
+import { belgeAc } from './belgeGoster';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -133,14 +134,7 @@ ${sayfalar}
 </body>
 </html>`;
 
-    const pw = window.open('', '_blank', 'width=700,height=900');
-    if (!pw) {
-        alert('Yazdırma penceresi açılamadı. Tarayıcınızın açılır pencere engelleyicisini kontrol edin.');
-        return;
-    }
-    pw.document.write(html);
-    pw.document.close();
-    pw.focus();
+    belgeAc(html, { baslik: 'Kesim Sevk İrsaliyesi — Boş Şablon' });
 }
 
 // Test/önizleme için HTML'i döndürür (yazdırma penceresi açmadan)

@@ -1324,3 +1324,59 @@ tr.is-selected td {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
+
+/* --------------------------------------------------------------------------
+   Uygulama içi belge ekranı (yazdırma önizleme: irsaliye, etiket, rapor, ekstre)
+   -------------------------------------------------------------------------- */
+.belge-katman {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+.belge-ust {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+  background: var(--color-header-bg);
+  color: var(--color-header-text);
+  flex-shrink: 0;
+}
+.belge-baslik {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.belge-dugme {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-header-btn-border);
+  background: var(--color-header-btn);
+  color: var(--color-header-text);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+.belge-dugme:hover { background: var(--color-header-btn-hover); }
+.belge-dugme:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--color-header-focus); }
+.belge-yazdir { background: #fff; color: var(--color-brand); border-color: #fff; }
+.belge-yazdir:hover { background: #eef3fb; }
+.belge-cerceve {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+body.belge-acik { overflow: hidden; }

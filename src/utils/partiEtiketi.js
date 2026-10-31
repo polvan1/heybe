@@ -2,6 +2,7 @@
 // "QR Okut" ile) okutulunca parti açılır ve bir sonraki adıma ilerletilebilir.
 // Boyutlar: 10×7 cm termal etiket ya da A4'e 8'li (2×4) etiket.
 import QRCode from 'qrcode';
+import { belgeAc } from './belgeGoster';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -84,12 +85,5 @@ export async function yazdirPartiEtiketi(parti, { kopya = 1, boyut = 'etiket', f
 </body>
 </html>`;
 
-    const pw = window.open('', '_blank', 'width=720,height=900');
-    if (!pw) {
-        alert('Yazdırma penceresi açılamadı. Tarayıcınızın açılır pencere engelleyicisini kontrol edin.');
-        return;
-    }
-    pw.document.write(html);
-    pw.document.close();
-    pw.focus();
+    belgeAc(html, { baslik: `Parti Etiketi — ${parti.partiNo}` });
 }

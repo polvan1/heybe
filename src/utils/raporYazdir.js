@@ -1,6 +1,7 @@
 // Ortak yazdırılabilir rapor (PDF) şablonu: logolu başlık, özet kutuları, tablolar.
 // Tarayıcının yazdırma penceresinde "PDF olarak kaydet" seçilerek PDF alınır.
 // Excel'e giden sayfa tanımlarıyla (utils/excel.js) aynı yapıyı kullanır.
+import { belgeAc } from './belgeGoster';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const tl = (n) => `${Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
@@ -79,14 +80,7 @@ export function raporYazdir({ baslik, altBaslik = '', ozet = [], tablolar = [], 
 </body>
 </html>`;
 
-    const pw = window.open('', '_blank', 'width=900,height=900');
-    if (!pw) {
-        alert('Yazdırma penceresi açılamadı. Tarayıcınızın açılır pencere engelleyicisini kontrol edin.');
-        return;
-    }
-    pw.document.write(html);
-    pw.document.close();
-    pw.focus();
+    belgeAc(html, { baslik: baslik });
 }
 
 export { tl as tlBicim };

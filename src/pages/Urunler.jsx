@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
-import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X, Calculator } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X, Calculator, Tag } from 'lucide-react';
 import MaliyetKarti from '../components/MaliyetKarti';
+import EtiketYazdir from '../components/EtiketYazdir';
 import { useKurlar, paraBicim } from '../data/kur';
 import { modelMaliyeti, maliyetGorur, maliyetTanimliMi } from '../utils/maliyet';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
@@ -48,6 +49,7 @@ export default function Urunler() {
     const [search, setSearch] = useState('');
     const [stokModal, setStokModal] = useState(null);
     const [stokAdet, setStokAdet] = useState('');
+    const [etiketUrun, setEtiketUrun] = useState(null);
     const [importData, setImportData] = useState(null);
     const [fotoBusy, setFotoBusy] = useState(false);
     const fileInputRef = useRef(null);
@@ -336,6 +338,7 @@ export default function Urunler() {
                                                 <td style={{ textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                                                         {maliyetGoster && <button className="btn-icon" onClick={() => setMaliyetUrun(urun)} title="Maliyet kartı" aria-label={`${urun.urunKodu} maliyet kartı`}><Calculator size={16} /></button>}
+                                                        <button className="btn-icon" onClick={() => setEtiketUrun(urun)} title="Etiket yazdır" aria-label={`${urun.urunKodu} etiket yazdır`}><Tag size={16} /></button>
                                                         <button className="btn-icon" onClick={(e) => openEdit(e, urun)}><Edit2 size={16} /></button>
                                                     </div>
                                                 </td>
@@ -358,6 +361,7 @@ export default function Urunler() {
                                             <span className="mobile-list-item-title">{urun.urunKodu}</span>
                                             <div style={{ display: 'flex', gap: '4px' }}>
                                                 {maliyetGoster && <button className="btn-icon" onClick={() => setMaliyetUrun(urun)} title="Maliyet kartı" aria-label={`${urun.urunKodu} maliyet kartı`}><Calculator size={16} /></button>}
+                                                <button className="btn-icon" onClick={() => setEtiketUrun(urun)} title="Etiket yazdır" aria-label={`${urun.urunKodu} etiket yazdır`}><Tag size={16} /></button>
                                                 <button className="btn-icon" onClick={(e) => openEdit(e, urun)}><Edit2 size={16} /></button>
                                             </div>
                                         </div>
@@ -699,6 +703,7 @@ export default function Urunler() {
                     </div>
                 </Modal>
             )}
+            {etiketUrun && <EtiketYazdir urun={etiketUrun} varsayilanAdet={3} onClose={() => setEtiketUrun(null)} />}
             {maliyetUrun && <MaliyetKarti urun={urunler.find(u => u.id === maliyetUrun.id) || maliyetUrun} onClose={() => setMaliyetUrun(null)} />}
         </div>
     );

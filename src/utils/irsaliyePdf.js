@@ -5,6 +5,7 @@
 // dosya olarak eklenir. Paylaşım desteklenmiyorsa (masaüstü) indirilir.
 import QRCode from 'qrcode';
 import { IRSALIYE_TIP_LABELS } from '../data/db';
+import { dosyaKaydet } from './belgeGoster';
 
 // ---- Yardımcılar ----
 
@@ -265,10 +266,5 @@ export async function irsaliyePdfPaylas(irsaliye) {
         }
     }
 
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = dosyaAdi;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    return 'indirildi';
+    return dosyaKaydet(blob, dosyaAdi);
 }

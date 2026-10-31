@@ -1686,3 +1686,22 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
 .aktar-ozet strong { color: var(--color-text); }
 .aktar-yeni { margin-top: 2px; font-size: var(--font-size-xs); color: var(--color-primary); font-weight: var(--font-weight-semibold); }
 .aktar-tablo tr.aktar-satir-atla td { opacity: 0.55; }
+
+/* Etiket yazdırma: ürün etiketi önizlemesi (yatay okunuş, 50×30 oranında) */
+.etiket-onizleme {
+  display: grid; grid-template-columns: 54% 46%; gap: 8px;
+  width: 100%; max-width: 300px; aspect-ratio: 50 / 30; margin: 0 auto var(--space-4);
+  padding: 10px 12px; background: #fff; color: #000;
+  border: 1px dashed var(--color-border-strong); border-radius: 6px;
+  font-family: Arial, sans-serif; box-shadow: var(--shadow-sm);
+}
+.etiket-onizleme-sol { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 3px; min-width: 0; }
+.etiket-rozet { background: #000; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; line-height: 1.2; }
+.etiket-kod { font-size: 20px; font-weight: 800; line-height: 1.05; }
+.etiket-beden { border-collapse: collapse; min-width: 0; }
+.etiket-beden td { font-size: 11px; font-weight: 700; text-align: center; padding: 0 4px; line-height: 1.3; border: 0; white-space: nowrap; }
+.etiket-beden tr:first-child td { border-bottom: 1.5px solid #000; }
+.etiket-onizleme-sag { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; min-width: 0; }
+.etiket-ad { font-size: 13px; font-weight: 800; line-height: 1.15; text-transform: uppercase; overflow-wrap: anywhere; }
+.etiket-yerli { border: 1.5px solid #000; border-radius: 3px; padding: 1px 5px; font-size: 8px; font-weight: 800; line-height: 1.1; }
+.etiket-ayar { margin-top: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-muted); }

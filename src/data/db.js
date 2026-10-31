@@ -2,6 +2,7 @@
 import { apiIstek, ApiHatasi } from './api';
 import { cariYazabilir } from './yetki';
 import { kvOku, kvYaz, kvSil, durumAnahtari, SON_KULLANICI, agHatasiMi } from './cevrimdisi';
+import { dosyaKaydet } from '../utils/belgeGoster';
 
 const STORAGE_KEYS = {
   firmalar: 'myhis_firmalar',
@@ -1470,11 +1471,7 @@ export function exportToCSV(data, headers, filename) {
 
   const csvString = '\uFEFF' + csvRows.join('\n'); // BOM for Turkish chars
   const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  dosyaKaydet(blob, `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
 }
 
 // --- KULLANICILAR & KİMLİK DOĞRULAMA ---
@@ -1557,11 +1554,7 @@ export function exportBackup() {
     if (inMemoryDb[k] !== undefined) yedek[k] = inMemoryDb[k];
   });
   const blob = new Blob([JSON.stringify(yedek, null, 2)], { type: 'application/json;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `his-erp-yedek_${new Date().toISOString().split('T')[0]}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  dosyaKaydet(blob, `his-erp-yedek_${new Date().toISOString().split('T')[0]}.json`);
 }
 
 export async function importBackup(jsonText) {

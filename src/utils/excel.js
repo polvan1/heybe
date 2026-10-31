@@ -2,6 +2,7 @@
 // .xlsx, içinde XML dosyaları olan bir ZIP'tir; burada sıkıştırmasız ZIP yazılır.
 // Başlık satırı kalın + sabit (dondurulmuş), filtreli; sayılar sayı, tarihler tarih,
 // tutarlar "#.##0,00 ₺" biçiminde gelir (Excel'de toplanabilir).
+import { dosyaKaydet } from './belgeGoster';
 
 const xmlEsc = (s) => String(s ?? '')
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
@@ -203,14 +204,7 @@ export function excelBlob(sayfalar) {
 const dosyaAdiTemizle = (s) => String(s).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '_');
 
 export function excelIndir(dosyaAdi, sayfalar) {
-    const blob = excelBlob(sayfalar);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${dosyaAdiTemizle(dosyaAdi)}_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return dosyaKaydet(excelBlob(sayfalar), `${dosyaAdiTemizle(dosyaAdi)}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 // Kolay kullanım: kayıt listesi + sütun tanımları → tek sayfalık Excel
