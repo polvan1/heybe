@@ -1,0 +1,11 @@
+{
+  "alan": "Deneme Atölye",
+  "gonderen": "Örnek Kesim",
+  "irsaliyeNo": "004915",
+  "toplamAdet": 1460,
+  "satirlar": [
+    { "model": "2045", "renk": "Bordo", "adet": 600, "bedenler": { "S": 150, "M": 150, "L": 150, "XL": 150 } },
+    { "model": "2045", "renk": "Haki", "adet": 480, "bedenler": { "S": 120, "M": 120, "L": 120, "XL": 120 } },
+    { "model": "2045", "renk": "Ekru", "adet": 380, "bedenler": { "S": 95, "M": 95, "L": 95, "XL": 95 } }
+  ]
+}

@@ -180,7 +180,7 @@ export default function Irsaliyeler() {
             <div className="page-header">
                 <h1 className="page-title">İrsaliyeler</h1>
                 <div className="page-header-actions">
-                    <button className="btn btn-ghost" onClick={sablonAc} title="Elle doldurulacak boş MY HİS kesim formu (A4 yatay)">
+                    <button className="btn btn-ghost" onClick={sablonAc} title="Elle doldurulacak boş irsaliye (A4'e atölye + ütü paket nüshası)">
                         <FileDown size={18} /> Boş Şablon
                     </button>
                     <button className="btn btn-ghost" onClick={() => kameraRef.current?.click()} disabled={okumaBusy} title="Doldurulmuş şablonun fotoğrafını çekin">
@@ -244,7 +244,7 @@ export default function Irsaliyeler() {
                                 <button className="btn btn-sm btn-soft irs-goruntule" onClick={(e) => { e.stopPropagation(); setDetay(i); }}>
                                     <Eye size={15} /> Görüntüle
                                 </button>
-                                <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); yazdirIrsaliye(i, 'A4', { parti: partiler.find(p => p.id === i.partiId), firmalar }); }} title="Yazdır (A4)">
+                                <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); yazdirIrsaliye(i, 'A4', { parti: partiler.find(p => p.id === i.partiId), firmalar }); }} title="Yazdır (A4'e iki A5: atölye + ütü paket nüshası)">
                                     <Printer size={15} />
                                 </button>
                                 {i.durum === 'taslak' && onaylayabilir && (
@@ -347,8 +347,7 @@ export default function Irsaliyeler() {
                         >
                             <MessageCircle size={16} /> Metin
                         </button>
-                        <button className="btn btn-outline" onClick={() => yazdirIrsaliye(detay, 'A5', { parti: partiler.find(p => p.id === detay.partiId), firmalar })}><Printer size={16} /> A5</button>
-                        <button className="btn btn-primary" onClick={() => yazdirIrsaliye(detay, 'A4', { parti: partiler.find(p => p.id === detay.partiId), firmalar })}><Printer size={16} /> A4</button>
+                        <button className="btn btn-primary" onClick={() => yazdirIrsaliye(detay, 'A4', { parti: partiler.find(p => p.id === detay.partiId), firmalar })} title="A4'e iki A5: atölye + ütü paket nüshası"><Printer size={16} /> Yazdır</button>
                     </>}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -396,7 +395,7 @@ export default function Irsaliyeler() {
             {/* Boş kesim formu yazdırma */}
             {sablonModal && (
                 <Modal
-                    title="Boş kesim formu (A4 yatay)"
+                    title="Boş irsaliye (A4'e 2 nüsha)"
                     onClose={() => setSablonModal(false)}
                     footer={<>
                         <button className="btn btn-ghost" onClick={() => setSablonModal(false)}>İptal</button>

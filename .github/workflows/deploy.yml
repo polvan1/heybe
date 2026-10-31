@@ -72,7 +72,7 @@ jobs:
       - name: Derle
         run: pnpm run build
 
-      # Yapay zekâ irsaliye okuma bağlantı testi: örnek (elle doldurulmuş) kesim sevk
+      # Yapay zekâ irsaliye okuma bağlantı testi: örnek (elle doldurulmuş, A5) MY HİS kesim / sevk
       # irsaliyesi görselini tanımlı sağlayıcıya okutur. Anahtar yoksa atlanır;
       # başarısız olsa bile yükleme devam eder (sonuç bu adımın günlüğünde görünür).
       - name: Yapay zekâ okuma testi
@@ -86,7 +86,7 @@ jobs:
           GROQ_MODEL: ${{ vars.GROQ_MODEL }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           AI_SAGLAYICI: ${{ vars.AI_SAGLAYICI }}
-        run: php scripts/ai-test.php scripts/ornek/kesim-sevk-irsaliyesi.jpg scripts/ornek/kesim-sevk-irsaliyesi.beklenen.json
+        run: php scripts/ai-test.php scripts/ornek/kesim-irsaliye-a5.jpg scripts/ornek/kesim-irsaliye-a5.beklenen.json
 
       # MY HİS kesim formu okuma testi (kurgusal örnek: renk × beden tablosu, tire = soldakiyle aynı)
       - name: Yapay zekâ kesim formu okuma testi

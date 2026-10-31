@@ -786,8 +786,7 @@ export default function Partiler() {
                     footer={
                         <>
                             <button className="btn btn-ghost" onClick={() => setShowIrsaliye(null)}>Kapat</button>
-                            <button className="btn btn-outline" onClick={() => printIrsaliye('A5')}><Printer size={16} /> A5 Yazdır</button>
-                            <button className="btn btn-primary" onClick={() => printIrsaliye('A4')}><Printer size={16} /> A4 Yazdır</button>
+                            <button className="btn btn-primary" onClick={() => printIrsaliye('A4')} title="A4'e iki A5: atölye + ütü paket nüshası"><Printer size={16} /> Yazdır</button>
                         </>
                     }
                 >

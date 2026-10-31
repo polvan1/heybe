@@ -1,4 +1,4 @@
-// Ortak irsaliye yazdırma — MY HİS kesim/sevk formu düzeninde (kâğıt formla aynı, yatay A4/A5).
+// Ortak irsaliye yazdırma — MY HİS kesim/sevk irsaliyesi: A4'e alt alta iki A5 (atölye + ütü paket nüshası).
 // Hem İrsaliyeler sayfası (kayıtlı irsaliye) hem Partiler'deki hızlı yazdırma bu şablonu kullanır.
 // Parti verilirse kesim tarihi, kritikler, ütü/paketçi ve çıkan adetler de forma yazılır.
 import QRCode from 'qrcode';
@@ -6,7 +6,8 @@ import { IRSALIYE_TIP_LABELS } from '../data/db';
 import { belgeAc } from './belgeGoster';
 import { kesimFormuSayfasi, kesimFormuBelgesi, formLogoUrl } from './kesimFormu';
 
-export async function yazdirIrsaliye(irsaliye, boyut = 'A4', { parti = null, firmalar = [] } = {}) {
+// boyut eski çağrılar için kabul edilir; çıktı her zaman A4'e iki A5 nüshadır
+export async function yazdirIrsaliye(irsaliye, boyut = 'A4', { parti = null, firmalar = [] } = {}) { // eslint-disable-line no-unused-vars
     const firmaAdi = (id) => (id ? firmalar.find(f => f.id === id)?.ad || '' : '');
     const tipEtiketi = irsaliye.tipLabel || IRSALIYE_TIP_LABELS[irsaliye.tip] || 'Sevkiyat';
     const dikimdenUtuye = irsaliye.tip === 'dikimhane_utupaketci';
@@ -41,12 +42,11 @@ export async function yazdirIrsaliye(irsaliye, boyut = 'A4', { parti = null, fir
         atolyedenCikmaTarihi: parti?.dikimBitisTarihi,
         asorti: irsaliye.asorti || parti?.asorti,
         renkler,
-        kesimKritik: parti?.kesimNotu || '',
         dikimKritik: parti?.dikimNotu || '',
         utuPaketci: dikimdenUtuye ? irsaliye.alanFirmaAdi : firmaAdi(parti?.utupaketciId),
         utudenCikan: parti?.durum === 'tamamlandi' ? parti.sonCikanAdet : '',
         not: irsaliye.notlar || '',
     });
     const baslik = `İrsaliye ${irsaliye.irsaliyeNo || irsaliye.partiNo || ''}`.trim();
-    belgeAc(kesimFormuBelgesi([sayfa], { baslik, boyut }), { baslik });
+    belgeAc(kesimFormuBelgesi([sayfa], { baslik }), { baslik });
 }
