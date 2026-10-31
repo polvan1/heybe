@@ -1621,3 +1621,68 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
   border-radius: var(--radius-sm); background: var(--color-warning-soft); border: 1px solid var(--color-warning-border);
   font-size: var(--font-size-sm);
 }
+
+/* ---- Partiler: defter görünümü (eski parti defteri düzeni) ---- */
+.gorunum-anahtar { display: inline-flex; gap: 4px; margin-left: auto; }
+.gorunum-anahtar .filter-btn { display: inline-flex; align-items: center; gap: 4px; }
+.parti-defteri { display: flex; flex-direction: column; gap: var(--space-4); }
+.defter-sayfa {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.defter-ay {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid var(--color-brand, var(--color-primary));
+}
+.defter-ay-ad { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); letter-spacing: 0.02em; }
+.defter-ay-toplam { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.defter-satirlar { list-style: none; margin: 0; padding: 0; }
+.defter-satir {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.1fr) minmax(220px, 2fr) minmax(60px, 0.7fr) auto;
+  align-items: center; gap: var(--space-3);
+  min-height: 46px; padding: 6px var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.defter-satir:last-child { border-bottom: 0; }
+.defter-satir:hover, .defter-satir:focus-visible { background: var(--color-surface-hover); outline: none; }
+.defter-atolye { font-weight: var(--font-weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.defter-atolye em { font-style: normal; color: var(--color-text-tertiary); font-weight: var(--font-weight-regular); }
+.defter-hesap {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+  font-variant-numeric: tabular-nums; font-size: var(--font-size-base);
+}
+.defter-model { font-weight: var(--font-weight-semibold); color: var(--color-primary); }
+.defter-esit, .defter-carpi { color: var(--color-text-tertiary); }
+.defter-tutar { font-weight: var(--font-weight-bold); }
+.defter-not { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.defter-durum { justify-self: end; }
+.defter-satir--tamam .defter-hesap { color: var(--color-text-secondary); }
+
+@media (max-width: 640px) {
+  .defter-satir {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "atolye durum" "hesap hesap" "not not";
+    row-gap: 2px; padding: var(--space-2) var(--space-3);
+  }
+  .defter-atolye { grid-area: atolye; }
+  .defter-hesap { grid-area: hesap; }
+  .defter-not { grid-area: not; }
+  .defter-not:empty { display: none; }
+  .defter-durum { grid-area: durum; }
+  .gorunum-anahtar { margin-left: 0; }
+}
+
+/* Excel'den parti aktarma önizlemesi */
+.aktar-ozet {
+  display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3); font-size: var(--font-size-sm); color: var(--color-text-secondary);
+}
+.aktar-ozet strong { color: var(--color-text); }
+.aktar-yeni { margin-top: 2px; font-size: var(--font-size-xs); color: var(--color-primary); font-weight: var(--font-weight-semibold); }
+.aktar-tablo tr.aktar-satir-atla td { opacity: 0.55; }

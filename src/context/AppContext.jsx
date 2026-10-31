@@ -160,7 +160,7 @@ export function AppProvider({ children }) {
     const firmaSil = useCallback((id) => { const r = db.deleteFirma(id); refresh(); return r; }, [refresh]);
 
     // Ürün operations
-    const urunEkle = useCallback((urun) => { db.addUrun(urun); refresh(); }, [refresh]);
+    const urunEkle = useCallback((urun) => { const yeni = db.addUrun(urun); refresh(); return yeni; }, [refresh]);
     const urunGuncelle = useCallback((id, updates) => { db.updateUrun(id, updates); refresh(); }, [refresh]);
     const urunSil = useCallback((id) => { db.deleteUrun(id); refresh(); }, [refresh]);
 

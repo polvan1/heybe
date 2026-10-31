@@ -100,7 +100,13 @@ function secimListeleri(sutunlar, ilkSatir) {
     }).join('')}</dataValidations>`;
 }
 
-function sayfaXml({ sutunlar, satirlar, toplamSatiri, ustBilgi = [] }) {
+// Formül hücresi (ör. Tutar = Adet × Fiyat); Excel açılışta hesaplar (workbook calcPr fullCalcOnLoad)
+function formulHucre(ref, formul, tip) {
+    const s = tip === 'para' ? STIL.para : tip === 'sayi' ? STIL.sayi : null;
+    return `<c r="${ref}"${s !== null ? ` s="${s}"` : ''}><f>${xmlEsc(formul)}</f></c>`;
+}
+
+function sayfaXml({ sutunlar, satirlar, toplamSatiri, ustBilgi = [], bosSatir = 0 }) {
     const genislikler = sutunlar.map((s, i) => s.genislik || Math.min(50, Math.max(
         String(s.baslik).length + 2,
         ...satirlar.slice(0, 300).map(r => String(r[i] ?? '').length + 1),
@@ -116,9 +122,17 @@ function sayfaXml({ sutunlar, satirlar, toplamSatiri, ustBilgi = [] }) {
     xmlSatirlar.push(`<row r="${no}">${sutunlar.map((s, i) => `<c r="${sutunHarfi(i)}${no}" t="inlineStr" s="${STIL.baslik}"><is><t>${xmlEsc(s.baslik)}</t></is></c>`).join('')}</row>`);
     no++;
     satirlar.forEach(r => {
-        xmlSatirlar.push(`<row r="${no}">${sutunlar.map((s, i) => hucre(`${sutunHarfi(i)}${no}`, r[i], s.tip)).join('')}</row>`);
+        xmlSatirlar.push(`<row r="${no}">${sutunlar.map((s, i) => (s.formul
+            ? formulHucre(`${sutunHarfi(i)}${no}`, s.formul(no), s.tip)
+            : hucre(`${sutunHarfi(i)}${no}`, r[i], s.tip))).join('')}</row>`);
         no++;
     });
+    // Şablonlar için: yalnızca formülleri olan boş satırlar (kullanıcı doldurdukça hesaplanır)
+    for (let k = 0; k < bosSatir; k++) {
+        const formuller = sutunlar.map((s, i) => (s.formul ? formulHucre(`${sutunHarfi(i)}${no}`, s.formul(no), s.tip) : '')).join('');
+        xmlSatirlar.push(`<row r="${no}">${formuller}</row>`);
+        no++;
+    }
     if (toplamSatiri) {
         xmlSatirlar.push(`<row r="${no}">${sutunlar.map((s, i) => hucre(`${sutunHarfi(i)}${no}`, toplamSatiri[i], s.tip, true)).join('')}</row>`);
         no++;
@@ -167,7 +181,8 @@ function sayfaAdlari(sayfalar) {
     });
 }
 
-// sayfalar: [{ ad, sutunlar: [{ baslik, tip?: 'para'|'sayi'|'tarih', genislik?, secenekler? }], satirlar: [[...]], toplamSatiri?, ustBilgi?: [metin] }]
+// sayfalar: [{ ad, sutunlar: [{ baslik, tip?: 'para'|'sayi'|'tarih', genislik?, secenekler?, formul?: (satirNo) => 'D2*E2' }],
+//              satirlar: [[...]], toplamSatiri?, ustBilgi?: [metin], bosSatir?: formüllü boş satır sayısı }]
 export function excelBlob(sayfalar) {
     const adlar = sayfaAdlari(sayfalar);
     const dosyalar = [
@@ -176,7 +191,7 @@ export function excelBlob(sayfalar) {
         { ad: '_rels/.rels', icerik: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
         { ad: 'xl/workbook.xml', icerik: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${adlar.map((ad, i) => `<sheet name="${xmlEsc(ad)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${adlar.map((ad, i) => `<sheet name="${xmlEsc(ad)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>` },
         { ad: 'xl/_rels/workbook.xml.rels', icerik: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sayfalar.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sayfalar.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
         { ad: 'xl/styles.xml', icerik: STILLER },
