@@ -1571,3 +1571,20 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
 .yuk-alt { display: flex; justify-content: space-between; gap: 6px; font-size: 0.72rem; color: var(--color-text-secondary); }
 .yuk-alt strong { color: var(--yuk-renk); }
 .kanban-container.kanban--surukleniyor { scroll-snap-type: none; }
+
+/* Ürün içe aktarma önizlemesi: beden + asorti adedi */
+.aktar-bedenler { display: flex; flex-wrap: wrap; gap: 4px; }
+.aktar-beden {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+.aktar-beden b { color: var(--color-primary); font-variant-numeric: tabular-nums; }
+.aktar-uyari { margin-top: 2px; font-size: var(--font-size-xs); color: var(--color-warning); }

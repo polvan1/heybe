@@ -8,6 +8,7 @@ import { modelMaliyeti, maliyetGorur, maliyetTanimliMi } from '../utils/maliyet'
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
 import { firmaAktifMi } from '../utils/firma';
+import { urunDosyasiOku, urunSatirlariniCoz, urunSablonuIndir } from '../utils/urunAktar';
 
 const DEFAULT_BEDENLER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 
@@ -90,93 +91,53 @@ export default function Urunler() {
         setModal('add');
     };
 
-    // ---- EXCEL / CSV IMPORT ----
-    const handleFileUpload = (e) => {
+    // ---- EXCEL / CSV İÇE AKTARMA ----
+    // Bedenler ayrı sütunlarda (S | M | L | XL | 2X ...): hücredeki sayı asorti adedi.
+    // Aynı ürün kodu zaten varsa yeni ürün açılmaz, mevcut ürün güncellenir.
+    const handleFileUpload = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const text = evt.target.result;
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            if (lines.length < 2) {
-                alert('Dosyada yeterli veri bulunamadı. İlk satır başlık, sonraki satırlar veri olmalıdır.');
-                return;
-            }
-            // Başlık satırını atla, verileri parse et
-            const separator = lines[0].includes(';') ? ';' : ',';
-            const headers = lines[0].split(separator).map(h => h.replace(/"/g, '').trim().toLowerCase());
-            
-            const parsed = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(separator).map(c => c.replace(/"/g, '').trim());
-                if (cols.length < 2) continue;
-
-                // Esnek kolon eşleştirme — kodIdx önce bulunur, adIdx onu hariç tutar
-                const kodIdx = headers.findIndex(h => h.includes('kod') || h.includes('code'));
-                const adIdx = headers.findIndex((h, idx) => {
-                    if (idx === kodIdx) return false; // kod sütununu atla
-                    return h.includes('ürün ad') || h.includes('urun ad') || h.includes('ad') || h.includes('name') || h.includes('isim') || h.includes('ürün');
-                });
-                const bedenIdx = headers.findIndex(h => h.includes('beden') || h.includes('size'));
-                const kesimIdx = headers.findIndex(h => h.includes('kesim'));
-                const dikimIdx = headers.findIndex(h => h.includes('dikim'));
-                const utuIdx = headers.findIndex(h => h.includes('ütü') || h.includes('utu') || h.includes('paket'));
-
-                const urunKodu = cols[kodIdx >= 0 ? kodIdx : 0] || '';
-                const urunAdi = cols[adIdx >= 0 ? adIdx : (kodIdx === 0 ? 1 : 0)] || '';
-                const bedenStr = bedenIdx >= 0 ? cols[bedenIdx] : '';
-                const kesimFiyat = kesimIdx >= 0 ? parseFloat(cols[kesimIdx]) || 0 : 0;
-                const dikimFiyat = dikimIdx >= 0 ? parseFloat(cols[dikimIdx]) || 0 : 0;
-                const utuFiyat = utuIdx >= 0 ? parseFloat(cols[utuIdx]) || 0 : 0;
-
-                if (!urunKodu && !urunAdi) continue;
-
-                // Bedenler parse et (virgülle ayrılmış veya boşlukla)
-                let bedenler = ['S', 'M', 'L', 'XL', '2XL'];
-                if (bedenStr) {
-                    bedenler = bedenStr.split(/[,\s\/\-]+/).map(b => b.trim().toUpperCase()).filter(b => b);
-                }
-
-                parsed.push({ urunKodu, urunAdi, bedenler, kesimFiyat, dikimFiyat, utuFiyat });
-            }
-
-            if (parsed.length === 0) {
-                alert('Geçerli ürün verisi bulunamadı. Lütfen dosya formatını kontrol edin.');
-                return;
-            }
-            setImportData(parsed);
-        };
-        reader.readAsText(file, 'UTF-8');
         e.target.value = '';
+        if (!file) return;
+        try {
+            const { urunler: okunan } = urunSatirlariniCoz(await urunDosyasiOku(file));
+            if (okunan.length === 0) {
+                alert('Geçerli ürün verisi bulunamadı. İlk satır başlık (Ürün Kodu, Ürün Adı, bedenler...), sonraki satırlar ürünler olmalıdır.');
+                return;
+            }
+            const kodaGore = new Map(urunler.filter(u => u.urunKodu).map(u => [String(u.urunKodu).trim().toLocaleLowerCase('tr'), u]));
+            setImportData(okunan.map(item => ({ ...item, mevcut: kodaGore.get(item.urunKodu.toLocaleLowerCase('tr')) || null })));
+        } catch (hata) {
+            alert(hata.message || 'Dosya okunamadı.');
+        }
     };
 
     const handleImportConfirm = () => {
         if (!importData) return;
+        let yeni = 0, guncel = 0;
         importData.forEach(item => {
-            const dagilim = {};
-            item.bedenler.forEach((b, i) => {
-                dagilim[b] = i === Math.floor(item.bedenler.length / 2) ? 3 : (i === 0 || i === item.bedenler.length - 1 ? 1 : 2);
-            });
-            urunEkle({
-                urunKodu: item.urunKodu,
-                urunAdi: item.urunAdi,
-                asorti: { bedenler: item.bedenler, dagilim },
-                kesimFiyat: item.kesimFiyat,
-                dikimFiyat: item.dikimFiyat,
-                utuFiyat: item.utuFiyat,
-            });
+            const asorti = { bedenler: item.bedenler, dagilim: item.dagilim };
+            if (item.mevcut) {
+                const degisim = { asorti };
+                if (item.urunAdi) degisim.urunAdi = item.urunAdi;
+                if (item.kesimFiyat > 0) degisim.kesimFiyat = item.kesimFiyat;
+                if (item.dikimFiyat > 0) degisim.dikimFiyat = item.dikimFiyat;
+                if (item.utuFiyat > 0) degisim.utuFiyat = item.utuFiyat;
+                urunGuncelle(item.mevcut.id, degisim);
+                guncel++;
+            } else {
+                urunEkle({
+                    urunKodu: item.urunKodu,
+                    urunAdi: item.urunAdi,
+                    asorti,
+                    kesimFiyat: item.kesimFiyat,
+                    dikimFiyat: item.dikimFiyat,
+                    utuFiyat: item.utuFiyat,
+                });
+                yeni++;
+            }
         });
         setImportData(null);
-        alert(`${importData.length} ürün başarıyla eklendi!`);
-    };
-
-    const downloadTemplate = () => {
-        const csv = '\uFEFFÜrün Kodu;Ürün Adı;Bedenler;Kesim Fiyat;Dikim Fiyat;Ütü Fiyat\nTS-001;Erkek Basic T-Shirt;S,M,L,XL,2XL;1.50;3.00;1.00\nTS-002;Kadın V-Yaka;XS,S,M,L,XL;1.75;3.50;1.25';
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'urun_sablonu.csv';
-        link.click();
+        alert([yeni && `${yeni} ürün eklendi`, guncel && `${guncel} ürün güncellendi`].filter(Boolean).join(', ') + '.');
     };
 
     const openEdit = (e, urun) => {
@@ -275,10 +236,10 @@ export default function Urunler() {
             <div className="page-header">
                 <h1 className="page-title">Ürünler</h1>
                 <div className="page-header-actions">
-                    <button className="btn btn-ghost" onClick={downloadTemplate} title="Şablon İndir">
+                    <button className="btn btn-ghost" onClick={urunSablonuIndir} title="Excel şablonunu indir (her beden ayrı sütun)">
                         <Download size={16} /> Şablon
                     </button>
-                    <button className="btn btn-success" onClick={() => fileInputRef.current?.click()} title="Excel/CSV'den Aktar">
+                    <button className="btn btn-success" onClick={() => fileInputRef.current?.click()} title="Excel (.xlsx) veya CSV'den aktar">
                         <Upload size={16} /> Excel Aktar
                     </button>
                     <button className="btn btn-primary" onClick={openAdd}>
@@ -288,7 +249,7 @@ export default function Urunler() {
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".xlsx,.xlsm,.csv,.txt"
                     style={{ display: 'none' }}
                     onChange={handleFileUpload}
                 />
@@ -582,7 +543,7 @@ export default function Urunler() {
                     <div className="form-group" style={{ marginTop: '16px' }}>
                         <label className="form-label">Beden Seçimi</label>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {DEFAULT_BEDENLER.map(beden => (
+                            {[...DEFAULT_BEDENLER, ...form.bedenler.filter(b => !DEFAULT_BEDENLER.includes(b))].map(beden => (
                                 <button
                                     key={beden}
                                     type="button"
@@ -684,6 +645,7 @@ export default function Urunler() {
             {importData && (
                 <Modal
                     title={`Excel Aktarma Önizleme (${importData.length} ürün)`}
+                    genis
                     onClose={() => setImportData(null)}
                     footer={
                         <>
@@ -701,10 +663,11 @@ export default function Urunler() {
                                     <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>#</th>
                                     <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Ürün Kodu</th>
                                     <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Ürün Adı</th>
-                                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Bedenler</th>
+                                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Bedenler (asorti)</th>
                                     <th style={{ padding: '8px', textAlign: 'right', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Kesim ₺</th>
                                     <th style={{ padding: '8px', textAlign: 'right', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Dikim ₺</th>
                                     <th style={{ padding: '8px', textAlign: 'right', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Ütü ₺</th>
+                                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: '2px solid var(--border-color)', whiteSpace: 'nowrap' }}>Durum</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -713,17 +676,26 @@ export default function Urunler() {
                                         <td style={{ padding: '6px 8px', color: 'var(--text-muted)' }}>{i + 1}</td>
                                         <td style={{ padding: '6px 8px', fontWeight: 600 }}>{item.urunKodu}</td>
                                         <td style={{ padding: '6px 8px' }}>{item.urunAdi}</td>
-                                        <td style={{ padding: '6px 8px', fontSize: '0.75rem' }}>{item.bedenler.join(', ')}</td>
+                                        <td style={{ padding: '6px 8px' }}>
+                                            <div className="aktar-bedenler">
+                                                {item.bedenler.map(b => <span key={b} className="aktar-beden">{b}<b>{item.dagilim[b]}</b></span>)}
+                                            </div>
+                                            {item.bedenYok && <div className="aktar-uyari">Beden yok → varsayılan</div>}
+                                        </td>
                                         <td style={{ padding: '6px 8px', textAlign: 'right' }}>{item.kesimFiyat > 0 ? item.kesimFiyat.toFixed(2) : '-'}</td>
                                         <td style={{ padding: '6px 8px', textAlign: 'right' }}>{item.dikimFiyat > 0 ? item.dikimFiyat.toFixed(2) : '-'}</td>
                                         <td style={{ padding: '6px 8px', textAlign: 'right' }}>{item.utuFiyat > 0 ? item.utuFiyat.toFixed(2) : '-'}</td>
+                                        <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                                            <span className={`badge ${item.mevcut ? 'dikimde' : 'tamamlandi'}`}>{item.mevcut ? 'Güncellenecek' : 'Yeni'}</span>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                     <div style={{ marginTop: '12px', padding: '10px', background: 'var(--color-primary-soft)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Veriler doğru görünüyorsa "Aktar" butonuna basın. Asorti dağılımları otomatik oluşturulacak.
+                        Veriler doğru görünüyorsa "Aktar" butonuna basın. Beden sütunlarındaki sayılar asorti adedi olarak alınır
+                        (boş hücre = o beden yok). Kodu zaten kayıtlı ürünlerin bedenleri ve dolu fiyatları güncellenir.
                     </div>
                 </Modal>
             )}

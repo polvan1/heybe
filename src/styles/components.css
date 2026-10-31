@@ -754,6 +754,11 @@ input[type="time"].form-input {
   }
 }
 
+/* Geniş pencere (tablo önizlemeleri) */
+@media (min-width: 600px) {
+  .modal.modal--genis { max-width: 920px; }
+}
+
 .modal-header {
   display: flex;
   align-items: center;

@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 // Modal her zaman <body>'nin doğrudan çocuğu olarak çizilir (portal).
 // Sayfa içeriğinin içinde çizildiğinde iOS Safari'de kaydırılan alanın katmanında
 // kalıyor, üst bar ve alt menünün ALTINA düşüyordu (butonlara dokunulamıyordu).
-export default function Modal({ title, onClose, children, footer }) {
+export default function Modal({ title, onClose, children, footer, genis = false }) {
     // Mobilde klavye açılınca odaklanan alan görünür kalsın:
     // input/textarea/select odaklandığında modal içinde görünüme kaydır
     const handleFocus = (e) => {
@@ -31,7 +31,7 @@ export default function Modal({ title, onClose, children, footer }) {
 
     return createPortal(
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
+            <div className={`modal${genis ? ' modal--genis' : ''}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
                 onClick={(e) => e.stopPropagation()} onFocus={handleFocus}>
                 <div className="modal-header">
                     <h3 className="modal-title">{title}</h3>
