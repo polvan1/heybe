@@ -155,7 +155,7 @@ export function AppProvider({ children }) {
     }, [oturumuAc]);
 
     // Firma operations
-    const firmaEkle = useCallback((firma) => { db.addFirma(firma); refresh(); }, [refresh]);
+    const firmaEkle = useCallback((firma) => { const yeni = db.addFirma(firma); refresh(); return yeni; }, [refresh]);
     const firmaGuncelle = useCallback((id, updates) => { db.updateFirma(id, updates); refresh(); }, [refresh]);
     const firmaSil = useCallback((id) => { const r = db.deleteFirma(id); refresh(); return r; }, [refresh]);
 

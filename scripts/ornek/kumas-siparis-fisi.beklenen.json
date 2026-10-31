@@ -1,0 +1,10 @@
+{
+  "firma": "Örnek Kumaşçılık",
+  "irsaliyeNo": "004512",
+  "tarih": "2026-10-30",
+  "satirlar": [
+    { "kumasTuru": "Buzi Ribana", "renk": "Lacivert", "topAdedi": 10, "miktar": 247, "lotNo": "60018-35" },
+    { "kumasTuru": "Süprem", "renk": "Siyah", "topAdedi": 6, "miktar": 152.5, "lotNo": "71204-12" },
+    { "kumasTuru": "Kaşkorse", "renk": "Gri Melanj", "topAdedi": 4, "miktar": 98, "lotNo": "55310-08" }
+  ]
+}

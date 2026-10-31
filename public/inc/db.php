@@ -28,7 +28,7 @@ function dbSurucu($pdo) {
 // Yeni kurulumda tablolar oluşturulur; mevcut kurulumda yalnızca
 // EKSİK kolonlar eklenir (mevcut veriye dokunulmaz).
 // ============================================================
-const SEMA_SURUMU = 6;
+const SEMA_SURUMU = 7;
 
 function semaTanimi() {
     $ts = 'VARCHAR(40) DEFAULT NULL';     // ISO tarih metni
@@ -128,6 +128,7 @@ function semaTanimi() {
             'miktar' => 'DOUBLE DEFAULT 0', 'topAdedi' => $sayi, 'birim' => "VARCHAR(20) DEFAULT 'kg'",
             'gelenFirmaId' => $ref, 'gelenFirmaAdi' => 'VARCHAR(255) DEFAULT NULL',
             'partiId' => $ref, 'partiNo' => 'VARCHAR(30) DEFAULT NULL',
+            'lotNo' => 'VARCHAR(60) DEFAULT NULL',   // kumaşçının parti (boya lot) numarası
             'referansNo' => 'VARCHAR(160) DEFAULT NULL', 'notlar' => $metin, 'tarih' => $ts, 'createdAt' => $ts,
         ],
         'kumas_turleri' => [

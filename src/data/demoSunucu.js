@@ -245,7 +245,19 @@ export async function demoIstek(sorgu, govde) {
                 },
             };
         }
-        return { error: 'anahtar_yok', mesaj: 'Demo modunda kumaş irsaliyesi okuma kapalıdır. Gerçek sunucuda yapay zekâ anahtarı (ör. ücretsiz GEMINI_API_KEY) eklendiğinde çalışır.' };
+        // Demo: kumaşçı sipariş fişi örneği (kurgusal firma; "Cinsi" sütunu tür + renk tek hücrede)
+        await new Promise(r => setTimeout(r, 900));
+        return {
+            success: true,
+            saglayici: 'Demo (örnek okuma — gerçek sunucuda Gemini okur)',
+            okuma: {
+                firma: 'Örnek Kumaşçılık', irsaliyeNo: '003981', tarih: new Date().toISOString().slice(0, 10),
+                satirlar: [
+                    { kumasTuru: 'Buzi Ribana Lacivert', renk: '', topAdedi: 10, miktar: 247, birim: 'kg', lotNo: '60018-35' },
+                    { kumasTuru: 'Süprem', renk: 'Siyah', topAdedi: 6, miktar: 152.5, birim: 'kg', lotNo: '71204-12' },
+                ],
+            },
+        };
     }
 
     if (p.has('push')) {

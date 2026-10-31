@@ -1,6 +1,7 @@
 <?php
 // Yapay zekâ irsaliye okuma testi (GitHub Actions ve geliştirme ortamı için).
 // Kullanım: php scripts/ai-test.php <görsel.jpg> [beklenen.json]
+// Dosya adı "kumas" ile başlıyorsa kumaşçı irsaliyesi/sipariş fişi, değilse kesim sevk irsaliyesi okunur.
 // Anahtarlar ortam değişkenlerinden okunur (GEMINI_API_KEY vb.); asla ekrana yazılmaz.
 if ($argc < 2) { fwrite(STDERR, "Görsel yolu gerekli\n"); exit(1); }
 
@@ -28,7 +29,10 @@ $baglam = [
     'partiler' => ['P-0009', 'P-0010'],
 ];
 $bas = microtime(true);
-$sonuc = aiGorselJsonOku(sevkIrsaliyePrompt($baglam), $tur, base64_encode($gorsel));
+$kumasModu = str_starts_with(basename($argv[1]), 'kumas');
+$prompt = $kumasModu ? kumasIrsaliyePrompt(['Süprem', 'Ribana', 'Kaşkorse', 'İki İplik']) : sevkIrsaliyePrompt($baglam);
+echo 'Okunan belge: ' . ($kumasModu ? 'kumaşçı fişi' : 'kesim sevk irsaliyesi') . "\n";
+$sonuc = aiGorselJsonOku($prompt, $tur, base64_encode($gorsel));
 $sure = round(microtime(true) - $bas, 1);
 if (isset($sonuc['hata'])) {
     echo "::error::Okuma başarısız ($sure sn): {$sonuc['mesaj']}\n";
@@ -36,6 +40,33 @@ if (isset($sonuc['hata'])) {
 }
 echo "Okuyan: {$sonuc['saglayici']} — $sure sn\n";
 echo json_encode($sonuc['veri'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+
+// Kumaş fişi: tür + renk eşleşen satırda top, kg ve parti no karşılaştırılır
+if ($kumasModu && !empty($argv[2]) && is_file($argv[2])) {
+    $beklenen = json_decode(file_get_contents($argv[2]), true);
+    $sade = fn($m) => preg_replace('/[^0-9A-ZÇĞİÖŞÜ]/u', '', mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], (string)$m), 'UTF-8'));
+    $okunan = [];
+    foreach ($sonuc['veri']['satirlar'] ?? [] as $s) {
+        // Renk ayrılmadıysa uygulama da ayırır; testte tür + renk birleşik karşılaştırılır
+        $okunan[$sade(($s['kumasTuru'] ?? '') . ($s['renk'] ?? ''))] = $s;
+    }
+    $dogru = 0;
+    foreach ($beklenen['satirlar'] as $b) {
+        $s = $okunan[$sade($b['kumasTuru'] . $b['renk'])] ?? null;
+        $ok = $s && (int)($s['topAdedi'] ?? -1) === $b['topAdedi'] && abs((float)($s['miktar'] ?? -1) - $b['miktar']) < 0.01
+            && $sade($s['lotNo'] ?? '') === $sade($b['lotNo']);
+        if ($ok) $dogru++;
+        echo ($ok ? '  ✓ ' : '  ✗ ') . "{$b['kumasTuru']} {$b['renk']} / {$b['topAdedi']} top / {$b['miktar']} kg / parti {$b['lotNo']}"
+            . ($ok ? '' : ' → okunan: ' . ($s ? json_encode($s, JSON_UNESCAPED_UNICODE) : 'yok')) . "\n";
+    }
+    foreach (['firma', 'irsaliyeNo', 'tarih'] as $a) echo "  $a: " . ($sonuc['veri'][$a] ?? '') . " (beklenen: {$beklenen[$a]})\n";
+    $toplam = count($beklenen['satirlar']);
+    echo "Satır doğruluğu: $dogru / $toplam\n";
+    if ($dogru < $toplam) echo "::warning::Kumaş fişi okuması $toplam satırdan $dogru tanesini doğru buldu.\n";
+    elseif ($sade($sonuc['veri']['firma'] ?? '') !== $sade($beklenen['firma'])) echo "::warning::Gönderen firma yanlış okundu.\n";
+    else echo "::notice::Kumaş fişi okuma testi başarılı ({$sonuc['saglayici']}, $sure sn).\n";
+    exit(0);
+}
 
 // Beklenen değerlerle karşılaştır (model + renk + adet)
 if (!empty($argv[2]) && is_file($argv[2])) {

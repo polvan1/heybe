@@ -12,6 +12,8 @@ import { FIRMA_TIP_LABELS, kumasTutari, kumasCariKapali } from '../data/db';
 import { cariYazabilir } from '../data/yetki';
 import { PARA_BIRIMLERI, paraSembolu, kurDegeri, useKurlar } from '../data/kur';
 import { secilebilirFirmalar, firmaSecenekAdi, firmaAktifMi } from '../utils/firma';
+import { renkAyir } from '../utils/kumasRenk';
+import { hasYetki } from '../data/yetki';
 
 const BIRIMLER = ['kg', 'metre', 'top'];
 const tl = (n) => `${Number(n || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`;
@@ -21,6 +23,19 @@ function tedarikciSecenekleri(firmalar, seciliId) {
     return secilebilirFirmalar(firmalar, { seciliId })
         .sort((a, b) => ((b.tip === 'kumasci') - (a.tip === 'kumasci')) || a.ad.localeCompare(b.ad, 'tr'))
         .map(f => ({ value: f.id, label: firmaSecenekAdi(f), sub: FIRMA_TIP_LABELS[f.tip] }));
+}
+
+// Tarih alanı (YYYY-AA-GG, yerel gün) ↔ kayıt tarihi (ISO)
+const yerelGun = (iso) => {
+    const d = iso ? new Date(iso) : new Date();
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+function gundenTarih(gun, eskiIso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(gun || '')) return eskiIso || new Date().toISOString();
+    if (eskiIso && yerelGun(eskiIso) === gun) return eskiIso;          // gün değişmediyse saat korunur
+    if (gun === yerelGun()) return new Date().toISOString();
+    return new Date(`${gun}T12:00:00`).toISOString();
 }
 
 // İrsaliyede okunan firma adını kayıtlı firmalarla eşleştir (önce kumaş tedarikçileri)
@@ -36,7 +51,8 @@ function firmaEslestir(firmalar, ad) {
 }
 
 export default function KumasStok() {
-    const { kumasStoklar, kumasStokEkle, kumasStokGuncelle, kumasStokSil, kumasTurleri, kumasTuruEkle, kumasTuruSil, firmalar, currentUser } = useApp();
+    const { kumasStoklar, kumasStokEkle, kumasStokGuncelle, kumasStokSil, kumasTurleri, kumasTuruEkle, kumasTuruSil, firmalar, firmaEkle, currentUser } = useApp();
+    const firmaEkleyebilir = hasYetki(currentUser, 'firmalar');
     // Kesimhane yetkilisi yalnızca kendi kesimhanesinin stoğunu görür ve girer (sunucu da bunu zorlar)
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
     // Alış fiyatı tedarikçinin carisine borç yazar → yalnızca cari yazabilen kullanıcı girer
@@ -58,11 +74,11 @@ export default function KumasStok() {
     const varsayilanKesimhane = () => kesimhaneKullanici
         ? (currentUser.firmaId || '')
         : (kesimhaneFiltre !== 'all' && kesimhaneFiltre !== 'yok' ? kesimhaneFiltre : '');
-    const BOS_FORM = { kumasAdi: '', renk: '', topAdedi: '', miktar: '', birim: 'kg', birimFiyat: '', paraBirimi: 'TRY', kur: '', gelenFirmaId: '', kesimhaneId: '', referansNo: '', notlar: '' };
+    const BOS_FORM = { kumasAdi: '', renk: '', topAdedi: '', miktar: '', birim: 'kg', birimFiyat: '', paraBirimi: 'TRY', kur: '', gelenFirmaId: '', kesimhaneId: '', referansNo: '', lotNo: '', tarih: '', notlar: '' };
     const [form, setForm] = useState(BOS_FORM);
     const [duzenlenenId, setDuzenlenenId] = useState(null);
     const duzenlenen = duzenlenenId ? kumasStoklar.find(k => k.id === duzenlenenId) : null;
-    const yeniForm = () => ({ ...BOS_FORM, kesimhaneId: varsayilanKesimhane() });
+    const yeniForm = () => ({ ...BOS_FORM, kesimhaneId: varsayilanKesimhane(), tarih: yerelGun() });
     const kesimhaneAdi = (id) => firmalar.find(f => f.id === id)?.ad || '';
 
     // Seçili kesimhaneye göre kayıtlar (özet ve liste bunu kullanır)
@@ -94,6 +110,7 @@ export default function KumasStok() {
                    (k.renk || '').toLowerCase().includes(q) ||
                    (k.gelenFirmaAdi || '').toLowerCase().includes(q) ||
                    (k.referansNo || '').toLowerCase().includes(q) ||
+                   (k.lotNo || '').toLowerCase().includes(q) ||
                    (k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId)).toLowerCase().includes(q);
         })
         .sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
@@ -137,15 +154,21 @@ export default function KumasStok() {
                 firma: json.okuma.firma || '',
                 firmaId: eslesenFirma?.id || '',
                 irsaliyeNo: json.okuma.irsaliyeNo || '',
-                satirlar: json.okuma.satirlar.map(s => ({
-                    kumasTuru: s.kumasTuru || '',
-                    renk: s.renk || '',
-                    topAdedi: s.topAdedi ?? '',
-                    miktar: s.miktar ?? '',
-                    birim: BIRIMLER.includes(s.birim) ? s.birim : 'kg',
-                    birimFiyat: '',
-                    dahil: true,
-                })),
+                tarih: /^\d{4}-\d{2}-\d{2}$/.test(json.okuma.tarih || '') ? json.okuma.tarih : yerelGun(),
+                satirlar: json.okuma.satirlar.map(s => {
+                    // "Buzi Ribana Lacivert" tek hücrede geldiyse rengi ayır
+                    const ayrik = s.renk ? { kumas: s.kumasTuru || '', renk: s.renk } : renkAyir(s.kumasTuru);
+                    return {
+                        kumasTuru: ayrik.kumas,
+                        renk: ayrik.renk,
+                        lotNo: s.lotNo ? String(s.lotNo) : '',
+                        topAdedi: s.topAdedi ?? '',
+                        miktar: s.miktar ?? '',
+                        birim: BIRIMLER.includes(s.birim) ? s.birim : 'kg',
+                        birimFiyat: '',
+                        dahil: true,
+                    };
+                }),
             });
         } catch (err) {
             alert('Okuma sırasında hata: ' + err.message);
@@ -173,6 +196,8 @@ export default function KumasStok() {
                 gelenFirmaId: okuma.firmaId || null,
                 gelenFirmaAdi: firma?.ad || okuma.firma || '',
                 referansNo: okuma.irsaliyeNo || '',
+                lotNo: (s.lotNo || '').trim(),
+                tarih: gundenTarih(okuma.tarih),
                 kesimhaneId: kesimhaneId || null,
                 kesimhaneAdi: kesimhaneAdi(kesimhaneId),
                 notlar: 'Yapay zekâ irsaliye okumasıyla eklendi',
@@ -181,13 +206,21 @@ export default function KumasStok() {
         setOkuma(null);
     };
 
+    // Fişteki firma kayıtlı değilse tek dokunuşla kumaş tedarikçisi olarak ekle
+    const okunanFirmayiEkle = () => {
+        const ad = (okuma.firma || '').trim();
+        if (!ad) return;
+        const yeni = firmaEkle({ ad, tip: 'kumasci' });
+        if (yeni?.id) setOkuma(o => ({ ...o, firmaId: yeni.id }));
+    };
+
     const formuAc = (k = null) => {
         setDuzenlenenId(k?.id || null);
         setForm(k ? {
             ...BOS_FORM,
             kumasAdi: k.kumasAdi || '', renk: k.renk || '', topAdedi: k.topAdedi ?? '', miktar: k.miktar ?? '',
             birim: k.birim || 'kg', birimFiyat: k.birimFiyat ?? '', paraBirimi: k.paraBirimi || 'TRY', kur: k.kur ?? '', gelenFirmaId: k.gelenFirmaId || '',
-            kesimhaneId: k.kesimhaneId || '', referansNo: k.referansNo || '', notlar: k.notlar || '',
+            kesimhaneId: k.kesimhaneId || '', referansNo: k.referansNo || '', lotNo: k.lotNo || '', tarih: yerelGun(k.tarih), notlar: k.notlar || '',
         } : yeniForm());
         setShowForm(true);
     };
@@ -209,6 +242,8 @@ export default function KumasStok() {
             gelenFirmaId: form.gelenFirmaId || null,
             gelenFirmaAdi: firma?.ad || (form.gelenFirmaId ? duzenlenen?.gelenFirmaAdi || '' : ''),
             referansNo: form.referansNo.trim(),
+            lotNo: (form.lotNo || '').trim(),
+            tarih: gundenTarih(form.tarih, duzenlenen?.tarih),
             kesimhaneId,
             kesimhaneAdi: kesimhaneAdi(kesimhaneId),
             notlar: form.notlar.trim(),
@@ -236,12 +271,12 @@ export default function KumasStok() {
         const sutunlar = [
             { baslik: 'Tarih', tip: 'tarih' }, { baslik: 'Kumaş' }, { baslik: 'Renk' }, { baslik: 'Top', tip: 'sayi' },
             { baslik: 'Miktar', tip: 'sayi' }, { baslik: 'Birim' }, { baslik: 'Kesimhane' }, { baslik: 'Geldiği Firma' },
-            { baslik: 'İrsaliye/Ref.' }, { baslik: 'Parti' }, { baslik: 'Not' },
+            { baslik: 'İrsaliye/Ref.' }, { baslik: 'Kumaş Parti (Lot)' }, { baslik: 'Üretim Partisi' }, { baslik: 'Not' },
         ];
         if (fiyatGirebilir) sutunlar.push({ baslik: 'Birim Fiyat', tip: 'sayi' }, { baslik: 'Para / Kur' }, { baslik: 'Tutar (TL)', tip: 'para' });
         const satirlar = filtered.map(k => {
             const r = [k.tarih, k.kumasAdi, k.renk || '', k.topAdedi || null, Number(k.miktar) || 0, k.birim,
-                k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId), k.gelenFirmaAdi || '', k.referansNo || '', k.partiNo || '', k.notlar || ''];
+                k.kesimhaneAdi || kesimhaneAdi(k.kesimhaneId), k.gelenFirmaAdi || '', k.referansNo || '', k.lotNo || '', k.partiNo || '', k.notlar || ''];
             if (fiyatGirebilir) r.push(k.birimFiyat || null, k.tutar || null);
             if (fiyatGirebilir) r.splice(r.length - 1, 0, k.paraBirimi && k.paraBirimi !== 'TRY' ? `${k.paraBirimi} @ ${k.kur}` : 'TRY');
             return r;
@@ -358,7 +393,7 @@ export default function KumasStok() {
 
             <div className="search-bar" style={{ marginBottom: '12px' }}>
                 <Search size={18} className="search-icon" />
-                <input type="text" placeholder="Kumaş, renk, firma veya irsaliye no ara..." value={search} onChange={e => setSearch(e.target.value)} />
+                <input type="text" placeholder="Kumaş, renk, firma, irsaliye veya parti no ara..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             {filtered.length === 0 ? (
@@ -392,6 +427,7 @@ export default function KumasStok() {
                                 <div className="text-xs text-muted" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                                     {k.gelenFirmaAdi && <><Layers size={12} /> {k.gelenFirmaAdi} •</>}
                                     {k.referansNo && <>{k.referansNo} •</>}
+                                    {k.lotNo && <>Parti {k.lotNo} •</>}
                                     <span>{new Date(k.tarih).toLocaleDateString('tr-TR')}</span>
                                     {fiyatGirebilir && k.tutar > 0 && (
                                         <span className="kumas-tutar">• {k.paraBirimi && k.paraBirimi !== 'TRY' ? `${Number(k.birimFiyat).toLocaleString('tr-TR')} ${paraSembolu(k.paraBirimi)}` : tl(k.birimFiyat)}/{k.birim} = <strong>{tl(k.tutar)}</strong></span>
@@ -436,10 +472,22 @@ export default function KumasStok() {
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">İrsaliye No</label>
+                            <label className="form-label">İrsaliye / Fiş No</label>
                             <input className="form-input" value={okuma.irsaliyeNo} onChange={e => setOkuma(o => ({ ...o, irsaliyeNo: e.target.value }))} />
                         </div>
+                        <div className="form-group">
+                            <label className="form-label">Tarih</label>
+                            <input className="form-input" type="date" value={okuma.tarih} onChange={e => setOkuma(o => ({ ...o, tarih: e.target.value }))} />
+                        </div>
                     </div>
+                    {!okuma.firmaId && okuma.firma && (
+                        <div className="kumas-firma-yok">
+                            <span><strong>{okuma.firma}</strong> kayıtlı firmalarda bulunamadı.</span>
+                            {firmaEkleyebilir
+                                ? <button type="button" className="btn btn-sm btn-primary" onClick={okunanFirmayiEkle}><Plus size={14} /> Kumaşçı olarak ekle</button>
+                                : <span className="text-muted">Listeden seçin ya da yöneticiden firmayı eklemesini isteyin.</span>}
+                        </div>
+                    )}
 
                     {!kesimhaneKullanici && (
                         <div className="form-group">
@@ -468,6 +516,8 @@ export default function KumasStok() {
                                     placeholder="Kumaş türü" style={{ flex: 2, minWidth: 0 }} />
                                 <input className="form-input" value={s.renk} onChange={e => okumaSatirGuncelle(i, 'renk', e.target.value)}
                                     placeholder="Renk" style={{ flex: 1, minWidth: 0 }} />
+                                <input className="form-input" value={s.lotNo} onChange={e => okumaSatirGuncelle(i, 'lotNo', e.target.value)}
+                                    placeholder="Parti No" title="Kumaşçının parti (lot) numarası" style={{ flex: 1, minWidth: 0 }} />
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input className="form-input" type="number" inputMode="numeric" value={s.topAdedi}
@@ -508,6 +558,12 @@ export default function KumasStok() {
                             <label className="form-label">Kumaş Türü *</label>
                             <input className="form-input" list="kumas-turleri-listesi" value={form.kumasAdi}
                                 onChange={e => setForm({ ...form, kumasAdi: e.target.value })}
+                                onBlur={() => {
+                                    // "Buzi Ribana Lacivert" yazıldıysa ve renk boşsa rengi ayrı alana al
+                                    if (form.renk.trim()) return;
+                                    const { kumas, renk } = renkAyir(form.kumasAdi);
+                                    if (renk) setForm(f => ({ ...f, kumasAdi: kumas, renk }));
+                                }}
                                 placeholder="Tanımlı türden seçin veya yazın" autoFocus />
                         </div>
                         <div className="form-group">
@@ -596,8 +652,18 @@ export default function KumasStok() {
                     )}
                     <div className="form-row">
                         <div className="form-group">
-                            <label className="form-label">İrsaliye / Referans No</label>
+                            <label className="form-label">İrsaliye / Fiş No</label>
                             <input className="form-input" value={form.referansNo} onChange={e => setForm({ ...form, referansNo: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Tarih</label>
+                            <input className="form-input" type="date" value={form.tarih} onChange={e => setForm({ ...form, tarih: e.target.value })} />
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Kumaş Parti No (Lot)</label>
+                            <input className="form-input" value={form.lotNo} onChange={e => setForm({ ...form, lotNo: e.target.value })} placeholder="Fişteki parti no, ör. 60018-35" />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Not</label>

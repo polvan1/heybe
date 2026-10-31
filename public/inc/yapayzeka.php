@@ -168,18 +168,25 @@ function aiListe($dizi, $sinir = 200) {
 
 // ---- Kumaş irsaliyesi (Kumaş Stok) ----
 function kumasIrsaliyePrompt($turler) {
-    return "Bu fotoğraf bir tekstil kumaş irsaliyesi/sevk pusulası. İçeriğini dikkatle oku.\n"
+    return "Bu fotoğraf, bir kumaş tedarikçisinin (kumaşçının) gönderdiği irsaliye / sevk pusulası / sipariş fişi. "
+        . "Basılı form üzerine çoğunlukla ELLE yazılmıştır; el yazısını dikkatle oku.\n"
         . "Sistemde tanımlı kumaş türleri: " . aiListe($turler) . "\n\n"
-        . "Görevin: irsaliyedeki HER kumaş satırı için şu bilgileri çıkar:\n"
-        . "- kumasTuru: tanımlı türlerden en uygun olanı seç; hiçbiri uymuyorsa irsaliyede yazan adı aynen kullan\n"
-        . "- renk: satırdaki renk (yoksa boş bırak)\n"
-        . "- topAdedi: top/rulo adedi (sayı; yoksa null)\n"
-        . "- miktar: kilogram veya metre miktarı (sayı; ondalık nokta ile)\n"
-        . "- birim: \"kg\", \"metre\" veya \"top\"\n"
-        . "Ayrıca irsaliyeyi GÖNDEREN firma adını ve irsaliye numarasını bulmaya çalış.\n\n"
+        . "Tipik form: üstte gönderen firmanın adı/logosu, Tarih, No (seri numarası), \"Sayın\" (alıcı), "
+        . "ve \"Top Ad. | Kg. | Cinsi | Parti No\" (veya Metre, Lot, Renk, Miktar) sütunlu bir tablo.\n\n"
+        . "Kurallar:\n"
+        . "- firma: formu GÖNDEREN firma = formun üstündeki basılı firma adı/logo. \"Sayın\" satırındaki ad ALICIDIR, onu firma olarak YAZMA.\n"
+        . "- irsaliyeNo: formun basılı seri numarası (\"No\" / \"№\" yanındaki sayı, baştaki sıfırlarla birlikte).\n"
+        . "- tarih: YYYY-AA-GG biçiminde (okunamazsa boş).\n"
+        . "- Tablodaki DOLU her satır ayrı satırdır; boş satırları ve çizgileri/karalamaları atla.\n"
+        . "- \"Cinsi\" hücresi genelde kumaş türü + renktir (ör. \"Buzi Ribana Lacivert\" → kumasTuru \"Buzi Ribana\", renk \"Lacivert\"). "
+        . "Renk ayrı sütundaysa oradan al. Renk yoksa boş bırak.\n"
+        . "- kumasTuru: tanımlı türlerden biri açıkça uyuyorsa onu aynen yaz; uymuyorsa formda yazan türü yaz (renk hariç, ilk harfler büyük).\n"
+        . "- topAdedi: \"Top Ad.\" / top / rulo sayısı (tam sayı; yoksa null).\n"
+        . "- miktar: \"Kg.\" sütunundaki kilogram (ya da metre) miktarı, ondalık nokta ile. birim: \"kg\", \"metre\" veya \"top\".\n"
+        . "- lotNo: \"Parti No\" / \"Lot\" sütunundaki değer, yazıldığı gibi (ör. \"60018-35\"; yoksa boş).\n"
+        . "- Emin olmadığın sayıları tahmin etme, null bırak.\n\n"
         . "YALNIZCA şu şemada geçerli JSON döndür, başka hiçbir metin yazma:\n"
-        . "{\"firma\": \"...\", \"irsaliyeNo\": \"...\", \"satirlar\": [{\"kumasTuru\": \"...\", \"renk\": \"...\", \"topAdedi\": 0, \"miktar\": 0, \"birim\": \"kg\"}]}\n"
-        . "Okunamayan alanları boş string veya null yap. Emin olmadığın sayıları tahmin etme, null bırak.";
+        . "{\"firma\": \"\", \"irsaliyeNo\": \"\", \"tarih\": \"\", \"satirlar\": [{\"kumasTuru\": \"\", \"renk\": \"\", \"topAdedi\": 0, \"miktar\": 0, \"birim\": \"kg\", \"lotNo\": \"\"}]}";
 }
 
 // ---- Kesim sevk irsaliyesi (HİS A5 şablonu, elle doldurulmuş) ----
