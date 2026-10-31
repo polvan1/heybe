@@ -98,7 +98,7 @@ export default function PartiDetay() {
             {etiket && (
                 <EtiketYazdir
                     urun={{ urunKodu: parti.urunKodu, urunAdi: parti.urunAdi, asorti: parti.asorti || urunler.find(u => u.id === parti.urunId)?.asorti }}
-                    varsayilanAdet={paketSayisi(parti.kesilenAdet || parti.toplamAdet || 0, parti.asorti || urunler.find(u => u.id === parti.urunId)?.asorti)}
+                    varsayilanAdet={parti.asortiCarpani > 0 ? Math.ceil((parti.kesilenAdet || parti.toplamAdet || 0) / parti.asortiCarpani) : paketSayisi(parti.kesilenAdet || parti.toplamAdet || 0, parti.asorti || urunler.find(u => u.id === parti.urunId)?.asorti)}
                     parti={parti}
                     firmalar={firmalar}
                     onClose={() => setEtiket(null)}

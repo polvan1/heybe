@@ -1662,7 +1662,18 @@ path.harita-rota[class*="harita-renk-"] { stroke: var(--arac); }
 .defter-tutar { font-weight: var(--font-weight-bold); }
 .defter-not { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .defter-durum { justify-self: end; }
-.defter-satir--tamam .defter-hesap { color: var(--color-text-secondary); }
+/* Tamamlanan işler: ayın en altında, yeşil — açık işler üstte göze çarpar */
+.defter-satir--tamam { background: var(--color-success-soft); }
+.defter-satir--tamam:hover, .defter-satir--tamam:focus-visible { background: color-mix(in srgb, var(--color-success) 16%, transparent); }
+.defter-satir--tamam .defter-atolye, .defter-satir--tamam .defter-hesap { color: var(--color-success); }
+.defter-satir--tamam + .defter-satir--tamam { border-top-color: var(--color-success-border); }
+.defter-satir:not(.defter-satir--tamam) + .defter-satir--tamam { border-top: 2px solid var(--color-success-border); }
+.defter-kat, .defter-carpan { color: var(--color-text-secondary); }
+.defter-adet { font-weight: var(--font-weight-bold); }
+.defter-ay-toplam strong { color: var(--color-text); font-weight: var(--font-weight-semibold); }
+/* Detaylı görünüm: tamamlanan satır / kart yeşil */
+tr.parti-satir--tamam td { background: var(--color-success-soft); }
+.mobile-list-item.parti-satir--tamam { background: var(--color-success-soft); border-color: var(--color-success-border); }
 
 @media (max-width: 640px) {
   .defter-satir {

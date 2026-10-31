@@ -11,7 +11,7 @@ import { excelIndir } from '../utils/excel';
 import { tabloDosyasiOku } from '../utils/excelOku';
 import { partiSatirlariniCoz, partiSablonuIndir, modelAnahtari, firmaAnahtari, ayEtiketi, DURUM_ADLARI } from '../utils/partiAktar';
 import { otomatikDagilim } from '../utils/urunAktar';
-import PartiDefteri, { partiDefterAyi, partiDefterAdedi } from '../components/PartiDefteri';
+import PartiDefteri, { partiDefterAyi, partiDefterAdedi, partiKatAdedi, partiAsortiCarpani } from '../components/PartiDefteri';
 import PartiIlerletModal, { sonrakiAdim, adimYapabilirMi } from '../components/PartiIlerletModal';
 import { secilebilirFirmalar } from '../utils/firma';
 
@@ -25,7 +25,7 @@ const DURUM_FILTERS = [
 ];
 
 export default function Partiler() {
-    const { partiler, urunler, firmalar, cariHareketler, irsaliyeler = [], partiEkle, partiArsivle, partiIlerlet, firmaEkle, urunEkle, currentUser } = useApp();
+    const { partiler, urunler, firmalar, cariHareketler, irsaliyeler = [], partiEkle, partiGuncelle, partiArsivle, partiIlerlet, firmaEkle, urunEkle, currentUser } = useApp();
     // Kesimhane yetkilisi: parti hep kendi kesimhanesine açılır, fiyatları görmez, arşivleyemez
     const kesimhaneKullanici = currentUser?.rol === 'kesimhane';
     const [ilerletParti, setIlerletParti] = useState(null);
@@ -109,7 +109,8 @@ export default function Partiler() {
         return true;
     });
     const arsivSayisi = partiler.filter(p => isPartiArsivde(p, cariHareketler)).length;
-    const sorted = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Açık (kapanmamış) işler üstte, tamamlananlar en altta (yeşil); kendi içlerinde yeniden eskiye
+    const sorted = [...filtered].sort((a, b) => ((a.durum === 'tamamlandi') - (b.durum === 'tamamlandi')) || new Date(b.createdAt) - new Date(a.createdAt));
 
     // Görünen (filtrelenmiş) partiler Excel'e — ilk sayfa şablonla aynı defter düzeninde (geri aktarılırsa
     // Parti No sayesinde tekrar açılmaz), ikinci sayfa ayrıntılı döküm. Fiyatlar kesimhaneye gösterilmez.
@@ -119,18 +120,14 @@ export default function Partiler() {
         const defterSirasi = [...filtered].sort((a, b) => partiDefterAyi(a).localeCompare(partiDefterAyi(b)) || new Date(a.createdAt) - new Date(b.createdAt));
         const fiyatli = !kesimhaneKullanici;
         const defterSutunlari = [
-            { baslik: 'Ay' }, { baslik: 'Atölye' }, { baslik: 'Model' }, { baslik: 'Adet', tip: 'sayi' },
-            ...(fiyatli ? [{ baslik: 'Birim Fiyat', tip: 'para' }, { baslik: 'Tutar', tip: 'para' }] : []),
+            { baslik: 'Ay' }, { baslik: 'Atölye' }, { baslik: 'Model' },
+            { baslik: 'Kat Adedi', tip: 'sayi' }, { baslik: 'Asorti Çarpanı', tip: 'sayi' }, { baslik: 'İş Adedi', tip: 'sayi' },
             { baslik: 'Not' }, { baslik: 'Durum' }, { baslik: 'Kesimhane' }, { baslik: 'Ütü/Paketçi' }, { baslik: 'Parti No' },
         ];
-        const defterSatirlari = defterSirasi.map(p => {
-            const adet = partiDefterAdedi(p);
-            const fiyat = Number(p.dikimBirimFiyat) || 0;
-            return [ayYazisi(p), firmaAdi(p.dikimhaneId), p.urunKodu, adet,
-                ...(fiyatli ? [fiyat || null, fiyat ? adet * fiyat : null] : []),
-                p.notlar || '', partiDurumEtiketi(p) || DURUM_LABELS[p.durum] || p.durum,
-                firmaAdi(p.kesimhaneId), firmaAdi(p.utupaketciId), p.partiNo];
-        });
+        const defterSatirlari = defterSirasi.map(p => [ayYazisi(p), firmaAdi(p.dikimhaneId), p.urunKodu,
+            partiKatAdedi(p), partiAsortiCarpani(p), partiDefterAdedi(p),
+            p.notlar || '', partiDurumEtiketi(p) || DURUM_LABELS[p.durum] || p.durum,
+            firmaAdi(p.kesimhaneId), firmaAdi(p.utupaketciId), p.partiNo]);
         const sutunlar = [
             { baslik: 'Parti No', deger: p => p.partiNo },
             { baslik: 'Tarih', tip: 'tarih', deger: p => p.createdAt },
@@ -152,7 +149,7 @@ export default function Partiler() {
                 { baslik: 'Ütü ₺/adet', tip: 'para', deger: p => p.utuBirimFiyat || null },
             );
         }
-        const toplamSatiri = defterSutunlari.map((c, i) => (i === 0 ? 'TOPLAM' : (c.baslik === 'Adet' || c.baslik === 'Tutar')
+        const toplamSatiri = defterSutunlari.map((c, i) => (i === 0 ? 'TOPLAM' : c.baslik === 'İş Adedi'
             ? defterSatirlari.reduce((t, r) => t + (Number(r[i]) || 0), 0) : ''));
         excelIndir('Partiler', [
             { ad: 'Defter', sutunlar: defterSutunlari, satirlar: defterSatirlari, toplamSatiri },
@@ -184,15 +181,21 @@ export default function Partiler() {
         return uyan.find(f => f.tip === tip) || uyan[0] || null;
     };
     const kayitliPartiNo = new Set(partiler.map(p => p.partiNo));
+    // Daha önce Excel'den aktarılmış aynı iş (ay + atölye + model) varsa yeni parti açılmaz, düzeltilir
+    const excelPartisiBul = (r) => partiler.find(p => p.aktarim === 'excel' && p.defterAy === r.ay
+        && modelAnahtari(p.urunKodu) === modelAnahtari(r.model)
+        && firmaAnahtari(firmalar.find(f => f.id === p.dikimhaneId)?.ad || '') === firmaAnahtari(r.atolye));
     const aktarilacak = aktarSatirlari ? partiSatirlariniCoz(aktarSatirlari).map(r => ({
         ...r,
+        duzeltilecek: !(r.partiNo && kayitliPartiNo.has(r.partiNo)) ? excelPartisiBul(r) || null : null,
         kayitli: !!(r.partiNo && kayitliPartiNo.has(r.partiNo)),
         yeniAtolye: !!r.atolye && !firmaAda(r.atolye, 'atolye'),
         yeniModel: !!r.model && !urunKoda.has(modelAnahtari(r.model)),
     })) : [];
     const aktarGecerli = aktarilacak.filter(r => !r.hatalar.length && !r.kayitli);
-    const yeniAtolyeler = [...new Set(aktarGecerli.filter(r => r.yeniAtolye).map(r => firmaAnahtari(r.atolye)))];
-    const yeniModeller = [...new Set(aktarGecerli.filter(r => r.yeniModel).map(r => modelAnahtari(r.model)))];
+    const yeniAtolyeler = [...new Set(aktarGecerli.filter(r => r.yeniAtolye && !r.duzeltilecek).map(r => firmaAnahtari(r.atolye)))];
+    const yeniModeller = [...new Set(aktarGecerli.filter(r => r.yeniModel && !r.duzeltilecek).map(r => modelAnahtari(r.model)))];
+    const duzeltilecekSayisi = aktarGecerli.filter(r => r.duzeltilecek).length;
 
     const handleAktarOnay = () => {
         const firmaCache = new Map();
@@ -217,8 +220,20 @@ export default function Partiler() {
             urunCache.set(anahtar, u);
             return u;
         };
-        let sayi = 0;
+        let sayi = 0, duzeltilen = 0;
         aktarGecerli.forEach(r => {   // dosyadaki sırayla: parti numaraları defter sırasını izler
+            if (r.duzeltilecek) {
+                const p = r.duzeltilecek;
+                const urunP = urunler.find(u => u.id === p.urunId);
+                partiGuncelle(p.id, {
+                    toplamAdet: r.adet, katAdedi: r.kat, asortiCarpani: r.carpan, notlar: r.not,
+                    ...(p.durum !== 'kesimde' ? { kesilenAdet: r.adet, dikimeGonderilenAdet: r.adet } : {}),
+                    ...(p.durum === 'dikimde' || p.durum === 'kesimde' ? { kalanAdet: r.adet } : {}),
+                    dikimBirimFiyat: firmaFiyatBul(urunP, p.dikimhaneId, 'dikim'),
+                });
+                duzeltilen++;
+                return;
+            }
             const urun = urunBulVeyaEkle(r.model);
             const atolye = firmaBulVeyaEkle(r.atolye, 'atolye');
             const kesimhane = firmaBulVeyaEkle(r.kesimhane, 'kesimhane');
@@ -232,6 +247,8 @@ export default function Partiler() {
                 asorti: urun.asorti,
                 renkler: [],
                 toplamAdet: r.adet,
+                katAdedi: r.kat,
+                asortiCarpani: r.carpan,
                 kesilenAdet: r.durum === 'kesimde' ? undefined : r.adet,
                 dikimeGonderilenAdet: r.durum === 'kesimde' ? undefined : r.adet,
                 dikimBaslamaTarihi: r.durum === 'kesimde' ? undefined : simdi,
@@ -239,7 +256,7 @@ export default function Partiler() {
                 dikimhaneId: atolye.id,
                 utupaketciId: utu?.id || null,
                 kesimBirimFiyat: kesimhane ? firmaFiyatBul(urun, kesimhane.id, 'kesim') : 0,
-                dikimBirimFiyat: r.fiyat > 0 ? r.fiyat : firmaFiyatBul(urun, atolye.id, 'dikim'),
+                dikimBirimFiyat: firmaFiyatBul(urun, atolye.id, 'dikim'),
                 utuBirimFiyat: utu ? firmaFiyatBul(urun, utu.id, 'utu') : 0,
                 notlar: r.not,
                 defterAy: r.ay,
@@ -252,7 +269,7 @@ export default function Partiler() {
         });
         setAktarSatirlari(null);
         setGorunum('defter');
-        alert(`${sayi} parti eklendi.`);
+        alert([sayi && `${sayi} parti eklendi`, duzeltilen && `${duzeltilen} parti düzeltildi`].filter(Boolean).join(', ') + '.');
     };
 
     const addRenk = () => {
@@ -485,7 +502,7 @@ export default function Partiler() {
                     <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}><Plus size={18} /> Yeni Parti</button>
                 </div>
             ) : gorunum === 'defter' ? (
-                <PartiDefteri partiler={sorted} firmalar={firmalar} fiyatGorur={!kesimhaneKullanici} onAc={(p) => navigate(`/parti/${p.id}`)} />
+                <PartiDefteri partiler={sorted} firmalar={firmalar} onAc={(p) => navigate(`/parti/${p.id}`)} />
             ) : (
                 <>
                     {/* Desktop Table */}
@@ -514,7 +531,7 @@ export default function Partiler() {
                                         const dikimhane = firmalar.find(f => f.id === p.dikimhaneId);
                                         const utupaketci = firmalar.find(f => f.id === p.utupaketciId);
                                         return (
-                                            <tr key={p.id} onClick={() => navigate(`/parti/${p.id}`)} style={{ cursor: 'pointer' }}>
+                                            <tr key={p.id} className={p.durum === 'tamamlandi' ? 'parti-satir--tamam' : ''} onClick={() => navigate(`/parti/${p.id}`)} style={{ cursor: 'pointer' }}>
                                                 <td style={{ fontSize: '0.85rem' }}>{formatMonthDay(p.createdAt)}</td>
                                                 <td style={{ fontWeight: 600 }}>{p.partiNo}</td>
                                                 <td>{p.urunKodu}</td>
@@ -566,7 +583,7 @@ export default function Partiler() {
                                 const dikimhane = firmalar.find(f => f.id === p.dikimhaneId);
                                 const utupaketci = firmalar.find(f => f.id === p.utupaketciId);
                                 return (
-                                    <div key={p.id} className="mobile-list-item" onClick={() => navigate(`/parti/${p.id}`)} style={{ cursor: 'pointer' }}>
+                                    <div key={p.id} className={`mobile-list-item${p.durum === 'tamamlandi' ? ' parti-satir--tamam' : ''}`} onClick={() => navigate(`/parti/${p.id}`)} style={{ cursor: 'pointer' }}>
                                         <div className="mobile-list-item-header">
                                             <span className="mobile-list-item-title">{p.partiNo}</span>
                                             <span className={`badge ${p.durum}`}>{partiDurumEtiketi(p)}</span>
@@ -827,14 +844,14 @@ export default function Partiler() {
                     <div className="aktar-ozet">
                         <span><strong>{aktarGecerli.length}</strong> parti</span>
                         <span><strong>{aktarGecerli.reduce((t, r) => t + r.adet, 0).toLocaleString('tr-TR')}</strong> adet</span>
-                        {!kesimhaneKullanici && <span><strong>{aktarGecerli.reduce((t, r) => t + r.tutar, 0).toLocaleString('tr-TR')} ₺</strong> tutar</span>}
+                        {duzeltilecekSayisi > 0 && <span><strong>{duzeltilecekSayisi}</strong> daha önce aktarılmış iş düzeltilecek (yeni parti açılmaz)</span>}
                         {yeniAtolyeler.length > 0 && <span>{yeniAtolyeler.length} yeni atölye eklenecek</span>}
                         {yeniModeller.length > 0 && <span>{yeniModeller.length} yeni model eklenecek</span>}
                     </div>
                     <div className="aktar-tablo">
                         <table>
                             <thead>
-                                <tr><th>#</th><th>Ay</th><th>Atölye</th><th>Model</th><th style={{ textAlign: 'right' }}>Adet × Fiyat = Tutar</th><th>Not</th><th>Durum</th></tr>
+                                <tr><th>#</th><th>Ay</th><th>Atölye</th><th>Model</th><th style={{ textAlign: 'right' }}>Kat × Çarpan = İş Adedi</th><th>Not</th><th>Durum</th></tr>
                             </thead>
                             <tbody>
                                 {aktarilacak.map((r, i) => (
@@ -850,12 +867,13 @@ export default function Partiler() {
                                             {r.yeniModel && <div className="aktar-yeni">Yeni model</div>}
                                         </td>
                                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                            {r.adet.toLocaleString('tr-TR')}{r.fiyat > 0 && <> × {r.fiyat.toLocaleString('tr-TR')} = <strong>{r.tutar.toLocaleString('tr-TR')}</strong></>}
+                                            {r.kat && r.carpan ? <>{r.kat.toLocaleString('tr-TR')} × {r.carpan} = </> : null}<strong>{r.adet.toLocaleString('tr-TR')}</strong>
                                         </td>
                                         <td>{r.not || ''}</td>
                                         <td>
                                             {r.kayitli ? <span className="badge pasif">Zaten kayıtlı</span>
                                                 : r.hatalar.length ? <span className="badge borc">{r.hatalar.join(', ')}</span>
+                                                : r.duzeltilecek ? <span className="badge dikimde">Düzeltilecek ({r.duzeltilecek.partiNo})</span>
                                                     : <span className={`badge ${r.durum}`}>{DURUM_ADLARI[r.durum]}</span>}
                                             {r.uyarilar.map((u, k) => <div key={k} className="aktar-uyari">{u}</div>)}
                                         </td>
@@ -865,9 +883,9 @@ export default function Partiler() {
                         </table>
                     </div>
                     <div className="aktar-bilgi">
-                        Partiler dosyadaki sırayla açılır. Kayıtlı olmayan atölyeler "Dikimhane", modeller ürün olarak eklenir
-                        (ürünün adını ve bedenlerini sonra Ürünler'den düzenleyebilirsiniz). Durumu "Tamamlandı" olan işler
-                        kapatılır ve tutarı atölyenin carisine borç yazılır; diğerleri atölyede (Dikimde) açık kalır.
+                        Partiler dosyadaki sırayla açılır; iş adedi = kat × asorti çarpanı. Kayıtlı olmayan atölyeler "Dikimhane",
+                        modeller ürün olarak eklenir (adını ve bedenlerini sonra Ürünler'den düzenleyebilirsiniz). Durumu "Tamamlandı"
+                        olan işler kapatılır; diğerleri atölyede (Dikimde) açık kalır. Daha önce aktarılmış aynı iş düzeltilir.
                     </div>
                 </Modal>
             )}

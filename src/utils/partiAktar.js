@@ -62,9 +62,10 @@ export const DURUM_ADLARI = { kesimde: 'Kesimde', dikimde: 'Dikimde', utupakette
 export const modelAnahtari = (kod) => metin(kod).toLocaleUpperCase('tr').replace(/\s+/g, '');
 export const firmaAnahtari = (ad) => kucuk(ad).replace(/\s+/g, ' ');
 
-// Satırlar → [{ partiNo, ay, atolye, model, adet, fiyat, tutar, not, durum, kesimhane, utupaketci, hatalar[], uyarilar[] }]
+// Satırlar → [{ partiNo, ay, atolye, model, kat, carpan, adet, not, durum, kesimhane, utupaketci, hatalar[], uyarilar[] }]
+// Defter satırı "Hacı (050-1 = 636 × 6 = 3816": 636 kat adedi, 6 asorti çarpanı (seri adedi), 3816 iş adedi.
 export function partiSatirlariniCoz(satirlar, { bugun = new Date() } = {}) {
-    const baslikNo = satirlar.findIndex(r => r.some(h => /atöly|atoly|model|adet/.test(kucuk(h))));
+    const baslikNo = satirlar.findIndex(r => r.some(h => /atöly|atoly|model|adet|kat/.test(kucuk(h))));
     if (baslikNo < 0) return [];
     const basliklar = satirlar[baslikNo].map(kucuk);
     const alinan = new Set();
@@ -73,11 +74,13 @@ export function partiSatirlariniCoz(satirlar, { bugun = new Date() } = {}) {
         if (i >= 0) alinan.add(i);
         return i;
     };
-    // Sıra önemli: "Birim Fiyat", "Dikim Fiyatı" önce fiyata; "Model Kodu" atölye sanılmasın
+    // Sıra önemli: "Kat Adedi" iş adedi sanılmasın, "Model Kodu" atölye sanılmasın
     const partiNoIdx = bul(h => /parti/.test(h));   // sistemden alınan dökümde: kayıtlı parti tekrar açılmaz
-    const fiyatIdx = bul(h => /fiyat/.test(h));
-    const tutarIdx = bul(h => /tutar|toplam/.test(h));
-    const adetIdx = bul(h => /adet|miktar/.test(h));
+    const katIdx = bul(h => /^kat|kat ad|kat say/.test(h));
+    const carpanIdx = bul(h => /çarpan|carpan|asorti|seri/.test(h));
+    const fiyatIdx = bul(h => /fiyat/.test(h));      // ilk gönderilen şablonda çarpan "Birim Fiyat" adıyla yazılmıştı
+    const tutarIdx = bul(h => /tutar/.test(h));
+    const adetIdx = bul(h => /adet|miktar|toplam/.test(h));
     const ayIdx = bul(h => /^ay$|^ay\b|tarih|dönem|donem/.test(h));
     const notIdx = bul(h => /not|açıklama|aciklama/.test(h));
     const durumIdx = bul(h => /durum/.test(h));
@@ -85,6 +88,7 @@ export function partiSatirlariniCoz(satirlar, { bugun = new Date() } = {}) {
     const utuIdx = bul(h => /ütü|utu|paket/.test(h));
     const modelIdx = bul(h => /model|kod|ürün|urun/.test(h));
     const atolyeIdx = bul(h => /atöly|atoly|dikim|fason|firma|usta|isim|^ad/.test(h));
+    const eskiSablon = katIdx < 0 && carpanIdx < 0 && fiyatIdx >= 0;
 
     let sonAy = '';   // defterde ay başlıkta bir kez yazılır: boş satırlar üsttekinin ayını alır
     const sonuc = [];
@@ -96,24 +100,37 @@ export function partiSatirlariniCoz(satirlar, { bugun = new Date() } = {}) {
         const ayHam = h(ayIdx);
         const ay = ayCoz(ayHam, bugun) || sonAy || `${bugun.getFullYear()}-${iki(bugun.getMonth() + 1)}`;
         sonAy = ay;
-        const adet = Math.round(sayiOku(h(adetIdx)));
-        const fiyat = sayiOku(h(fiyatIdx));
-        const tutarYazilan = sayiOku(h(tutarIdx));
+        let kat, carpan, yazilanAdet;
+        if (eskiSablon) {
+            // Eski şablon: Adet = kat, Birim Fiyat = asorti çarpanı, Tutar = iş adedi
+            kat = Math.round(sayiOku(h(adetIdx)));
+            carpan = Math.round(sayiOku(h(fiyatIdx)));
+            yazilanAdet = Math.round(sayiOku(h(tutarIdx)));
+        } else {
+            kat = Math.round(sayiOku(h(katIdx)));
+            carpan = Math.round(sayiOku(h(carpanIdx)));
+            yazilanAdet = Math.round(sayiOku(h(adetIdx)));
+        }
+        const hesap = kat > 0 && carpan > 0 ? kat * carpan : 0;
+        const adet = hesap || yazilanAdet;
         const durum = durumCoz(h(durumIdx));
         const hatalar = [];
         const uyarilar = [];
         if (!atolye) hatalar.push('Atölye yok');
         if (!model) hatalar.push('Model yok');
         if (!(adet > 0)) hatalar.push('Adet yok');
+        if (eskiSablon) uyarilar.push('Eski şablon: "Birim Fiyat" asorti çarpanı olarak okundu');
         if (metin(ayHam) && !ayCoz(ayHam, bugun)) uyarilar.push(`"${metin(ayHam)}" ay olarak okunamadı`);
         if (!durum) uyarilar.push(`"${metin(h(durumIdx))}" durumu tanınmadı → Dikimde`);
-        if (tutarYazilan > 0 && fiyat > 0 && Math.abs(tutarYazilan - adet * fiyat) > 0.01) {
-            uyarilar.push(`Tutar ${tutarYazilan.toLocaleString('tr-TR')} yazılmış, ${adet} × ${fiyat} = ${(adet * fiyat).toLocaleString('tr-TR')}`);
+        if (hesap && yazilanAdet > 0 && yazilanAdet !== hesap) {
+            uyarilar.push(`İş adedi ${yazilanAdet.toLocaleString('tr-TR')} yazılmış, ${kat} × ${carpan} = ${hesap.toLocaleString('tr-TR')} alındı`);
         }
         sonuc.push({
             partiNo: metin(h(partiNoIdx)),
-            ay, atolye, model, adet, fiyat,
-            tutar: adet * fiyat,
+            ay, atolye, model,
+            kat: kat > 0 ? kat : null,
+            carpan: carpan > 0 ? carpan : null,
+            adet,
             not: metin(h(notIdx)),
             durum: durum || 'dikimde',
             kesimhane: metin(h(kesimIdx)),
@@ -128,16 +145,16 @@ const SABLON_SUTUNLARI = [
     { baslik: 'Ay', genislik: 9 },
     { baslik: 'Atölye', genislik: 22 },
     { baslik: 'Model', genislik: 11 },
-    { baslik: 'Adet', tip: 'sayi', genislik: 9 },
-    { baslik: 'Birim Fiyat', tip: 'para', genislik: 12 },
-    { baslik: 'Tutar', tip: 'para', genislik: 14, formul: (n) => `IF(AND(D${n}<>"",E${n}<>""),D${n}*E${n},"")` },
+    { baslik: 'Kat Adedi', tip: 'sayi', genislik: 11 },
+    { baslik: 'Asorti Çarpanı', tip: 'sayi', genislik: 14 },
+    { baslik: 'İş Adedi', tip: 'sayi', genislik: 11, formul: (n) => `IF(AND(D${n}<>"",E${n}<>""),D${n}*E${n},"")` },
     { baslik: 'Not', genislik: 16 },
     { baslik: 'Durum', genislik: 13, secenekler: Object.values(DURUM_ADLARI) },
     { baslik: 'Kesimhane', genislik: 18 },
     { baslik: 'Ütü/Paketçi', genislik: 18 },
 ];
 
-// satirlar: [[ay, atölye, model, adet, fiyat, '', not, durum, kesimhane, ütü], ...] — boşsa boş şablon
+// satirlar: [[ay, atölye, model, kat, çarpan, '', not, durum, kesimhane, ütü], ...] — boşsa boş şablon
 export function partiSablonuIndir({ dosyaAdi = 'parti_sablonu', satirlar = [] } = {}) {
     excelIndir(dosyaAdi, partiSablonuSayfalari(satirlar));
 }
@@ -151,8 +168,8 @@ export function partiSablonuSayfalari(satirlar = []) {
             ustBilgi: [
                 'Partiler sayfasına defterdeki gibi her satıra bir iş yazın. Program yalnızca "Partiler" sayfasını okur.',
                 'Ay: 11.AY, 11, Kasım veya tarih yazabilirsiniz. Boş bırakılan satır üstteki satırın ayını alır.',
-                'Atölye ve Model kayıtlı değilse aktarırken otomatik eklenir. Tutar kendisi hesaplanır (Adet × Birim Fiyat).',
-                'Durum boşsa "Dikimde" olur. "Tamamlandı" yazılırsa parti kapanır ve atölyenin carisine borç (Tutar) yazılır.',
+                'Defterdeki "636 × 6 = 3816": Kat Adedi 636, Asorti Çarpanı 6 (bir serideki adet); İş Adedi kendisi hesaplanır.',
+                'Atölye ve Model kayıtlı değilse aktarırken otomatik eklenir. Durum boşsa "Dikimde" olur; "Tamamlandı" yazılırsa parti kapanır.',
             ],
             satirlar: [
                 ['11.AY', 'Örnek Atölye', '050-1', 636, 6, '', '', '', '', ''],
