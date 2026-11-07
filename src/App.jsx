@@ -13,6 +13,7 @@ import { flushPersist, cevrimdisiMi, bekleyenDegisiklikSayisi } from './data/db'
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Firmalar = lazy(() => import('./pages/Firmalar'));
 const Urunler = lazy(() => import('./pages/Urunler'));
+const FasonFiyatlari = lazy(() => import('./pages/FasonFiyatlari'));
 const Partiler = lazy(() => import('./pages/Partiler'));
 const PartiDetay = lazy(() => import('./pages/PartiDetay'));
 const IsAkisi = lazy(() => import('./pages/IsAkisi'));
@@ -36,6 +37,7 @@ const PAGE_TITLES = {
     '/islem-gunlugu': 'İşlem Günlüğü',
     '/firmalar': 'Firmalar',
     '/urunler': 'Ürünler',
+    '/fason-fiyatlari': 'Fason Fiyatları',
     '/partiler': 'Partiler',
     '/is-akisi': 'Atölye Kanban',
     '/stok-takibi': 'Stok Takibi',
@@ -184,6 +186,7 @@ export default function App() {
                             <Route path="/" element={<Korumali yetki="anasayfa"><Dashboard /></Korumali>} />
                             <Route path="/firmalar" element={<Korumali yetki="firmalar"><Firmalar /></Korumali>} />
                             <Route path="/urunler" element={<Korumali yetki="urunler"><Urunler /></Korumali>} />
+                            <Route path="/fason-fiyatlari" element={<Korumali yetki="urunler"><FasonFiyatlari /></Korumali>} />
                             <Route path="/partiler" element={<Korumali yetki="partiler"><Partiler /></Korumali>} />
                             <Route path="/parti/:id" element={<Korumali yetki="partiler"><PartiDetay /></Korumali>} />
                             <Route path="/is-akisi" element={<Korumali yetki="is_akisi"><IsAkisi /></Korumali>} />

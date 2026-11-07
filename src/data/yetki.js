@@ -9,6 +9,7 @@ export const ROUTE_YETKI = {
     '/is-akisi': 'is_akisi',
     '/is-talep-takvimi': 'takvim',
     '/urunler': 'urunler',
+    '/fason-fiyatlari': 'urunler',
     '/stok-takibi': 'stok_takibi',
     '/kumas-stok': 'kumas_stok',
     '/firmalar': 'firmalar',
@@ -67,3 +68,6 @@ export function cariYazabilir(user) {
     if (user.rol === 'izleyici' || user.rol === 'kesimhane') return false;
     return ['anasayfa', 'partiler', 'cari_hesaplar'].some(y => (user.yetkiler || []).includes(y));
 }
+
+// Fason fiyat tablosu: kesimhane, fasoncu ve şoför fiyatları görmez (sunucu da göndermez)
+export const fasonFiyatGorur = (user) => !!user && !['kesimhane', 'fasoncu', 'sofor'].includes(user.rol);

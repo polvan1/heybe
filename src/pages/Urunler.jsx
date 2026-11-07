@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/Modal';
-import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X, Calculator, Tag } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Search, Warehouse, Minus, Upload, Download, FileSpreadsheet, Camera, X, Calculator, Tag, Table2 } from 'lucide-react';
 import MaliyetKarti from '../components/MaliyetKarti';
 import EtiketYazdir from '../components/EtiketYazdir';
+import { fasonFiyatGorur } from '../data/yetki';
+import { useNavigate } from 'react-router-dom';
 import { useKurlar, paraBicim } from '../data/kur';
 import { modelMaliyeti, maliyetGorur, maliyetTanimliMi } from '../utils/maliyet';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
@@ -41,6 +43,7 @@ function MaliyetRozet({ urun, kurlar, ayar }) {
 export default function Urunler() {
     const { urunler, urunEkle, urunGuncelle, urunSil, partiler, firmalar = [], currentUser, maliyetAyar } = useApp();
     const maliyetGoster = maliyetGorur(currentUser);
+    const navigate = useNavigate();
     const { kurlar } = useKurlar();
     const [maliyetUrun, setMaliyetUrun] = useState(null);
     const [modal, setModal] = useState(null);
@@ -238,6 +241,11 @@ export default function Urunler() {
             <div className="page-header">
                 <h1 className="page-title">Ürünler</h1>
                 <div className="page-header-actions">
+                    {fasonFiyatGorur(currentUser) && (
+                        <button className="btn btn-soft" onClick={() => navigate('/fason-fiyatlari')} title="Tüm modellerin fason fiyatlarını tabloda gir">
+                            <Table2 size={16} /> Fason Fiyatları
+                        </button>
+                    )}
                     <button className="btn btn-ghost" onClick={urunSablonuIndir} title="Excel şablonunu indir (her beden ayrı sütun)">
                         <Download size={16} /> Şablon
                     </button>

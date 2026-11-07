@@ -3,10 +3,10 @@ import {
     LayoutDashboard, Layers, GitBranch, CalendarClock,
     Package, Scissors, Factory, Wallet, BarChart3,
     Users, Settings, ChevronLeft, ChevronRight,
-    FileText, ClipboardList, ScrollText, PackagePlus, MapPinned, Truck,
+    FileText, ClipboardList, ScrollText, PackagePlus, MapPinned, Truck, Table2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { hasYetki } from '../data/yetki';
+import { hasYetki, fasonFiyatGorur } from '../data/yetki';
 
 const NAV_SECTIONS = [
     {
@@ -28,6 +28,7 @@ const NAV_SECTIONS = [
         title: 'STOK',
         items: [
             { to: '/urunler', icon: Package, label: 'Ürünler', yetki: 'urunler' },
+            { to: '/fason-fiyatlari', icon: Table2, label: 'Fason Fiyatları', yetki: 'urunler', fiyat: true },
             { to: '/stok-takibi', icon: Scissors, label: 'Stok Takibi', yetki: 'stok_takibi' },
             { to: '/kumas-stok', icon: PackagePlus, label: 'Kumaş Stok', yetki: 'kumas_stok' },
         ]
@@ -62,7 +63,7 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }) 
 
     // Kullanıcının yetkisi olmayan sayfaları menüde gösterme
     const sections = NAV_SECTIONS
-        .map(s => ({ ...s, items: s.items.filter(i => hasYetki(currentUser, i.yetki)) }))
+        .map(s => ({ ...s, items: s.items.filter(i => hasYetki(currentUser, i.yetki) && (!i.fiyat || fasonFiyatGorur(currentUser))) }))
         .filter(s => s.items.length > 0);
 
     return (
