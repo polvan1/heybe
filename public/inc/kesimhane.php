@@ -72,11 +72,9 @@ function kesimhaneVerisi($pdo, $ben) {
     return $sonuc;
 }
 
-// Ürün + firma için birim fiyat (src/data/db.js firmaFiyatBul ile aynı kural)
+// Ürünün birim fiyatı (src/data/db.js firmaFiyatBul ile aynı kural: firmaya özel fiyat yok)
 function sunucuFiyatBul($urun, $firmaId, $tip) {
     if (!$urun) return 0;
-    $ozel = $firmaId ? ($urun['firmaFiyatlari'][$firmaId][$tip] ?? null) : null;
-    if ($ozel !== null && $ozel !== '' && (float)$ozel > 0) return (float)$ozel;
     return (float)($urun[$tip . 'Fiyat'] ?? 0);
 }
 

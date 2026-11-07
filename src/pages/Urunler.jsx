@@ -10,7 +10,6 @@ import { useKurlar, paraBicim } from '../data/kur';
 import { modelMaliyeti, maliyetGorur, maliyetTanimliMi } from '../utils/maliyet';
 import { fotoYukle, fotoSil, fotoSrc } from '../utils/foto';
 import { silmeOnayi } from '../utils/guvenlik';
-import { firmaAktifMi } from '../utils/firma';
 import { urunDosyasiOku, urunSatirlariniCoz, urunSablonuIndir } from '../utils/urunAktar';
 
 const DEFAULT_BEDENLER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
@@ -24,7 +23,6 @@ const EMPTY_FORM = {
     dikimFiyat: '',
     utuFiyat: '',
     foto: '',
-    firmaFiyatlari: {}, // { [firmaId]: { kesim, dikim, utu } } — firma bazlı anlaşma fiyatları
 };
 
 // Ürün satırında birim maliyet ve kâr marjı özeti
@@ -41,7 +39,7 @@ function MaliyetRozet({ urun, kurlar, ayar }) {
 }
 
 export default function Urunler() {
-    const { urunler, urunEkle, urunGuncelle, urunSil, partiler, firmalar = [], currentUser, maliyetAyar } = useApp();
+    const { urunler, urunEkle, urunGuncelle, urunSil, partiler, currentUser, maliyetAyar } = useApp();
     const maliyetGoster = maliyetGorur(currentUser);
     const navigate = useNavigate();
     const { kurlar } = useKurlar();
@@ -156,7 +154,6 @@ export default function Urunler() {
             dikimFiyat: urun.dikimFiyat || '',
             utuFiyat: urun.utuFiyat || '',
             foto: urun.foto || '',
-            firmaFiyatlari: urun.firmaFiyatlari ? JSON.parse(JSON.stringify(urun.firmaFiyatlari)) : {},
         });
         setEditId(urun.id);
         setModal('edit');
@@ -175,12 +172,6 @@ export default function Urunler() {
             dikimFiyat: parseFloat(form.dikimFiyat) || 0,
             utuFiyat: parseFloat(form.utuFiyat) || 0,
             foto: form.foto || null,
-            // Tamamen boş anlaşma satırlarını kaydetme
-            firmaFiyatlari: Object.fromEntries(
-                Object.entries(form.firmaFiyatlari || {}).filter(([, f]) =>
-                    parseFloat(f?.kesim) > 0 || parseFloat(f?.dikim) > 0 || parseFloat(f?.utu) > 0
-                )
-            ),
         };
         if (editId) {
             urunGuncelle(editId, urunData);
@@ -487,69 +478,6 @@ export default function Urunler() {
                             <label className="form-label">Ütü/Paket Fiyatı (₺)</label>
                             <input type="number" step="0.01" className="form-input" value={form.utuFiyat} onChange={e => setForm({ ...form, utuFiyat: e.target.value })} placeholder="0.00" />
                         </div>
-                    </div>
-
-                    {/* Firma Bazlı Fiyat Anlaşmaları */}
-                    <div style={{ marginTop: '12px', padding: '12px', background: 'var(--color-primary-soft)', border: '1px solid var(--color-primary-border)', borderRadius: 'var(--radius-sm)' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '4px' }}>Firma Bazlı Fiyat Anlaşmaları</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                            Belirli bir firmayla farklı fiyat anlaştıysanız buraya girin. Parti açarken o firma seçilince
-                            bu fiyat otomatik kullanılır; boş bırakılan alanlar için yukarıdaki varsayılan geçerlidir.
-                        </div>
-
-                        {Object.entries(form.firmaFiyatlari || {}).map(([fid, fiyatlar]) => {
-                            const firma = firmalar.find(f => f.id === fid);
-                            const setF = (alan, deger) => setForm({
-                                ...form,
-                                firmaFiyatlari: { ...form.firmaFiyatlari, [fid]: { ...fiyatlar, [alan]: deger } },
-                            });
-                            return (
-                                <div key={fid} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1 1 120px', fontWeight: 600, fontSize: '0.8rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {firma?.ad || 'Silinmiş firma'}
-                                    </div>
-                                    {[['kesim', 'Kesim'], ['dikim', 'Dikim'], ['utu', 'Ütü']].map(([alan, ad]) => (
-                                        <input
-                                            key={alan}
-                                            type="number" step="0.01" min="0"
-                                            className="form-input"
-                                            style={{ width: '74px', padding: '6px 8px', fontSize: '0.8rem' }}
-                                            value={fiyatlar?.[alan] ?? ''}
-                                            onChange={e => setF(alan, e.target.value)}
-                                            placeholder={ad}
-                                            title={`${ad} fiyatı (₺)`}
-                                        />
-                                    ))}
-                                    <button
-                                        type="button" className="btn-icon"
-                                        onClick={() => {
-                                            const yeni = { ...form.firmaFiyatlari };
-                                            delete yeni[fid];
-                                            setForm({ ...form, firmaFiyatlari: yeni });
-                                        }}
-                                        style={{ color: 'var(--accent-danger)' }} title="Anlaşmayı kaldır"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            );
-                        })}
-
-                        <select
-                            className="form-input"
-                            style={{ fontSize: '0.8rem' }}
-                            value=""
-                            onChange={e => {
-                                const fid = e.target.value;
-                                if (!fid || form.firmaFiyatlari?.[fid]) return;
-                                setForm({ ...form, firmaFiyatlari: { ...form.firmaFiyatlari, [fid]: { kesim: '', dikim: '', utu: '' } } });
-                            }}
-                        >
-                            <option value="">+ Firma anlaşması ekle...</option>
-                            {firmalar
-                                .filter(f => !form.firmaFiyatlari?.[f.id] && firmaAktifMi(f) && f.tip !== 'kumasci')
-                                .map(f => <option key={f.id} value={f.id}>{f.ad}</option>)}
-                        </select>
                     </div>
 
                     <div className="form-group" style={{ marginTop: '16px' }}>

@@ -458,10 +458,9 @@ function kesimhaneVerisi(d, ben) {
     return sonuc;
 }
 
+// eslint-disable-next-line no-unused-vars
 function fiyatBul(urun, firmaId, tip) {
     if (!urun) return 0;
-    const ozel = firmaId && urun.firmaFiyatlari?.[firmaId]?.[tip];
-    if (ozel !== undefined && ozel !== null && ozel !== '' && parseFloat(ozel) > 0) return parseFloat(ozel);
     return parseFloat(urun[tip + 'Fiyat']) || 0;
 }
 

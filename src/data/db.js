@@ -414,14 +414,12 @@ export function updateUrun(id, updates) {
   return null;
 }
 
-// Firma bazlı fiyat anlaşması çözümü: ürünün o firmaya özel fiyatı varsa onu,
-// yoksa ürünün varsayılan fiyatını döndürür. tip: 'kesim' | 'dikim' | 'utu'
+// Ürünün fason birim fiyatı. tip: 'kesim' | 'dikim' | 'utu'
+// Firmaya özel fiyat yoktur: hangi firma seçilirse seçilsin ürünün fiyatı kullanılır
+// (firmaId yalnızca eski çağrılarla uyum için durur; eski firmaFiyatlari verisi yok sayılır).
+// eslint-disable-next-line no-unused-vars
 export function firmaFiyatBul(urun, firmaId, tip) {
   if (!urun) return 0;
-  const ozel = firmaId && urun.firmaFiyatlari?.[firmaId]?.[tip];
-  if (ozel !== undefined && ozel !== null && ozel !== '' && parseFloat(ozel) > 0) {
-    return parseFloat(ozel);
-  }
   return parseFloat(urun[tip + 'Fiyat']) || 0;
 }
 

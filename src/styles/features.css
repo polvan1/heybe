@@ -1733,17 +1733,11 @@ tr.parti-satir--tamam td { background: var(--color-success-soft); }
   position: sticky; z-index: 2; background: var(--color-surface-muted); color: var(--color-text);
   font-weight: var(--font-weight-semibold); text-align: center; padding: 6px 8px;
 }
-.fason-tablo tr.grup-satir th { top: 0; height: 30px; font-size: var(--font-size-xs); letter-spacing: 0.04em; }
-.fason-tablo tr.firma-satir th {
-  top: 30px; font-weight: var(--font-weight-medium); font-size: var(--font-size-xs);
-  max-width: 120px; overflow: hidden; text-overflow: ellipsis;
-}
+.fason-tablo thead th { top: 0; height: 34px; font-size: var(--font-size-xs); letter-spacing: 0.04em; }
+.fason-tablo thead th.fiyat { min-width: 110px; background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-muted)); font-weight: var(--font-weight-bold); }
 .fason-tablo th.grup-kesim { box-shadow: inset 0 3px 0 var(--status-kesimde); }
 .fason-tablo th.grup-dikim { box-shadow: inset 0 3px 0 var(--status-dikimde); }
 .fason-tablo th.grup-utu { box-shadow: inset 0 3px 0 var(--status-utupakette); }
-.fason-tablo tr.firma-satir th { box-shadow: none; }
-.fason-tablo th.varsayilan, .fason-tablo td.varsayilan { background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface)); }
-.fason-tablo thead th.varsayilan { background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-muted)); font-weight: var(--font-weight-bold); }
 /* Sabit sol sütunlar (model kodu, ürün adı) */
 .fason-tablo .sabit { position: sticky; z-index: 1; background: var(--color-surface); text-align: left; padding: 0 10px; }
 .fason-tablo thead .sabit { z-index: 3; background: var(--color-surface-muted); }

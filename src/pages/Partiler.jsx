@@ -723,7 +723,6 @@ export default function Partiler() {
                                     { label: 'Dikimhane *', value: dikimhaneId, onChange: setDikimhaneId, options: dikimhaneler, tip: 'dikim', tipAd: 'Dikim', placeholder: 'Seçin' },
                                     { label: 'Ütü/Paket', value: utupaketciId, onChange: setUtupaketciId, options: utupaketciler, tip: 'utu', tipAd: 'Ütü/Paket', placeholder: 'Yok / Sonra', clearLabel: 'Yok / Sonra' },
                                 ].map(alan => {
-                                    const anlasmaVar = alan.value && selectedUrun?.firmaFiyatlari?.[alan.value]?.[alan.tip] > 0;
                                     const fiyat = alan.value ? firmaFiyatBul(selectedUrun, alan.value, alan.tip) : 0;
                                     return (
                                         <div key={alan.tip} className="form-group" style={{ marginBottom: 0 }}>
@@ -736,9 +735,8 @@ export default function Partiler() {
                                                 clearLabel={alan.clearLabel}
                                             />
                                             {alan.value && !kesimhaneKullanici && (
-                                                <div style={{ fontSize: '0.72rem', marginTop: '3px', color: anlasmaVar ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: anlasmaVar ? 600 : 400 }}>
+                                                <div style={{ fontSize: '0.72rem', marginTop: '3px', color: 'var(--text-muted)' }}>
                                                     {alan.tipAd} fiyatı: {fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                                                    {anlasmaVar ? ' — firma anlaşması' : ' (varsayılan)'}
                                                 </div>
                                             )}
                                         </div>

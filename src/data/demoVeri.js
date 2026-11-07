@@ -66,7 +66,7 @@ export function demoVerisiOlustur() {
             id: id('urn'), urunKodu: u.urunKodu, urunAdi: u.urunAdi, bedenler: u.bedenler,
             asorti: { bedenler, dagilim: u.dagilim },
             kesimFiyat: u.kesimFiyat, dikimFiyat: u.dikimFiyat, utuFiyat: u.utuFiyat,
-            firmaFiyatlari: {}, stokAdet: 0, aktif: true, createdAt: tarih(55),
+            stokAdet: 0, aktif: true, createdAt: tarih(55),
         };
     });
     // Örnek maliyet kartları (kurgusal fiyatlar): kumaş, aksesuar, operasyonlar, satış fiyatı
@@ -82,8 +82,6 @@ export function demoVerisiOlustur() {
         operasyonlar: [op('Omuz çatma', 0.8), op('Kol takma', 2.2), op('Ribana takma', 2.6), op('Yan dikiş', 1.6)],
         satisFiyati: 260, satisParaBirimi: 'TRY', genelGiderOrani: 12, hedefKarMarji: 25,
     };
-    // Örnek firma bazlı fiyat anlaşması: Ece Dikim Evi tişörtü daha ucuza dikiyor
-    urunler[0].firmaFiyatlari = { [firmalar[4].id]: { dikim: 12.5 } };
 
     const partiler = [], cari = [], irsaliyeler = [], bildirimler = [], gunluk = [];
     const kesimhaneler = firmalar.filter(f => f.tip === 'kesimhane');
@@ -116,7 +114,7 @@ export function demoVerisiOlustur() {
             toplamAdet: toplam, kalanAdet: siraIndex >= 1 ? 0 : toplam, renkler: renkSatirlari, asorti: urun.asorti,
             durum, kesimhaneId: kesimhane.id, dikimhaneId: atolye.id, utupaketciId: utucu.id,
             kesimBirimFiyat: urun.kesimFiyat,
-            dikimBirimFiyat: urun.firmaFiyatlari?.[atolye.id]?.dikim || urun.dikimFiyat,
+            dikimBirimFiyat: urun.dikimFiyat,
             utuBirimFiyat: urun.utuFiyat,
             firmaAtamalari: [], teslimatGecmisi: gecmis, fotolar: [], notlar: '', arsivde: false,
             createdAt: tarih(gunOnce), updatedAt: tarih(Math.max(gunOnce - siraIndex * 3, 0)),
